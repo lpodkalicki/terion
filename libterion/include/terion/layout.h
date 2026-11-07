@@ -12,6 +12,22 @@
 
 namespace terion {
 
+enum class JustifyContent
+{
+    Start,
+    Center,
+    End,
+    SpaceBetween
+}; /* End of enum JustifyContent */
+
+enum class AlignItems
+{
+    Start,
+    Center,
+    End,
+    Stretch
+}; /* End of enum AlignItems */
+
 struct Constraints
 {
     Size minimum{};
@@ -32,6 +48,13 @@ struct LayoutStyle
     std::optional<int> height = std::nullopt;
     int padding = 0;
     int gap = 0;
+    std::optional<int> minWidth = std::nullopt;
+    std::optional<int> maxWidth = std::nullopt;
+    std::optional<int> minHeight = std::nullopt;
+    std::optional<int> maxHeight = std::nullopt;
+    int flex = 0;
+    JustifyContent justifyContent = JustifyContent::Start;
+    AlignItems alignItems = AlignItems::Start;
 
     bool operator==(const LayoutStyle&) const = default;
 }; /* End of struct LayoutStyle */

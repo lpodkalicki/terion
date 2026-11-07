@@ -190,6 +190,10 @@ Size RenderNode::measure(const Constraints& constraints) const
 
     if (style_.width) content.width = std::max(0,*style_.width);
     if (style_.height) content.height = std::max(0,*style_.height);
+    if (style_.minWidth) content.width = std::max(content.width,std::max(0,*style_.minWidth));
+    if (style_.maxWidth) content.width = std::min(content.width,std::max(0,*style_.maxWidth));
+    if (style_.minHeight) content.height = std::max(content.height,std::max(0,*style_.minHeight));
+    if (style_.maxHeight) content.height = std::min(content.height,std::max(0,*style_.maxHeight));
     return constraints.constrain(content);
 }
 
@@ -239,6 +243,75 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
                 x += width + gap;
             }
             y += row_height + gap;
+        }
+        return;
+    }
+    if (type_ == Component::Type::Row || type_ == Component::Type::Column)
+    {
+        const bool horizontal = type_ == Component::Type::Row;
+        const int main_extent = horizontal ? inner_width : inner_height;
+        const int cross_extent = horizontal ? inner_height : inner_width;
+        const int gaps = children_.empty() ? 0 : static_cast<int>(children_.size() - 1);
+        const int gap_space = static_cast<int>(std::min(static_cast<long long>(main_extent),
+            static_cast<long long>(gaps) * gap));
+        std::vector<int> sizes(children_.size(),0);
+        int fixed_extent = 0;
+        long long total_flex = 0;
+        for (std::size_t i = 0; i < children_.size(); ++i)
+        {
+            const int weight = std::max(0,children_[i]->style_.flex);
+            if (weight > 0)
+                total_flex += weight;
+            else
+            {
+                const auto natural = children_[i]->measure(Constraints{.maximum = {
+                    .width = inner_width,.height = inner_height}});
+                sizes[i] = std::min(horizontal ? natural.width : natural.height,
+                    std::max(0,main_extent - gap_space - std::min(main_extent,fixed_extent)));
+                fixed_extent = addBounded(fixed_extent,sizes[i]);
+            }
+        }
+        const int available = std::max(0,main_extent - gap_space - std::min(main_extent,fixed_extent));
+        long long remaining_weight = total_flex;
+        int remaining_space = available;
+        for (std::size_t i = 0; i < children_.size(); ++i)
+        {
+            const int weight = std::max(0,children_[i]->style_.flex);
+            if (weight > 0)
+            {
+                sizes[i] = remaining_weight ? static_cast<int>(static_cast<long long>(remaining_space) *
+                    weight / remaining_weight) : 0;
+                remaining_space -= sizes[i];
+                remaining_weight -= weight;
+            }
+        }
+        int occupied = gap_space;
+        for (int extent : sizes) occupied = addBounded(occupied,extent);
+        const int extra = std::max(0,main_extent - occupied);
+        int cursor = horizontal ? origin.x + padding : origin.y + padding;
+        if (style_.justifyContent == JustifyContent::Center) cursor += extra / 2;
+        if (style_.justifyContent == JustifyContent::End) cursor += extra;
+        const int between = style_.justifyContent == JustifyContent::SpaceBetween && gaps > 0 ? extra / gaps : 0;
+        int remainder = style_.justifyContent == JustifyContent::SpaceBetween && gaps > 0 ? extra % gaps : 0;
+        for (std::size_t i = 0; i < children_.size(); ++i)
+        {
+            const int cross_natural = horizontal ?
+                children_[i]->measure(Constraints{.maximum = {.width = sizes[i],.height = cross_extent}}).height :
+                children_[i]->measure(Constraints{.maximum = {.width = cross_extent,.height = sizes[i]}}).width;
+            const int cross_size = style_.alignItems == AlignItems::Stretch ? cross_extent : cross_natural;
+            int cross_position = horizontal ? origin.y + padding : origin.x + padding;
+            if (style_.alignItems == AlignItems::Center) cross_position += (cross_extent - cross_size) / 2;
+            if (style_.alignItems == AlignItems::End) cross_position += cross_extent - cross_size;
+            const Size slot = horizontal ? Size{.width = sizes[i],.height = cross_size} :
+                Size{.width = cross_size,.height = sizes[i]};
+            children_[i]->layout(Constraints{.minimum = slot,.maximum = slot},
+                horizontal ? Point{.x = cursor,.y = cross_position} : Point{.x = cross_position,.y = cursor});
+            cursor += sizes[i] + gap;
+            if (i + 1 < children_.size())
+            {
+                cursor += between;
+                if (remainder > 0) { ++cursor; --remainder; }
+            }
         }
         return;
     }
