@@ -63,6 +63,7 @@ private:
     ButtonVariant button_variant_ = ButtonVariant::Outlined;
     double value_ = 0.0;
     int columns_ = 1;
+    SurfaceTone surface_tone_ = SurfaceTone::None;
     std::function<void()> on_click_;
     std::function<void(std::string)> on_change_;
     std::string placeholder_;

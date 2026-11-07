@@ -267,7 +267,13 @@ const RenderNode* RenderNode::hitTest(const Point position) const noexcept
 void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     const std::string_view hovered_id, const std::optional<Color> background, const Theme* theme) const
 {
-    const auto effective_background = background_.has_value() ? background_ : background;
+    std::optional<Color> effective_background = background;
+    if (surface_tone_ != SurfaceTone::None)
+    {
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        effective_background = surface_tone_ == SurfaceTone::Primary ? palette.primary : palette.surface;
+    }
+    if (background_) effective_background = background_;
     TextStyle style = text_style_;
     if (theme && text_style_ == TextStyle{})
     {
@@ -276,7 +282,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     }
     if (effective_background) style.background = *effective_background;
 
-    if (background_) painter.fillBackground(bounds_,*background_);
+    if (effective_background && (background_ || surface_tone_ != SurfaceTone::None))
+        painter.fillBackground(bounds_,*effective_background);
     if (type_ == Component::Type::Divider)
     {
         painter.horizontalLine(bounds_.x,bounds_.y,bounds_.width,style);

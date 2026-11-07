@@ -22,6 +22,13 @@ enum class ButtonVariant
     Contained
 }; /* End of enum ButtonVariant */
 
+enum class SurfaceTone
+{
+    None,
+    Surface,
+    Primary
+}; /* End of enum SurfaceTone */
+
 class Component
 {
 public:
@@ -55,6 +62,7 @@ public:
         ButtonVariant button_variant = ButtonVariant::Outlined;
         double value = 0.0;
         int columns = 1;
+        SurfaceTone surface_tone = SurfaceTone::None;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

@@ -17,6 +17,8 @@
 #include <terion/components/progress.h>
 #include <terion/components/grid.h>
 #include <terion/components/stack.h>
+#include <terion/components/paper.h>
+#include <terion/components/card.h>
 #include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/layout.h>
