@@ -1,8 +1,11 @@
 /*
-* Copyright (c) 2026 by Łukasz Marcin Podkalicki <lpodkalicki@gmail.com>
+ * Copyright (c) 2026 by Łukasz Marcin Podkalicki <lpodkalicki@gmail.com>
  */
 
 #include <terion/terion.h>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 #include <iostream>
 
@@ -21,8 +24,8 @@ int main()
     painter.put(1,1,"A");
     assert(screen.at(0,1).grapheme == " ");
     assert(screen.at(1,1).grapheme == "A");
-    assert(unicode::isValidUtf8("Łódź"));
-    assert(!unicode::isValidUtf8("\xFF"));
+    assert(isValidUtf8("Łódź"));
+    assert(!isValidUtf8("\xFF"));
     HeadlessTerminalBackend terminal({12,3});
     DifferentialRenderer renderer;
     renderer.render(screen,terminal);
@@ -34,7 +37,7 @@ int main()
     renderer.render(screen,terminal);
     assert(terminal.output().find("B") != std::string::npos);
     auto backend = std::make_unique<HeadlessTerminalBackend>(Size{20,5});
-    //auto* observed = backend.get();
+    auto* observed = backend.get();
     Application app(std::move(backend));
     app.render([](Painter& p, Size) { p.text(0,0,"Terion"); });
     app.renderOnce();

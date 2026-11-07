@@ -39,7 +39,7 @@ public:
     virtual void write(std::string_view bytes) = 0;
     virtual void flush() = 0;
     virtual std::optional<Event> pollEvent() = 0;
-}; /* End of class Backend */
+}; /* End of class TerminalBackend */
 
 class AnsiTerminalBackend final : public TerminalBackend
 {

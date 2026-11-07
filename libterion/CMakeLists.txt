@@ -19,8 +19,8 @@ target_include_directories(${TARGET_NAME}_static
         PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         PUBLIC "$<INSTALL_INTERFACE:include>")
 
-file(GLOB TARGET_PUBLIC_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/terion/*.h")
-install(FILES ${TARGET_PUBLIC_HEADERS} DESTINATION include/terion COMPONENT development)
+install(DIRECTORY include/terion/ DESTINATION include/terion
+        COMPONENT development FILES_MATCHING PATTERN "*.h")
 
 install(TARGETS ${TARGET_NAME} ${TARGET_NAME}_static
         EXPORT TerionConfig
