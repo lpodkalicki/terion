@@ -24,6 +24,7 @@ void Application::renderOnce()
     dirty_->store(false);
     ScreenBuffer buffer(backend_->size());
     Painter painter(buffer);
+    painter.fillBackground({.width = buffer.size().width,.height = buffer.size().height},theme_.palette.background);
     DependencyTracker::Scope tracking(tracker_);
     if (component_)
     {
@@ -36,7 +37,7 @@ void Application::renderOnce()
     syncFocusTargets();
     if (component_)
     {
-        if (const auto* root = reconciler_.root()) root->paint(painter,focus_.current(),hovered_button_id_);
+        if (const auto* root = reconciler_.root()) root->paint(painter,focus_.current(),hovered_button_id_,std::nullopt,&theme_);
     }
     else if (paint_) paint_(painter,buffer.size());
     renderer_.render(buffer,*backend_);

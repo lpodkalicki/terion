@@ -15,6 +15,7 @@
 #include <terion/layout.h>
 #include <terion/render/painter.h>
 #include <terion/terminal.h>
+#include <terion/theme.h>
 
 namespace terion {
 
@@ -41,7 +42,7 @@ public:
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
     void paint(Painter& painter, std::string_view focused_id = {}, std::string_view hovered_id = {},
-        std::optional<Color> background = std::nullopt) const;
+        std::optional<Color> background = std::nullopt, const Theme* theme = nullptr) const;
     [[nodiscard]] int height() const noexcept;
 
 private:

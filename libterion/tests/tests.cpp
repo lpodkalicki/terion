@@ -13,6 +13,23 @@ using namespace terion;
 
 int main()
 {
+    const Theme light = Theme::light();
+    assert(light.spacing(3) == 3);
+    assert(light.palette.background == Color::rgb(248,249,251));
+    Reconciler themed;
+    themed.update(Component::column({
+        Button({.text = "OK",.variant = ButtonVariant::Contained}),
+        Progress({.value = 0.5,.layout = {.width = 4}})
+    }));
+    themed.root()->layout(Constraints{.maximum = {.width = 15,.height = 4}});
+    ScreenBuffer theme_buffer({.width = 15,.height = 4});
+    Painter theme_painter(theme_buffer);
+    themed.root()->paint(theme_painter,{},{},std::nullopt,&light);
+    assert(theme_buffer.at(0,0).style.background == light.palette.primary);
+    assert(theme_buffer.at(0,0).style.foreground == light.palette.on_primary);
+    assert(theme_buffer.at(0,1).style.foreground == light.palette.primary);
+    assert(theme_buffer.at(3,1).style.foreground == light.palette.muted);
+
     render::Canvas canvas(4,8);
     canvas.point(0,0);
     canvas.point(1,3);

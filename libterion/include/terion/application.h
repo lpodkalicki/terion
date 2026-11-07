@@ -13,6 +13,7 @@
 #include <terion/focus.h>
 #include <terion/reconciler.h>
 #include <terion/state.h>
+#include <terion/theme.h>
 #include <terion/terminal.h>
 #include <terion/render/painter.h>
 #include <terion/render/screen_buffer.h>
@@ -51,6 +52,8 @@ public:
     int run();
 
     [[nodiscard]] FocusManager& focus() noexcept { return focus_; }
+    void setTheme(Theme theme) { theme_ = std::move(theme); invalidate(); }
+    [[nodiscard]] const Theme& theme() const noexcept { return theme_; }
     [[nodiscard]] const Reconciler& reconciler() const noexcept { return reconciler_; }
 
     void quit() noexcept
@@ -76,6 +79,7 @@ private:
     DependencyTracker tracker_;
     EventCallback on_event_;
     FocusManager focus_;
+    Theme theme_;
     std::vector<std::string> component_focus_ids_;
     std::string hovered_button_id_;
     std::string pressed_button_id_;

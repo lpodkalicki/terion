@@ -21,6 +21,7 @@
 #include <terion/reconciler.h>
 #include <terion/render_node.h>
 #include <terion/state.h>
+#include <terion/theme.h>
 #include <terion/render/cell.h>
 #include <terion/render/canvas.h>
 #include <terion/render/color.h>

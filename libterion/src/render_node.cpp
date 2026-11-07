@@ -200,10 +200,15 @@ const RenderNode* RenderNode::hitTest(const Point position) const noexcept
 }
 
 void RenderNode::paint(Painter& painter, const std::string_view focused_id,
-    const std::string_view hovered_id, const std::optional<Color> background) const
+    const std::string_view hovered_id, const std::optional<Color> background, const Theme* theme) const
 {
     const auto effective_background = background_.has_value() ? background_ : background;
     TextStyle style = text_style_;
+    if (theme && text_style_ == TextStyle{})
+    {
+        style.foreground = theme->palette.foreground;
+        style.background = theme->palette.background;
+    }
     if (effective_background) style.background = *effective_background;
 
     if (background_) painter.fillBackground(bounds_,*background_);
@@ -216,7 +221,11 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     {
         const int filled = static_cast<int>(bounds_.width * std::clamp(value_,0.0,1.0));
         for (int i = 0; i < bounds_.width; ++i)
-            painter.put(bounds_.x+i,bounds_.y,i < filled ? "█" : "░",style);
+        {
+            TextStyle segment_style = style;
+            if (theme) segment_style.foreground = i < filled ? theme->palette.primary : theme->palette.muted;
+            painter.put(bounds_.x+i,bounds_.y,i < filled ? "█" : "░",segment_style);
+        }
         return;
     }
     if (type_ == Component::Type::Text || type_ == Component::Type::Button ||
@@ -227,6 +236,13 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             std::string label = text_;
             if (type_ == Component::Type::Button)
             {
+                if (theme && button_variant_ == ButtonVariant::Contained)
+                {
+                    style.foreground = theme->palette.on_primary;
+                    style.background = theme->palette.primary;
+                }
+                else if (theme && button_variant_ == ButtonVariant::Outlined)
+                    style.foreground = theme->palette.primary;
                 if (disabled_) label = "(" + label + ")";
                 else if (button_variant_ == ButtonVariant::Text) {}
                 else if (focused_id == std::to_string(id_)) label = ">" + label + "<";
@@ -245,7 +261,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         }
         return;
     }
-    for (const auto& child : children_) child->paint(painter,focused_id,hovered_id,effective_background);
+    for (const auto& child : children_) child->paint(painter,focused_id,hovered_id,effective_background,theme);
     if (border_) painter.border(bounds_,*border_,style);
 }
 
