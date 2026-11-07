@@ -133,6 +133,35 @@ Size RenderNode::measure(const Constraints& constraints) const
         content = {.width = addBounded(textWidth(value),type_ == Component::Type::Text ? 0 :
             type_ == Component::Type::TextField ? 3 : button_variant_ == ButtonVariant::Text ? 0 : 2),.height = 1};
     }
+    else if (type_ == Component::Type::Grid)
+    {
+        const int inset = addBounded(padding,padding);
+        const int columns = std::max(1,columns_);
+        const int inner_width = std::max(0,constraints.maximum.width - std::min(inset,constraints.maximum.width));
+        const int available_width = std::max(0,inner_width - static_cast<int>(std::min(
+            static_cast<long long>(inner_width),static_cast<long long>(columns - 1) * gap)));
+        const int cell_width = available_width / columns;
+        int largest_width = 0;
+        int row_height = 0;
+        int total_height = 0;
+        for (std::size_t i = 0; i < children_.size(); ++i)
+        {
+            const auto child_size = children_[i]->measure(Constraints{.maximum = {
+                .width = cell_width,.height = constraints.maximum.height}});
+            largest_width = std::max(largest_width,child_size.width);
+            row_height = std::max(row_height,child_size.height);
+            if (i % static_cast<std::size_t>(columns) == static_cast<std::size_t>(columns - 1) ||
+                i + 1 == children_.size())
+            {
+                total_height = addBounded(total_height,row_height);
+                if (i + 1 < children_.size()) total_height = addBounded(total_height,gap);
+                row_height = 0;
+            }
+        }
+        content = {.width = static_cast<int>(std::min(static_cast<long long>(std::numeric_limits<int>::max()),
+            static_cast<long long>(largest_width) * columns + static_cast<long long>(columns - 1) * gap + inset)),
+            .height = addBounded(total_height,inset)};
+    }
     else
     {
         const int inset = addBounded(padding,padding);
@@ -177,6 +206,42 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     const int inset = addBounded(padding,padding);
     const int inner_width = std::max(0,size.width - inset);
     const int inner_height = std::max(0,size.height - inset);
+    if (type_ == Component::Type::Grid)
+    {
+        const int columns = std::max(1,columns_);
+        const int available_width = std::max(0,inner_width - static_cast<int>(std::min(
+            static_cast<long long>(inner_width),static_cast<long long>(columns - 1) * gap)));
+        const int column_width = available_width / columns;
+        const int remainder = available_width % columns;
+        int y = origin.y + padding;
+        for (std::size_t row = 0; row * static_cast<std::size_t>(columns) < children_.size(); ++row)
+        {
+            int row_height = 0;
+            int x = origin.x + padding;
+            for (int col = 0; col < columns; ++col)
+            {
+                const std::size_t index = row * static_cast<std::size_t>(columns) + static_cast<std::size_t>(col);
+                if (index >= children_.size()) break;
+                const int width = column_width + (col < remainder ? 1 : 0);
+                const auto child_size = children_[index]->measure(Constraints{.maximum = {
+                    .width = width,.height = std::max(0,inner_height - (y - origin.y - padding))}});
+                row_height = std::max(row_height,child_size.height);
+                x += width + gap;
+            }
+            x = origin.x + padding;
+            for (int col = 0; col < columns; ++col)
+            {
+                const std::size_t index = row * static_cast<std::size_t>(columns) + static_cast<std::size_t>(col);
+                if (index >= children_.size()) break;
+                const int width = column_width + (col < remainder ? 1 : 0);
+                children_[index]->layout(Constraints{.maximum = {.width = width,.height = row_height}},
+                    {.x = x,.y = y});
+                x += width + gap;
+            }
+            y += row_height + gap;
+        }
+        return;
+    }
     int x = origin.x + padding;
     int y = origin.y + padding;
     for (const auto& child : children_)

@@ -62,6 +62,7 @@ private:
     std::optional<Color> background_;
     ButtonVariant button_variant_ = ButtonVariant::Outlined;
     double value_ = 0.0;
+    int columns_ = 1;
     std::function<void()> on_click_;
     std::function<void(std::string)> on_change_;
     std::string placeholder_;

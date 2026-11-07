@@ -31,6 +31,7 @@ public:
         Column,
         Row,
         Box,
+        Grid,
         Button,
         TextField,
         Divider,
@@ -53,6 +54,7 @@ public:
         std::optional<Color> background = std::nullopt;
         ButtonVariant button_variant = ButtonVariant::Outlined;
         double value = 0.0;
+        int columns = 1;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

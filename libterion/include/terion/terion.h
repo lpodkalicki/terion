@@ -15,6 +15,8 @@
 #include <terion/components/text_field.h>
 #include <terion/components/divider.h>
 #include <terion/components/progress.h>
+#include <terion/components/grid.h>
+#include <terion/components/stack.h>
 #include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/layout.h>
