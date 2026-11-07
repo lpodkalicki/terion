@@ -13,6 +13,22 @@ using namespace terion;
 
 int main()
 {
+    FocusManager focus;
+    int first_calls = 0;
+    int second_calls = 0;
+    focus.add("first",[&](const Event&) { ++first_calls; return true; });
+    focus.add("second",[&](const Event&) { ++second_calls; return true; });
+    assert(focus.current() == "first");
+    assert(focus.dispatch(Event{.key = Key::Character,.character = U'x'}));
+    assert(first_calls == 1 && second_calls == 0);
+    assert(focus.dispatch(Event{.key = Key::Tab}));
+    assert(focus.current() == "second");
+    assert(focus.dispatch(Event{.key = Key::Enter}));
+    assert(second_calls == 1);
+    assert(focus.previous() && focus.current() == "first");
+    assert(focus.remove("first") && focus.current() == "second");
+    assert(!focus.focus("missing"));
+
     InputDecoder decoder;
     decoder.feed("\033");
     assert(!decoder.nextEvent());
@@ -97,5 +113,18 @@ int main()
     app.render([](Painter& p, Size) { p.text(0,0,"Terion"); });
     app.renderOnce();
     assert(observed->output().find("Terion") != std::string::npos);
+    bool received = false;
+    app.onEvent([&](const Event& event) { received = event.key == Key::Enter; return received; });
+    assert(app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(received);
+    received = false;
+    app.focus().add("editor",[&](const Event& event) { return event.key == Key::Escape; });
+    assert(app.dispatchEvent(Event{.key = Key::Escape}));
+    assert(!received);
+    assert(app.focus().remove("editor"));
+    assert(app.dispatchEvent(Event{.key = Key::Escape}));
+    // The headless backend allows run() to finish deterministically without a TTY.
+    observed->push(Event{.key = Key::Escape});
+    assert(app.run() == 0);
     std::cout << "Terion tests passed\n";
 }

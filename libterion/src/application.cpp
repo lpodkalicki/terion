@@ -23,6 +23,19 @@ void Application::renderOnce()
     renderer_.render(buffer,*backend_);
 }
 
+bool Application::dispatchEvent(const Event& event)
+{
+    if (event.key == Key::Resize) renderer_.invalidate();
+    if (focus_.dispatch(event)) return true;
+    if (on_event_ && on_event_(event)) return true;
+    if (event.key == Key::Escape)
+    {
+        quit();
+        return true;
+    }
+    return false;
+}
+
 int Application::run()
 {
     running_ = true;
@@ -32,7 +45,13 @@ int Application::run()
         const auto size = backend_->size();
         if (size != lastSize) { renderer_.invalidate(); lastSize = size; }
         renderOnce();
-        if (const auto event = backend_->pollEvent(); event && event->key == Key::Escape) quit();
+        // Drain a bounded number of pending events to avoid delaying input under load.
+        for (int i = 0; i < 64 && running_; ++i)
+        {
+            const auto event = backend_->pollEvent();
+            if (!event) break;
+            dispatchEvent(*event);
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
     return 0;

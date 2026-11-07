@@ -6,6 +6,7 @@
 #define TERION_TERION_H
 
 #include <terion/application.h>
+#include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/render/cell.h>
 #include <terion/render/color.h>
