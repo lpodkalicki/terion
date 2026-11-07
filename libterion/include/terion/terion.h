@@ -22,6 +22,7 @@
 #include <terion/render_node.h>
 #include <terion/state.h>
 #include <terion/render/cell.h>
+#include <terion/render/canvas.h>
 #include <terion/render/color.h>
 #include <terion/render/differential_renderer.h>
 #include <terion/render/painter.h>

@@ -13,6 +13,23 @@ using namespace terion;
 
 int main()
 {
+    render::Canvas canvas(4,8);
+    canvas.point(0,0);
+    canvas.point(1,3);
+    ScreenBuffer canvas_buffer({.width = 2,.height = 2});
+    Painter canvas_painter(canvas_buffer);
+    canvas.paint(canvas_painter);
+    assert(canvas_buffer.at(0,0).grapheme == "⢁");
+    canvas.clear();
+    canvas.rectangle({.x = 0,.y = 0,.width = 4,.height = 8});
+    canvas.paint(canvas_painter);
+    assert(canvas_buffer.at(0,0).grapheme != "⠀");
+    canvas.clear();
+    canvas.line({.x = 0,.y = 0},{.x = 3,.y = 7});
+    canvas.circle({.x = 1,.y = 2},1);
+    canvas.paint(canvas_painter);
+    assert(canvas_buffer.at(0,0).grapheme != "⠀");
+
     ScreenBuffer drawing({.width = 12,.height = 6});
     Painter drawing_painter(drawing);
     drawing_painter.border({.x = 1,.y = 1,.width = 8,.height = 4},BorderStyle::Rounded);
