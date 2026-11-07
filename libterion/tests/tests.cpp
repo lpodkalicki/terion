@@ -44,6 +44,34 @@ int main()
     }
     assert(duplicate_rejected);
 
+    reconciler.update(Component::column({
+        Component::row({Component::text("A"),Component::text("BC")},"row",LayoutStyle{.gap = 2}),
+        Component::box({Component::text("X")},LayoutStyle{.width = 8,.padding = 1},"box")
+    },"root",LayoutStyle{.gap = 1}));
+    auto* layout_root = reconciler.root();
+    assert(layout_root->measure(Constraints{.maximum = {.width = 40,.height = 20}}) == (Size{.width = 8,.height = 5}));
+    layout_root->layout(Constraints{.maximum = {.width = 40,.height = 20}});
+    assert(layout_root->children()[0]->children()[1]->bounds().x == 3);
+    assert(layout_root->children()[1]->bounds().y == 2);
+    assert(layout_root->children()[1]->children()[0]->bounds().x == 1);
+    assert(layout_root->children()[1]->children()[0]->bounds().y == 3);
+    ScreenBuffer layout_buffer({.width = 12,.height = 8});
+    Painter layout_painter(layout_buffer);
+    layout_root->paint(layout_painter);
+    assert(layout_buffer.at(3,0).grapheme == "B");
+    assert(layout_buffer.at(1,3).grapheme == "X");
+    reconciler.update(Component::row({Component::text("界X"),Component::text("Z")}));
+    layout_root = reconciler.root();
+    layout_root->layout(Constraints{.maximum = {.width = 2,.height = 1}});
+    assert(layout_root->bounds().width == 2);
+    assert(layout_root->children()[0]->bounds().width == 2);
+    assert(layout_root->children()[1]->bounds().width == 0);
+    ScreenBuffer clipped({.width = 2,.height = 1});
+    Painter clipped_painter(clipped);
+    layout_root->paint(clipped_painter);
+    assert(clipped.at(0,0).grapheme == "界");
+    assert(clipped.at(1,0).width == 0);
+
     FocusManager focus;
     int first_calls = 0;
     int second_calls = 0;

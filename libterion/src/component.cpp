@@ -8,10 +8,20 @@ using namespace terion;
 
 Component Component::text(std::string value, std::string key)
 {
-    return Component({.type = Type::Text,.key = std::move(key),.text = std::move(value),.children = {}});
+    return Component({.type = Type::Text,.key = std::move(key),.text = std::move(value),.children = {},.layout = {}});
 }
 
-Component Component::column(std::vector<Component> children, std::string key)
+Component Component::column(std::vector<Component> children, std::string key, const LayoutStyle layout)
 {
-    return Component({.type = Type::Column,.key = std::move(key),.text = {},.children = std::move(children)});
+    return Component({.type = Type::Column,.key = std::move(key),.text = {},.children = std::move(children),.layout = layout});
+}
+
+Component Component::row(std::vector<Component> children, std::string key, const LayoutStyle layout)
+{
+    return Component({.type = Type::Row,.key = std::move(key),.text = {},.children = std::move(children),.layout = layout});
+}
+
+Component Component::box(std::vector<Component> children, const LayoutStyle layout, std::string key)
+{
+    return Component({.type = Type::Box,.key = std::move(key),.text = {},.children = std::move(children),.layout = layout});
 }

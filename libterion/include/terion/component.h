@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <terion/layout.h>
 
 namespace terion {
 
@@ -17,7 +18,9 @@ public:
     enum class Type
     {
         Text,
-        Column
+        Column,
+        Row,
+        Box
     }; /* End of enum Type */
 
     struct Props
@@ -26,12 +29,15 @@ public:
         std::string key;
         std::string text;
         std::vector<Component> children;
+        LayoutStyle layout;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}
 
     static Component text(std::string value, std::string key = {});
-    static Component column(std::vector<Component> children, std::string key = {});
+    static Component column(std::vector<Component> children, std::string key = {}, LayoutStyle layout = {});
+    static Component row(std::vector<Component> children, std::string key = {}, LayoutStyle layout = {});
+    static Component box(std::vector<Component> children, LayoutStyle layout = {}, std::string key = {});
 
     [[nodiscard]] const Props& props() const noexcept { return props_; }
 

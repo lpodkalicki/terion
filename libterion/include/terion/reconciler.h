@@ -16,6 +16,7 @@ class Reconciler
 public:
     void update(const Component& component);
     void clear() noexcept { root_.reset(); }
+    [[nodiscard]] RenderNode* root() noexcept { return root_.get(); }
     [[nodiscard]] const RenderNode* root() const noexcept { return root_.get(); }
 
 private:

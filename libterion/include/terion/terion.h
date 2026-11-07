@@ -9,6 +9,7 @@
 #include <terion/component.h>
 #include <terion/focus.h>
 #include <terion/geometry.h>
+#include <terion/layout.h>
 #include <terion/reconciler.h>
 #include <terion/render_node.h>
 #include <terion/render/cell.h>

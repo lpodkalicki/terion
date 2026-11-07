@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <terion/component.h>
+#include <terion/layout.h>
 #include <terion/render/painter.h>
 
 namespace terion {
@@ -22,8 +23,11 @@ public:
     [[nodiscard]] const std::string& key() const noexcept { return key_; }
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
     [[nodiscard]] const std::vector<std::unique_ptr<RenderNode>>& children() const noexcept { return children_; }
+    [[nodiscard]] Rect bounds() const noexcept { return bounds_; }
 
-    void paint(Painter& painter, Point origin = {}) const;
+    [[nodiscard]] Size measure(const Constraints& constraints) const;
+    void layout(const Constraints& constraints, Point origin = {});
+    void paint(Painter& painter) const;
     [[nodiscard]] int height() const noexcept;
 
 private:
@@ -37,6 +41,8 @@ private:
     Component::Type type_;
     std::string key_;
     std::string text_;
+    LayoutStyle style_;
+    Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
 }; /* End of class RenderNode */
 

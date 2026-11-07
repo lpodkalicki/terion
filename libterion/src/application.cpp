@@ -22,7 +22,11 @@ void Application::renderOnce()
     if (component_)
     {
         reconciler_.update(component_());
-        if (const auto* root = reconciler_.root()) root->paint(painter);
+        if (auto* root = reconciler_.root())
+        {
+            root->layout(Constraints{.maximum = buffer.size()});
+            root->paint(painter);
+        }
     }
     else if (paint_) paint_(painter,buffer.size());
     renderer_.render(buffer,*backend_);
