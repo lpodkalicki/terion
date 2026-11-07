@@ -4,6 +4,7 @@
 
 #include <terion/render/differential_renderer.h>
 #include <string>
+#include <vector>
 
 using namespace terion;
 
@@ -22,27 +23,43 @@ void DifferentialRenderer::render(const ScreenBuffer& current, TerminalBackend& 
     std::string output;
     if (full) output += "\033[2J";
     std::optional<TextStyle> style;
+    Point cursor {.x = -1,.y = -1};
+
     for (int y = 0; y < size.height; ++y)
     {
+        std::vector<bool> dirty(static_cast<std::size_t>(size.width), full);
+        if (!full)
+        {
+            for (int x = 0; x < size.width; ++x)
+            {
+                dirty[x] = current.at(x,y) != previous_->at(x,y);
+            }
+        }
+
+        // A continuation cell cannot be drawn independently. Repaint its leading cell.
+        for (int x = 1; x < size.width; ++x)
+        {
+            if (current.at(x,y).width == 0 && dirty[x]) dirty[x-1] = true;
+        }
+
         for (int x = 0; x < size.width;)
         {
             const auto& cell = current.at(x,y);
-            if (cell.width == 0 || (!full && cell == previous_->at(x,y))) { ++x; continue; }
-            const int start = x;
-            std::string run;
-            while (x < size.width)
+            if (!dirty[x] || cell.width == 0) { ++x; continue; }
+
+            if (cursor.x != x || cursor.y != y)
             {
-                const auto& next = current.at(x,y);
-                if (next.width == 0) { ++x; continue; }
-                if (!full && next == previous_->at(x,y)) break;
-                if (style && *style != next.style && !run.empty()) break;
-                if (!style || *style != next.style) { output += "\033[" + std::to_string(y+1) + ";" + std::to_string(x+1) + "H" + styleSequence(next.style); style = next.style; }
-                else if (run.empty()) output += "\033[" + std::to_string(y+1) + ";" + std::to_string(x+1) + "H";
-                run += next.grapheme;
-                x += next.width;
+                output += "\033[" + std::to_string(y+1) + ";" + std::to_string(x+1) + "H";
             }
-            output += run;
-            if (x == start) ++x;
+            if (!style || *style != cell.style)
+            {
+                output += styleSequence(cell.style);
+                style = cell.style;
+            }
+
+            output += cell.grapheme;
+            cursor = {.x = x + cell.width,.y = y};
+            x += cell.width;
         }
     }
     if (!output.empty()) { backend.write(output); backend.flush(); }

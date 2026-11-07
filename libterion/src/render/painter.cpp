@@ -31,19 +31,24 @@ void Painter::put(const int x, const int y, const std::string_view grapheme, con
 
 void Painter::text(int x, const int y, const std::string_view text, const TextStyle style) const
 {
-    for (std::size_t i = 0; i < text.size();) {
-        auto [code_point, bytes] = decodeUtf8(text,i);
+    int last_x = -1;
+    for (std::size_t i = 0; i < text.size();)
+    {
+        const auto [code_point, bytes] = decodeUtf8(text,i);
         if (bytes == 0) break;
-        auto width = codePointWidth(code_point);
-        if (width == 0 && i > 0 && buffer_.contains(x-1,y))
+        const int width = codePointWidth(code_point);
+        if (width == 0 && last_x >= 0)
         {
-            auto& prior = buffer_.at(x-1,y);
-            if (prior.width == 0 && buffer_.contains(x-2,y)) buffer_.at(x-2,y).grapheme.append(text.substr(i,bytes));
-            else prior.grapheme.append(text.substr(i,bytes));
+            buffer_.at(last_x,y).grapheme.append(text.substr(i,bytes));
         }
         else if (width > 0)
         {
-            put(x,y,text.substr(i,bytes),style);
+            if (buffer_.contains(x,y) && (width == 1 || buffer_.contains(x+1,y)))
+            {
+                put(x,y,text.substr(i,bytes),style);
+                last_x = x;
+            }
+            else last_x = -1;
             x += width;
         }
         i += bytes;
