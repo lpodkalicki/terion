@@ -13,6 +13,37 @@ using namespace terion;
 
 int main()
 {
+    Reconciler reconciler;
+    reconciler.update(Component::column({
+        Component::text("Alpha","a"),
+        Component::text("Beta","b")
+    }));
+    const auto* root = reconciler.root();
+    assert(root && root->children().size() == 2);
+    const auto root_id = root->id();
+    const auto a_id = root->children()[0]->id();
+    const auto b_id = root->children()[1]->id();
+    reconciler.update(Component::column({
+        Component::text("Beta updated","b"),
+        Component::text("Alpha","a")
+    }));
+    assert(reconciler.root()->id() == root_id);
+    assert(reconciler.root()->children()[0]->id() == b_id);
+    assert(reconciler.root()->children()[0]->text() == "Beta updated");
+    assert(reconciler.root()->children()[1]->id() == a_id);
+    reconciler.update(Component::column({Component::column({},"b")}));
+    assert(reconciler.root()->children()[0]->id() != b_id);
+    bool duplicate_rejected = false;
+    try
+    {
+        reconciler.update(Component::column({Component::text("A","same"),Component::text("B","same")}));
+    }
+    catch (const std::invalid_argument&)
+    {
+        duplicate_rejected = true;
+    }
+    assert(duplicate_rejected);
+
     FocusManager focus;
     int first_calls = 0;
     int second_calls = 0;
@@ -113,6 +144,23 @@ int main()
     app.render([](Painter& p, Size) { p.text(0,0,"Terion"); });
     app.renderOnce();
     assert(observed->output().find("Terion") != std::string::npos);
+    observed->clearOutput();
+    std::string label = "First";
+    app.render([&] {
+        return Component::column({Component::text(label,"label")});
+    });
+    app.renderOnce();
+    assert(observed->output().find("F") != std::string::npos);
+    const auto label_id = app.reconciler().root()->children()[0]->id();
+    ScreenBuffer component_buffer({.width = 20,.height = 5});
+    Painter component_painter(component_buffer);
+    app.reconciler().root()->paint(component_painter);
+    assert(component_buffer.at(0,0).grapheme == "F");
+    label = "Next";
+    observed->clearOutput();
+    app.renderOnce();
+    assert(app.reconciler().root()->children()[0]->id() == label_id);
+    assert(observed->output().find("N") != std::string::npos);
     bool received = false;
     app.onEvent([&](const Event& event) { received = event.key == Key::Enter; return received; });
     assert(app.dispatchEvent(Event{.key = Key::Enter}));

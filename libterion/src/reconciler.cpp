@@ -1,0 +1,57 @@
+/*
+ * Copyright (c) 2026 by Łukasz Marcin Podkalicki <lpodkalicki@gmail.com>
+ */
+
+#include <terion/reconciler.h>
+#include <stdexcept>
+#include <unordered_set>
+
+using namespace terion;
+
+namespace {
+
+void validateKeys(const Component& component)
+{
+    std::unordered_set<std::string> keys;
+    for (const auto& child : component.props().children)
+    {
+        if (!child.props().key.empty() && !keys.insert(child.props().key).second)
+            throw std::invalid_argument("duplicate component key among siblings");
+        validateKeys(child);
+    }
+}
+
+} /* End of anonymous namespace */
+
+void Reconciler::update(const Component& component)
+{
+    validateKeys(component);
+    reconcile(root_,component);
+}
+
+void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& component)
+{
+    const auto& props = component.props();
+    if (!node || node->type_ != props.type || node->key_ != props.key)
+        node.reset(new RenderNode(next_id_++,props.type,props.key));
+
+    node->text_ = props.text;
+    auto previous = std::move(node->children_);
+    node->children_.reserve(props.children.size());
+
+    for (const auto& child : props.children)
+    {
+        std::unique_ptr<RenderNode> matched;
+        for (auto& candidate : previous)
+        {
+            if (!candidate) continue;
+            if (candidate->key_ == child.props().key)
+            {
+                matched = std::move(candidate);
+                break;
+            }
+        }
+        reconcile(matched,child);
+        node->children_.push_back(std::move(matched));
+    }
+}

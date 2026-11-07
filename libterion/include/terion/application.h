@@ -7,7 +7,9 @@
 
 #include <functional>
 #include <memory>
+#include <terion/component.h>
 #include <terion/focus.h>
+#include <terion/reconciler.h>
 #include <terion/terminal.h>
 #include <terion/render/painter.h>
 #include <terion/render/screen_buffer.h>
@@ -19,6 +21,7 @@ class Application
 {
 public:
     using PaintCallback = std::function<void(Painter&, Size)>;
+    using ComponentCallback = std::function<Component()>;
     using EventCallback = std::function<bool(const Event&)>;
 
     explicit Application(std::unique_ptr<TerminalBackend> backend);
@@ -26,6 +29,13 @@ public:
     void render(PaintCallback callback)
     {
         paint_ = std::move(callback);
+        component_ = {};
+    }
+
+    void render(ComponentCallback callback)
+    {
+        component_ = std::move(callback);
+        paint_ = {};
     }
 
     void renderOnce();
@@ -34,6 +44,7 @@ public:
     int run();
 
     [[nodiscard]] FocusManager& focus() noexcept { return focus_; }
+    [[nodiscard]] const Reconciler& reconciler() const noexcept { return reconciler_; }
 
     void quit() noexcept
     {
@@ -49,6 +60,8 @@ private:
     std::unique_ptr<TerminalBackend> backend_;
     DifferentialRenderer renderer_;
     PaintCallback paint_;
+    ComponentCallback component_;
+    Reconciler reconciler_;
     EventCallback on_event_;
     FocusManager focus_;
     bool running_ = false;

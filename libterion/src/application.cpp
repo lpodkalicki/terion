@@ -19,7 +19,12 @@ void Application::renderOnce()
 {
     ScreenBuffer buffer(backend_->size());
     Painter painter(buffer);
-    if (paint_) paint_(painter,buffer.size());
+    if (component_)
+    {
+        reconciler_.update(component_());
+        if (const auto* root = reconciler_.root()) root->paint(painter);
+    }
+    else if (paint_) paint_(painter,buffer.size());
     renderer_.render(buffer,*backend_);
 }
 
