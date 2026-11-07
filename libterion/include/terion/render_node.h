@@ -40,7 +40,8 @@ public:
 
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
-    void paint(Painter& painter, std::string_view focused_id = {}, std::string_view hovered_id = {}) const;
+    void paint(Painter& painter, std::string_view focused_id = {}, std::string_view hovered_id = {},
+        std::optional<Color> background = std::nullopt) const;
     [[nodiscard]] int height() const noexcept;
 
 private:
@@ -56,6 +57,10 @@ private:
     std::string text_;
     LayoutStyle style_;
     TextStyle text_style_;
+    std::optional<BorderStyle> border_;
+    std::optional<Color> background_;
+    ButtonVariant button_variant_ = ButtonVariant::Outlined;
+    double value_ = 0.0;
     std::function<void()> on_click_;
     std::function<void(std::string)> on_change_;
     std::string placeholder_;

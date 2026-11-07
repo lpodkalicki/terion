@@ -9,6 +9,14 @@
 
 namespace terion {
 
+enum class BorderStyle
+{
+    Single,
+    Double,
+    Rounded,
+    Heavy
+}; /* End of enum BorderStyle */
+
 struct Color
 {
     std::uint8_t red = 255, green = 255, blue = 255;

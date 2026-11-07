@@ -115,15 +115,23 @@ int addBounded(const int a, const int b)
 
 Size RenderNode::measure(const Constraints& constraints) const
 {
-    const int padding = std::max(0,style_.padding);
+    const int padding = std::max(0,style_.padding) + (border_ ? 1 : 0);
     const int gap = std::max(0,style_.gap);
     Size content{};
 
-    if (type_ == Component::Type::Text || type_ == Component::Type::Button || type_ == Component::Type::TextField)
+    if (type_ == Component::Type::Divider)
+    {
+        content = {.width = constraints.maximum.width,.height = 1};
+    }
+    else if (type_ == Component::Type::Progress)
+    {
+        content = {.width = 20,.height = 1};
+    }
+    else if (type_ == Component::Type::Text || type_ == Component::Type::Button || type_ == Component::Type::TextField)
     {
         const auto& value = type_ == Component::Type::TextField && text_.empty() ? placeholder_ : text_;
         content = {.width = addBounded(textWidth(value),type_ == Component::Type::Text ? 0 :
-            type_ == Component::Type::TextField ? 3 : 2),.height = 1};
+            type_ == Component::Type::TextField ? 3 : button_variant_ == ButtonVariant::Text ? 0 : 2),.height = 1};
     }
     else
     {
@@ -161,9 +169,10 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
     if (type_ == Component::Type::Text || type_ == Component::Type::Button ||
-        type_ == Component::Type::TextField) return;
+        type_ == Component::Type::TextField || type_ == Component::Type::Divider ||
+        type_ == Component::Type::Progress) return;
 
-    const int padding = std::max(0,style_.padding);
+    const int padding = std::max(0,style_.padding) + (border_ ? 1 : 0);
     const int gap = std::max(0,style_.gap);
     const int inset = addBounded(padding,padding);
     const int inner_width = std::max(0,size.width - inset);
@@ -191,8 +200,25 @@ const RenderNode* RenderNode::hitTest(const Point position) const noexcept
 }
 
 void RenderNode::paint(Painter& painter, const std::string_view focused_id,
-    const std::string_view hovered_id) const
+    const std::string_view hovered_id, const std::optional<Color> background) const
 {
+    const auto effective_background = background_.has_value() ? background_ : background;
+    TextStyle style = text_style_;
+    if (effective_background) style.background = *effective_background;
+
+    if (background_) painter.fillBackground(bounds_,*background_);
+    if (type_ == Component::Type::Divider)
+    {
+        painter.horizontalLine(bounds_.x,bounds_.y,bounds_.width,style);
+        return;
+    }
+    if (type_ == Component::Type::Progress)
+    {
+        const int filled = static_cast<int>(bounds_.width * std::clamp(value_,0.0,1.0));
+        for (int i = 0; i < bounds_.width; ++i)
+            painter.put(bounds_.x+i,bounds_.y,i < filled ? "█" : "░",style);
+        return;
+    }
     if (type_ == Component::Type::Text || type_ == Component::Type::Button ||
         type_ == Component::Type::TextField)
     {
@@ -202,8 +228,10 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             if (type_ == Component::Type::Button)
             {
                 if (disabled_) label = "(" + label + ")";
+                else if (button_variant_ == ButtonVariant::Text) {}
                 else if (focused_id == std::to_string(id_)) label = ">" + label + "<";
                 else if (hovered_id == std::to_string(id_)) label = "{" + label + "}";
+                else if (button_variant_ == ButtonVariant::Contained) label = " " + label + " ";
                 else label = "[" + label + "]";
             }
             else if (type_ == Component::Type::TextField)
@@ -213,11 +241,12 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                     label.insert(std::min(cursor_byte_,label.size()),"|");
                 label = disabled_ ? "(" + label + ")" : "[" + label + "]";
             }
-            painter.text(bounds_.x,bounds_.y,clipText(label,bounds_.width),text_style_);
+            painter.text(bounds_.x,bounds_.y,clipText(label,bounds_.width),style);
         }
         return;
     }
-    for (const auto& child : children_) child->paint(painter,focused_id,hovered_id);
+    for (const auto& child : children_) child->paint(painter,focused_id,hovered_id,effective_background);
+    if (border_) painter.border(bounds_,*border_,style);
 }
 
 int RenderNode::height() const noexcept

@@ -10,14 +10,6 @@
 
 namespace terion {
 
-enum class BorderStyle
-{
-    Single,
-    Double,
-    Rounded,
-    Heavy
-}; /* End of enum BorderStyle */
-
 class Painter
 {
 public:

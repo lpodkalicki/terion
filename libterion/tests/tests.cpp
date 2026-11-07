@@ -24,6 +24,23 @@ int main()
     assert(drawing.at(4,2).grapheme == "─");
     drawing_painter.fillBackground({.x = 2,.y = 2,.width = 3,.height = 1},Color::rgb(3,5,7));
     assert(drawing.at(3,2).style.background == Color::rgb(3,5,7));
+    Reconciler styled;
+    styled.update(Box({.children = {
+        Typography({.text = "Hello"}),
+        Divider({.layout = {.width = 9}}),
+        Progress({.value = 0.5,.layout = {.width = 8}})
+    },.layout = {.padding = 1},.border = BorderStyle::Rounded,
+        .background = Color::rgb(8,9,10)}));
+    styled.root()->layout(Constraints{.maximum = {.width = 20,.height = 10}});
+    ScreenBuffer styled_buffer({.width = 20,.height = 10});
+    Painter styled_painter(styled_buffer);
+    styled.root()->paint(styled_painter);
+    assert(styled_buffer.at(0,0).grapheme == "╭");
+    assert(styled_buffer.at(2,2).grapheme == "H");
+    assert(styled_buffer.at(2,2).style.background == Color::rgb(8,9,10));
+    assert(styled_buffer.at(2,3).grapheme == "─");
+    assert(styled_buffer.at(2,4).grapheme == "█");
+    assert(styled_buffer.at(6,4).grapheme == "░");
 
     Reconciler reconciler;
     reconciler.update(Component::column({

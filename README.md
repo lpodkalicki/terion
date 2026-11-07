@@ -24,6 +24,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - MUI-inspired components in `<terion/components/>`: `Typography`, `Box`, `Row`, `Column` and interactive `Button`.
 - SGR mouse reporting (click, move, drag and wheel) with button hit-testing, hover and focus-on-click.
 - Controlled `TextField` supports UTF-8 codepoint entry, cursor movement, Backspace/Delete and mouse focus.
+- Drawing primitives, styled `Box`, `Divider`, `Progress` and button visual variants.
 - UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.
 - Cmdly integration will be an optional `Console` component in a later milestone.
 

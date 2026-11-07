@@ -17,10 +17,14 @@ public:
         std::vector<Component> children = {};
         std::string key = {};
         LayoutStyle layout = {};
+        std::optional<BorderStyle> border = std::nullopt;
+        std::optional<Color> background = std::nullopt;
     }; /* End of struct Props */
 
     explicit Box(Props props) :
-        Component(Component::box(std::move(props.children),props.layout,std::move(props.key)))
+        Component({.type = Type::Box,.key = std::move(props.key),
+            .children = std::move(props.children),.layout = props.layout,
+            .border = props.border,.background = props.background})
     {}
 }; /* End of class Box */
 

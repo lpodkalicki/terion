@@ -7,12 +7,20 @@
 
 #include <string>
 #include <functional>
+#include <optional>
 #include <utility>
 #include <vector>
 #include <terion/layout.h>
 #include <terion/render/color.h>
 
 namespace terion {
+
+enum class ButtonVariant
+{
+    Text,
+    Outlined,
+    Contained
+}; /* End of enum ButtonVariant */
 
 class Component
 {
@@ -24,7 +32,9 @@ public:
         Row,
         Box,
         Button,
-        TextField
+        TextField,
+        Divider,
+        Progress
     }; /* End of enum Type */
 
     struct Props
@@ -39,6 +49,10 @@ public:
         std::function<void(std::string)> on_change = {};
         std::string placeholder = {};
         bool disabled = false;
+        std::optional<BorderStyle> border = std::nullopt;
+        std::optional<Color> background = std::nullopt;
+        ButtonVariant button_variant = ButtonVariant::Outlined;
+        double value = 0.0;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

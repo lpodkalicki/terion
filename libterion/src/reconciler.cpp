@@ -41,6 +41,10 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->text_ = props.text;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
+    node->border_ = props.border;
+    node->background_ = props.background;
+    node->button_variant_ = props.button_variant;
+    node->value_ = props.value;
     node->on_click_ = props.on_click;
     node->on_change_ = props.on_change;
     node->placeholder_ = props.placeholder;

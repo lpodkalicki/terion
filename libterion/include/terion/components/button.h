@@ -16,6 +16,7 @@ public:
     {
         std::string text = {};
         std::string key = {};
+        ButtonVariant variant = ButtonVariant::Outlined;
         bool disabled = false;
         std::function<void()> onClick = {};
         TextStyle style = {};
@@ -23,7 +24,8 @@ public:
 
     explicit Button(Props props) :
         Component({.type = Type::Button,.key = std::move(props.key),.text = std::move(props.text),
-            .text_style = props.style,.on_click = std::move(props.onClick),.disabled = props.disabled})
+            .text_style = props.style,.on_click = std::move(props.onClick),.disabled = props.disabled,
+            .button_variant = props.variant})
     {}
 }; /* End of class Button */
 
