@@ -116,7 +116,17 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     }
 }
 
-void RenderNode::paint(Painter& painter, const std::string_view focused_id) const
+const RenderNode* RenderNode::hitTest(const Point position) const noexcept
+{
+    if (position.x < bounds_.x || position.y < bounds_.y ||
+        position.x >= bounds_.x + bounds_.width || position.y >= bounds_.y + bounds_.height) return nullptr;
+    for (auto it = children_.rbegin(); it != children_.rend(); ++it)
+        if (const auto* hit = (*it)->hitTest(position)) return hit;
+    return this;
+}
+
+void RenderNode::paint(Painter& painter, const std::string_view focused_id,
+    const std::string_view hovered_id) const
 {
     if (type_ == Component::Type::Text || type_ == Component::Type::Button)
     {
@@ -127,13 +137,14 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id) cons
             {
                 if (disabled_) label = "(" + label + ")";
                 else if (focused_id == std::to_string(id_)) label = ">" + label + "<";
+                else if (hovered_id == std::to_string(id_)) label = "{" + label + "}";
                 else label = "[" + label + "]";
             }
             painter.text(bounds_.x,bounds_.y,clipText(label,bounds_.width),text_style_);
         }
         return;
     }
-    for (const auto& child : children_) child->paint(painter,focused_id);
+    for (const auto& child : children_) child->paint(painter,focused_id,hovered_id);
 }
 
 int RenderNode::height() const noexcept

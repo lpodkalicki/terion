@@ -115,6 +115,20 @@ int main()
     decoder.feed("\033[99~");
     assert(decoder.nextEvent()->key == Key::Unknown);
     assert(!decoder.nextEvent());
+    decoder.feed("\033[<0;2;");
+    assert(!decoder.nextEvent());
+    decoder.feed("3M");
+    const auto mouse_press = decoder.nextEvent();
+    assert(mouse_press && mouse_press->key == Key::Mouse);
+    assert(mouse_press->mouse.action == MouseAction::Press);
+    assert(mouse_press->mouse.button == MouseButton::Left);
+    assert(mouse_press->mouse.position == (Point{.x = 1,.y = 2}));
+    decoder.feed("\033[<0;2;3m\033[<64;5;6M");
+    assert(decoder.nextEvent()->mouse.action == MouseAction::Release);
+    const auto wheel = decoder.nextEvent();
+    assert(wheel && wheel->mouse.action == MouseAction::Scroll && wheel->mouse.scrollY == 1);
+    decoder.feed("\033[<32;3;4M");
+    assert(decoder.nextEvent()->mouse.action == MouseAction::Move);
 
     ScreenBuffer screen({.width = 12,.height = 3});
     Painter painter(screen);
@@ -244,6 +258,26 @@ int main()
     assert(clicks == 11);
     app.renderOnce();
     assert(app.focus().current() == second_button_id);
+    assert(app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 1},.button = MouseButton::Left,.action = MouseAction::Press}}));
+    assert(app.focus().current() == first_button_id);
+    assert(app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 1},.button = MouseButton::Left,.action = MouseAction::Release}}));
+    assert(clicks == 12);
+    app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 2},.button = MouseButton::Left,.action = MouseAction::Press}});
+    app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 2},.button = MouseButton::Left,.action = MouseAction::Release}});
+    assert(clicks == 12);
+    app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 1},.button = MouseButton::Left,.action = MouseAction::Press}});
+    app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 40,.y = 10},.button = MouseButton::Left,.action = MouseAction::Release}});
+    assert(clicks == 12);
+    ScreenBuffer hover_buffer({.width = 20,.height = 5});
+    Painter hover_painter(hover_buffer);
+    app.reconciler().root()->paint(hover_painter,{},first_button_id);
+    assert(hover_buffer.at(0,1).grapheme == "{");
     app.render([](Painter&, Size) {});
     app.renderOnce();
     bool received = false;

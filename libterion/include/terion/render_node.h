@@ -26,12 +26,13 @@ public:
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
     [[nodiscard]] const std::vector<std::unique_ptr<RenderNode>>& children() const noexcept { return children_; }
     [[nodiscard]] Rect bounds() const noexcept { return bounds_; }
+    [[nodiscard]] const RenderNode* hitTest(Point position) const noexcept;
     [[nodiscard]] bool disabled() const noexcept { return disabled_; }
     [[nodiscard]] const std::function<void()>& onClick() const noexcept { return on_click_; }
 
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
-    void paint(Painter& painter, std::string_view focused_id = {}) const;
+    void paint(Painter& painter, std::string_view focused_id = {}, std::string_view hovered_id = {}) const;
     [[nodiscard]] int height() const noexcept;
 
 private:

@@ -65,6 +65,7 @@ public:
 
 private:
     void syncFocusTargets();
+    bool handleMouse(const MouseEvent& mouse);
 
     std::unique_ptr<TerminalBackend> backend_;
     DifferentialRenderer renderer_;
@@ -76,6 +77,8 @@ private:
     EventCallback on_event_;
     FocusManager focus_;
     std::vector<std::string> button_focus_ids_;
+    std::string hovered_button_id_;
+    std::string pressed_button_id_;
     bool running_ = false;
 }; /* End of class Application */
 

@@ -34,14 +34,44 @@ enum class Key
     Insert,
     PageUp,
     PageDown,
-    Resize
+    Resize,
+    Mouse
 }; /* End of enum Key */
+
+enum class MouseButton
+{
+    None,
+    Left,
+    Middle,
+    Right
+}; /* End of enum MouseButton */
+
+enum class MouseAction
+{
+    Press,
+    Release,
+    Move,
+    Scroll
+}; /* End of enum MouseAction */
+
+struct MouseEvent
+{
+    Point position{};
+    MouseButton button = MouseButton::None;
+    MouseAction action = MouseAction::Move;
+    int scrollX = 0;
+    int scrollY = 0;
+    bool shift = false;
+    bool alt = false;
+    bool ctrl = false;
+}; /* End of struct MouseEvent */
 
 struct Event
 {
     Key key = Key::Unknown;
     char32_t character = 0;
     Size size{};
+    MouseEvent mouse{};
 }; /* End of struct Event */
 
 // Stateful incremental decoder. Incomplete UTF-8 and escape sequences are buffered.

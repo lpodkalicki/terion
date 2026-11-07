@@ -28,7 +28,7 @@ int main()
                     },
                     .layout = {.gap = 2}
                 }),
-                Typography({.text = "Tab to focus, Enter or Space to activate, ESC to exit"})
+                Typography({.text = "Tab, Enter, Space or mouse click; ESC to exit"})
             },
             .layout = {.padding = 1,.gap = 1}
         });

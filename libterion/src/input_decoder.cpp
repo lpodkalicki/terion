@@ -4,6 +4,7 @@
 
 #include <terion/terminal.h>
 #include <terion/utf8.h>
+#include <limits>
 
 using namespace terion;
 
@@ -29,6 +30,52 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
             if (end < bytes_.size() && end < 64)
             {
                 const auto final = bytes_[end];
+                if (bytes_.size() > 3 && bytes_[2] == '<' && (final == 'M' || final == 'm'))
+                {
+                    int fields[3] = {};
+                    int field = 0;
+                    bool valid = true;
+                    bool has_digit = false;
+                    for (std::size_t i = 3; i < end; ++i)
+                    {
+                        const auto c = bytes_[i];
+                        if (c == ';' && has_digit && field < 2)
+                        {
+                            ++field;
+                            has_digit = false;
+                        }
+                        else if (c >= '0' && c <= '9' &&
+                            fields[field] <= (std::numeric_limits<int>::max() - (c - '0')) / 10)
+                        {
+                            fields[field] = fields[field] * 10 + c - '0';
+                            has_digit = true;
+                        }
+                        else { valid = false; break; }
+                    }
+                    valid = valid && field == 2 && has_digit && fields[1] > 0 && fields[2] > 0;
+                    for (std::size_t i = 0; i <= end; ++i) bytes_.pop_front();
+                    if (!valid) return Event{.key = Key::Unknown};
+
+                    const int code = fields[0];
+                    const int button = code & 3;
+                    MouseEvent mouse {
+                        .position = {.x = fields[1] - 1,.y = fields[2] - 1},
+                        .button = button == 0 ? MouseButton::Left : button == 1 ? MouseButton::Middle :
+                            button == 2 ? MouseButton::Right : MouseButton::None,
+                        .action = (code & 64) ? MouseAction::Scroll : final == 'm' ? MouseAction::Release :
+                            (code & 32) ? MouseAction::Move : MouseAction::Press,
+                        .shift = (code & 4) != 0,
+                        .alt = (code & 8) != 0,
+                        .ctrl = (code & 16) != 0
+                    };
+                    if (mouse.action == MouseAction::Scroll)
+                    {
+                        mouse.button = MouseButton::None;
+                        if (button < 2) mouse.scrollY = button == 0 ? 1 : -1;
+                        else mouse.scrollX = button == 2 ? -1 : 1;
+                    }
+                    return Event{.key = Key::Mouse,.mouse = mouse};
+                }
                 Key key = Key::Unknown;
                 switch (final)
                 {

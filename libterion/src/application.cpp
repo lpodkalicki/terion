@@ -36,7 +36,7 @@ void Application::renderOnce()
     syncFocusTargets();
     if (component_)
     {
-        if (const auto* root = reconciler_.root()) root->paint(painter,focus_.current());
+        if (const auto* root = reconciler_.root()) root->paint(painter,focus_.current(),hovered_button_id_);
     }
     else if (paint_) paint_(painter,buffer.size());
     renderer_.render(buffer,*backend_);
@@ -66,12 +66,44 @@ void Application::syncFocusTargets()
     };
     if (const auto* root = reconciler_.root()) visit(visit,*root);
     if (!previous_focus.empty()) focus_.focus(previous_focus);
+    if (std::ranges::find(button_focus_ids_,hovered_button_id_) == button_focus_ids_.end()) hovered_button_id_.clear();
+    if (std::ranges::find(button_focus_ids_,pressed_button_id_) == button_focus_ids_.end()) pressed_button_id_.clear();
+}
+
+bool Application::handleMouse(const MouseEvent& mouse)
+{
+    const RenderNode* hit = nullptr;
+    if (component_ && reconciler_.root()) hit = reconciler_.root()->hitTest(mouse.position);
+    if (hit && (hit->type() != Component::Type::Button || hit->disabled() || !hit->onClick())) hit = nullptr;
+    const std::string target = hit ? std::to_string(hit->id()) : std::string{};
+
+    if (hovered_button_id_ != target)
+    {
+        hovered_button_id_ = target;
+        invalidate();
+    }
+    if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
+    {
+        pressed_button_id_ = target;
+        if (hit) focus_.focus(target);
+        return hit != nullptr;
+    }
+    if (mouse.action == MouseAction::Release &&
+        (mouse.button == MouseButton::Left || mouse.button == MouseButton::None))
+    {
+        const bool activate = hit && !pressed_button_id_.empty() && pressed_button_id_ == target;
+        pressed_button_id_.clear();
+        if (activate) { hit->onClick()(); return true; }
+    }
+    if (mouse.action == MouseAction::Scroll) return false;
+    return hit != nullptr;
 }
 
 bool Application::dispatchEvent(const Event& event)
 {
     if (event.key == Key::Resize) renderer_.invalidate();
     invalidate();
+    if (event.key == Key::Mouse && handleMouse(event.mouse)) return true;
     if (focus_.dispatch(event)) return true;
     if (on_event_ && on_event_(event)) return true;
     if (event.key == Key::Escape)
