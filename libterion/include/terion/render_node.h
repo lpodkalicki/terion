@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <functional>
+#include <string_view>
 #include <vector>
 #include <terion/component.h>
 #include <terion/layout.h>
@@ -24,10 +26,12 @@ public:
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
     [[nodiscard]] const std::vector<std::unique_ptr<RenderNode>>& children() const noexcept { return children_; }
     [[nodiscard]] Rect bounds() const noexcept { return bounds_; }
+    [[nodiscard]] bool disabled() const noexcept { return disabled_; }
+    [[nodiscard]] const std::function<void()>& onClick() const noexcept { return on_click_; }
 
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
-    void paint(Painter& painter) const;
+    void paint(Painter& painter, std::string_view focused_id = {}) const;
     [[nodiscard]] int height() const noexcept;
 
 private:
@@ -42,6 +46,9 @@ private:
     std::string key_;
     std::string text_;
     LayoutStyle style_;
+    TextStyle text_style_;
+    std::function<void()> on_click_;
+    bool disabled_ = false;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
 }; /* End of class RenderNode */

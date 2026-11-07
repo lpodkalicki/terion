@@ -7,6 +7,11 @@
 
 #include <terion/application.h>
 #include <terion/component.h>
+#include <terion/components/box.h>
+#include <terion/components/row.h>
+#include <terion/components/column.h>
+#include <terion/components/typography.h>
+#include <terion/components/button.h>
 #include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/layout.h>

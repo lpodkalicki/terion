@@ -21,6 +21,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `RenderNode` and `Reconciler` retain keyed node identity across view rebuilds.
 - Initial constraints-based layout supports text, `Row`, `Column`, `Box`, padding, gap and fixed dimensions.
 - Reactive `State<T>` automatically tracks dependencies in render callbacks; unchanged state does not trigger redraw.
+- MUI-inspired components in `<terion/components/>`: `Typography`, `Box`, `Row`, `Column` and interactive `Button`.
 - UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.
 - Cmdly integration will be an optional `Console` component in a later milestone.
 

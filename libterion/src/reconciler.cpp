@@ -37,6 +37,9 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
 
     node->text_ = props.text;
     node->style_ = props.layout;
+    node->text_style_ = props.text_style;
+    node->on_click_ = props.on_click;
+    node->disabled_ = props.disabled;
     auto previous = std::move(node->children_);
     node->children_.reserve(props.children.size());
 

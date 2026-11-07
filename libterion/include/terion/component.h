@@ -6,9 +6,11 @@
 #define TERION_COMPONENT_H
 
 #include <string>
+#include <functional>
 #include <utility>
 #include <vector>
 #include <terion/layout.h>
+#include <terion/render/color.h>
 
 namespace terion {
 
@@ -20,16 +22,20 @@ public:
         Text,
         Column,
         Row,
-        Box
+        Box,
+        Button
     }; /* End of enum Type */
 
     struct Props
     {
         Type type = Type::Column;
-        std::string key;
-        std::string text;
-        std::vector<Component> children;
-        LayoutStyle layout;
+        std::string key = {};
+        std::string text = {};
+        std::vector<Component> children = {};
+        LayoutStyle layout = {};
+        TextStyle text_style = {};
+        std::function<void()> on_click = {};
+        bool disabled = false;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

@@ -223,6 +223,29 @@ int main()
     assert(!app.needsRender());
     show.set(true);
     assert(app.needsRender());
+    int clicks = 0;
+    app.render([&] {
+        return Column({.children = {
+            Typography({.text = "Actions",.variant = TypographyVariant::H2}),
+            Button({.text = "First",.key = "first",.onClick = [&] { ++clicks; }}),
+            Button({.text = "Disabled",.key = "disabled",.disabled = true,.onClick = [&] { clicks += 100; }}),
+            Button({.text = "Second",.key = "second",.onClick = [&] { clicks += 10; }})
+        }});
+    });
+    app.renderOnce();
+    const auto first_button_id = std::to_string(app.reconciler().root()->children()[1]->id());
+    const auto second_button_id = std::to_string(app.reconciler().root()->children()[3]->id());
+    assert(app.focus().current() == first_button_id);
+    assert(app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(clicks == 1);
+    assert(app.dispatchEvent(Event{.key = Key::Tab}));
+    assert(app.focus().current() == second_button_id);
+    assert(app.dispatchEvent(Event{.key = Key::Character,.character = U' '}));
+    assert(clicks == 11);
+    app.renderOnce();
+    assert(app.focus().current() == second_button_id);
+    app.render([](Painter&, Size) {});
+    app.renderOnce();
     bool received = false;
     app.onEvent([&](const Event& event) { received = event.key == Key::Enter; return received; });
     assert(app.dispatchEvent(Event{.key = Key::Enter}));

@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <atomic>
+#include <vector>
 #include <terion/component.h>
 #include <terion/focus.h>
 #include <terion/reconciler.h>
@@ -63,6 +64,8 @@ public:
     }
 
 private:
+    void syncFocusTargets();
+
     std::unique_ptr<TerminalBackend> backend_;
     DifferentialRenderer renderer_;
     PaintCallback paint_;
@@ -72,6 +75,7 @@ private:
     DependencyTracker tracker_;
     EventCallback on_event_;
     FocusManager focus_;
+    std::vector<std::string> button_focus_ids_;
     bool running_ = false;
 }; /* End of class Application */
 

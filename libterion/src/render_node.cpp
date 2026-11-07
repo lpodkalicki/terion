@@ -57,9 +57,9 @@ Size RenderNode::measure(const Constraints& constraints) const
     const int gap = std::max(0,style_.gap);
     Size content{};
 
-    if (type_ == Component::Type::Text)
+    if (type_ == Component::Type::Text || type_ == Component::Type::Button)
     {
-        content = {.width = textWidth(text_),.height = 1};
+        content = {.width = addBounded(textWidth(text_),type_ == Component::Type::Button ? 2 : 0),.height = 1};
     }
     else
     {
@@ -96,7 +96,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
 {
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
-    if (type_ == Component::Type::Text) return;
+    if (type_ == Component::Type::Text || type_ == Component::Type::Button) return;
 
     const int padding = std::max(0,style_.padding);
     const int gap = std::max(0,style_.gap);
@@ -116,15 +116,24 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     }
 }
 
-void RenderNode::paint(Painter& painter) const
+void RenderNode::paint(Painter& painter, const std::string_view focused_id) const
 {
-    if (type_ == Component::Type::Text)
+    if (type_ == Component::Type::Text || type_ == Component::Type::Button)
     {
         if (bounds_.height > 0 && bounds_.width > 0)
-            painter.text(bounds_.x,bounds_.y,clipText(text_,bounds_.width));
+        {
+            std::string label = text_;
+            if (type_ == Component::Type::Button)
+            {
+                if (disabled_) label = "(" + label + ")";
+                else if (focused_id == std::to_string(id_)) label = ">" + label + "<";
+                else label = "[" + label + "]";
+            }
+            painter.text(bounds_.x,bounds_.y,clipText(label,bounds_.width),text_style_);
+        }
         return;
     }
-    for (const auto& child : children_) child->paint(painter);
+    for (const auto& child : children_) child->paint(painter,focused_id);
 }
 
 int RenderNode::height() const noexcept
