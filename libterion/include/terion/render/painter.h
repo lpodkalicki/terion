@@ -10,6 +10,14 @@
 
 namespace terion {
 
+enum class BorderStyle
+{
+    Single,
+    Double,
+    Rounded,
+    Heavy
+}; /* End of enum BorderStyle */
+
 class Painter
 {
 public:
@@ -17,6 +25,11 @@ public:
     void put(int x, int y, std::string_view grapheme, TextStyle style = {}) const;
     void text(int x, int y, std::string_view text, TextStyle style = {}) const;
     void fill(Rect rect, Cell cell = {}) const;
+    void fillBackground(Rect rect, Color color) const;
+    void horizontalLine(int x, int y, int length, TextStyle style = {}) const;
+    void verticalLine(int x, int y, int length, TextStyle style = {}) const;
+    void line(Point start, Point end, TextStyle style = {}) const;
+    void border(Rect rect, BorderStyle border = BorderStyle::Single, TextStyle style = {}) const;
 
 private:
     ScreenBuffer& buffer_;

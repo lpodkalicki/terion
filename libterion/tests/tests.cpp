@@ -13,6 +13,18 @@ using namespace terion;
 
 int main()
 {
+    ScreenBuffer drawing({.width = 12,.height = 6});
+    Painter drawing_painter(drawing);
+    drawing_painter.border({.x = 1,.y = 1,.width = 8,.height = 4},BorderStyle::Rounded);
+    assert(drawing.at(1,1).grapheme == "╭");
+    assert(drawing.at(8,1).grapheme == "╮");
+    assert(drawing.at(1,4).grapheme == "╰");
+    assert(drawing.at(8,4).grapheme == "╯");
+    drawing_painter.line({.x = 2,.y = 2},{.x = 6,.y = 2});
+    assert(drawing.at(4,2).grapheme == "─");
+    drawing_painter.fillBackground({.x = 2,.y = 2,.width = 3,.height = 1},Color::rgb(3,5,7));
+    assert(drawing.at(3,2).style.background == Color::rgb(3,5,7));
+
     Reconciler reconciler;
     reconciler.update(Component::column({
         Component::text("Alpha","a"),

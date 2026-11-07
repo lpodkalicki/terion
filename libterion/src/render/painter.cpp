@@ -69,3 +69,68 @@ void Painter::fill(const Rect rect, Cell cell) const
         }
     }
 }
+
+void Painter::fillBackground(const Rect rect, const Color color) const
+{
+    const int x0 = std::max(0,rect.x), y0 = std::max(0,rect.y);
+    const int x1 = std::min(buffer_.size().width,rect.x + rect.width);
+    const int y1 = std::min(buffer_.size().height,rect.y + rect.height);
+    for (int y = y0; y < y1; ++y)
+        for (int x = x0; x < x1; ++x)
+        {
+            buffer_.at(x,y).style.background = color;
+            if (buffer_.at(x,y).width == 0 && buffer_.contains(x-1,y))
+                buffer_.at(x-1,y).style.background = color;
+        }
+}
+
+void Painter::horizontalLine(const int x, const int y, const int length, const TextStyle style) const
+{
+    for (int i = 0; i < length; ++i) put(x+i,y,"─",style);
+}
+
+void Painter::verticalLine(const int x, const int y, const int length, const TextStyle style) const
+{
+    for (int i = 0; i < length; ++i) put(x,y+i,"│",style);
+}
+
+void Painter::line(const Point start, const Point end, const TextStyle style) const
+{
+    int x = start.x, y = start.y;
+    const int dx = std::abs(end.x - start.x), dy = std::abs(end.y - start.y);
+    const int sx = start.x < end.x ? 1 : -1, sy = start.y < end.y ? 1 : -1;
+    int error = dx - dy;
+    while (true)
+    {
+        put(x,y,dx == 0 ? "│" : dy == 0 ? "─" : sx == sy ? "╲" : "╱",style);
+        if (x == end.x && y == end.y) break;
+        const int twice = error * 2;
+        if (twice > -dy) { error -= dy; x += sx; }
+        if (twice < dx) { error += dx; y += sy; }
+    }
+}
+
+void Painter::border(const Rect rect, const BorderStyle border_style, const TextStyle style) const
+{
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const char* horizontal = border_style == BorderStyle::Double ? "═" : border_style == BorderStyle::Heavy ? "━" : "─";
+    const char* vertical = border_style == BorderStyle::Double ? "║" : border_style == BorderStyle::Heavy ? "┃" : "│";
+    const char* tl = border_style == BorderStyle::Double ? "╔" : border_style == BorderStyle::Rounded ? "╭" : border_style == BorderStyle::Heavy ? "┏" : "┌";
+    const char* tr = border_style == BorderStyle::Double ? "╗" : border_style == BorderStyle::Rounded ? "╮" : border_style == BorderStyle::Heavy ? "┓" : "┐";
+    const char* bl = border_style == BorderStyle::Double ? "╚" : border_style == BorderStyle::Rounded ? "╰" : border_style == BorderStyle::Heavy ? "┗" : "└";
+    const char* br = border_style == BorderStyle::Double ? "╝" : border_style == BorderStyle::Rounded ? "╯" : border_style == BorderStyle::Heavy ? "┛" : "┘";
+    for (int x = rect.x+1; x < rect.x+rect.width-1; ++x)
+    {
+        put(x,rect.y,horizontal,style);
+        if (rect.height > 1) put(x,rect.y+rect.height-1,horizontal,style);
+    }
+    for (int y = rect.y+1; y < rect.y+rect.height-1; ++y)
+    {
+        put(rect.x,y,vertical,style);
+        if (rect.width > 1) put(rect.x+rect.width-1,y,vertical,style);
+    }
+    put(rect.x,rect.y,tl,style);
+    if (rect.width > 1) put(rect.x+rect.width-1,rect.y,tr,style);
+    if (rect.height > 1) put(rect.x,rect.y+rect.height-1,bl,style);
+    if (rect.width > 1 && rect.height > 1) put(rect.x+rect.width-1,rect.y+rect.height-1,br,style);
+}
