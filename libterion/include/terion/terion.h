@@ -12,6 +12,7 @@
 #include <terion/layout.h>
 #include <terion/reconciler.h>
 #include <terion/render_node.h>
+#include <terion/state.h>
 #include <terion/render/cell.h>
 #include <terion/render/color.h>
 #include <terion/render/differential_renderer.h>

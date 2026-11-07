@@ -7,9 +7,11 @@
 
 #include <functional>
 #include <memory>
+#include <atomic>
 #include <terion/component.h>
 #include <terion/focus.h>
 #include <terion/reconciler.h>
+#include <terion/state.h>
 #include <terion/terminal.h>
 #include <terion/render/painter.h>
 #include <terion/render/screen_buffer.h>
@@ -30,15 +32,19 @@ public:
     {
         paint_ = std::move(callback);
         component_ = {};
+        invalidate();
     }
 
     void render(ComponentCallback callback)
     {
         component_ = std::move(callback);
         paint_ = {};
+        invalidate();
     }
 
     void renderOnce();
+    void invalidate() noexcept { dirty_->store(true); }
+    [[nodiscard]] bool needsRender() const noexcept { return dirty_->load(); }
     void onEvent(EventCallback callback) { on_event_ = std::move(callback); }
     bool dispatchEvent(const Event& event);
     int run();
@@ -62,6 +68,8 @@ private:
     PaintCallback paint_;
     ComponentCallback component_;
     Reconciler reconciler_;
+    std::shared_ptr<std::atomic_bool> dirty_ = std::make_shared<std::atomic_bool>(true);
+    DependencyTracker tracker_;
     EventCallback on_event_;
     FocusManager focus_;
     bool running_ = false;
