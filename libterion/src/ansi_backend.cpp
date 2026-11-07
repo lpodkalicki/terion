@@ -6,6 +6,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <cerrno>
+#include <chrono>
 #include <stdexcept>
 #include <terion/terminal.h>
 
@@ -19,6 +20,7 @@ AnsiTerminalBackend::AnsiTerminalBackend()
     ::cfmakeraw(&raw);
     if (::tcsetattr(STDIN_FILENO,TCSAFLUSH,&raw) != 0) throw std::runtime_error("tcsetattr failed");
     active_ = true;
+    last_size_ = size();
     try { write("\033[?1049h\033[?25l"); }
     catch (...) { ::tcsetattr(STDIN_FILENO,TCSAFLUSH,&previous_); active_ = false; throw; }
 }
@@ -59,13 +61,25 @@ void AnsiTerminalBackend::flush() {}
 
 std::optional<Event> AnsiTerminalBackend::pollEvent()
 {
+    const auto current_size = size();
+    if (current_size != last_size_)
+    {
+        last_size_ = current_size;
+        return Event{.key = Key::Resize,.size = current_size};
+    }
+
     pollfd descriptor{.fd = STDIN_FILENO, .events = POLLIN,.revents = 0};
-    if (::poll(&descriptor,1,0) <= 0 || !(descriptor.revents & POLLIN)) return std::nullopt;
-    unsigned char c{};
-    const auto n = ::read(STDIN_FILENO,&c,1);
-    if (n != 1) return std::nullopt;
-    if (c == 27) return Event{Key::Escape};
-    if (c == 13) return Event{Key::Enter};
-    if (c == 127) return Event{Key::Backspace};
-    return Event{.key = Key::Character,.character = c};
+    if (::poll(&descriptor,1,0) > 0 && (descriptor.revents & POLLIN))
+    {
+        char data[128];
+        const auto n = ::read(STDIN_FILENO,data,sizeof(data));
+        if (n > 0)
+        {
+            decoder_.feed(std::string_view(data,static_cast<std::size_t>(n)));
+            last_input_ = std::chrono::steady_clock::now();
+        }
+    }
+
+    const bool timed_out = std::chrono::steady_clock::now() - last_input_ >= std::chrono::milliseconds(35);
+    return decoder_.nextEvent(timed_out);
 }

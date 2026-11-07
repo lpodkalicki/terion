@@ -6,6 +6,7 @@
 #define TERION_TERMINAL_H
 
 #include <deque>
+#include <chrono>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -21,14 +22,39 @@ enum class Key
     Escape,
     Character,
     Enter,
-    Backspace
+    Backspace,
+    Tab,
+    Up,
+    Down,
+    Left,
+    Right,
+    Home,
+    End,
+    Delete,
+    Insert,
+    PageUp,
+    PageDown,
+    Resize
 }; /* End of enum Key */
 
 struct Event
 {
     Key key = Key::Unknown;
     char32_t character = 0;
+    Size size{};
 }; /* End of struct Event */
+
+// Stateful incremental decoder. Incomplete UTF-8 and escape sequences are buffered.
+// Call nextEvent(true) after an input timeout to resolve incomplete sequences.
+class InputDecoder
+{
+public:
+    void feed(std::string_view bytes);
+    [[nodiscard]] std::optional<Event> nextEvent(bool flush_escape = false);
+
+private:
+    std::deque<unsigned char> bytes_;
+}; /* End of class InputDecoder */
 
 class TerminalBackend
 {
@@ -58,6 +84,9 @@ public:
 private:
     termios previous_{};
     bool active_ = false;
+    Size last_size_{};
+    InputDecoder decoder_;
+    std::chrono::steady_clock::time_point last_input_{};
 }; /* End of class AnsiTerminalBackend */
 
 class HeadlessTerminalBackend final : public TerminalBackend
@@ -66,7 +95,12 @@ public:
     explicit HeadlessTerminalBackend(const Size size) : size_(size) {}
 
     [[nodiscard]] Size size() const override { return size_; }
-    void resize(const Size size) { size_ = size; }
+    void resize(const Size size)
+    {
+        if (size_ == size) return;
+        size_ = size;
+        events_.push_back(Event{.key = Key::Resize,.size = size});
+    }
     void write(const std::string_view bytes) override { output_.append(bytes); }
     void flush() override { ++flush_count_; }
 

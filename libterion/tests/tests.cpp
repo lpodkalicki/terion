@@ -13,6 +13,34 @@ using namespace terion;
 
 int main()
 {
+    InputDecoder decoder;
+    decoder.feed("\033");
+    assert(!decoder.nextEvent());
+    assert(decoder.nextEvent(true)->key == Key::Escape);
+    decoder.feed("\033[");
+    assert(!decoder.nextEvent());
+    decoder.feed("A");
+    assert(decoder.nextEvent()->key == Key::Up);
+    decoder.feed("\033[3~\033OD");
+    assert(decoder.nextEvent()->key == Key::Delete);
+    assert(decoder.nextEvent()->key == Key::Left);
+    decoder.feed("\xC5");
+    assert(!decoder.nextEvent());
+    decoder.feed("\x81");
+    const auto letter = decoder.nextEvent();
+    assert(letter && letter->key == Key::Character && letter->character == U'Ł');
+    decoder.feed("\t\r");
+    assert(decoder.nextEvent()->key == Key::Tab);
+    assert(decoder.nextEvent()->key == Key::Enter);
+    decoder.feed("\xE2");
+    assert(!decoder.nextEvent());
+    assert(decoder.nextEvent(true)->character == 0xFFFD);
+    decoder.feed("\033[1;5C");
+    assert(decoder.nextEvent()->key == Key::Right);
+    decoder.feed("\033[99~");
+    assert(decoder.nextEvent()->key == Key::Unknown);
+    assert(!decoder.nextEvent());
+
     ScreenBuffer screen({.width = 12,.height = 3});
     Painter painter(screen);
     painter.text(0,0,"Łódź");
@@ -33,6 +61,12 @@ int main()
     assert(isValidUtf8("Łódź"));
     assert(!isValidUtf8("\xFF"));
     HeadlessTerminalBackend terminal({12,3});
+    terminal.resize({.width = 14,.height = 4});
+    const auto resized = terminal.pollEvent();
+    assert(resized && resized->key == Key::Resize);
+    assert(resized->size == (Size{.width = 14,.height = 4}));
+    terminal.resize({.width = 12,.height = 3});
+    assert(terminal.pollEvent()->key == Key::Resize);
     DifferentialRenderer renderer;
     renderer.render(screen,terminal);
     assert(!terminal.output().empty());
