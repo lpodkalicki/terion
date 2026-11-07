@@ -278,6 +278,43 @@ int main()
     Painter hover_painter(hover_buffer);
     app.reconciler().root()->paint(hover_painter,{},first_button_id);
     assert(hover_buffer.at(0,1).grapheme == "{");
+    State<std::string> input{std::string{}};
+    app.render([&] {
+        return Column({.children = {
+            TextField({.value = input.get(),.placeholder = "Name",.key = "name",
+                .onChange = [&](std::string value) { input.set(std::move(value)); }}),
+            Button({.text = "OK",.key = "ok",.onClick = [&] { ++clicks; }})
+        }});
+    });
+    app.renderOnce();
+    const auto field_id = std::to_string(app.reconciler().root()->children()[0]->id());
+    assert(app.focus().current() == field_id);
+    assert(app.dispatchEvent(Event{.key = Key::Character,.character = U'Ł'}));
+    assert(input.get() == "Ł");
+    app.renderOnce();
+    assert(app.dispatchEvent(Event{.key = Key::Character,.character = U'x'}));
+    assert(input.get() == "Łx");
+    app.renderOnce();
+    app.dispatchEvent(Event{.key = Key::Left});
+    app.dispatchEvent(Event{.key = Key::Backspace});
+    assert(input.get() == "x");
+    app.renderOnce();
+    assert(app.reconciler().root()->children()[0]->id() == std::stoull(field_id));
+    app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 1,.y = 0},.button = MouseButton::Left,.action = MouseAction::Press}});
+    app.dispatchEvent(Event{.key = Key::Character,.character = U'Z'});
+    assert(input.get() == "Zx");
+    app.renderOnce();
+    input.set("e\xCC\x81");
+    app.renderOnce();
+    app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 0},.button = MouseButton::Left,.action = MouseAction::Press}});
+    app.dispatchEvent(Event{.key = Key::Backspace});
+    assert(input.get().empty());
+    app.renderOnce();
+    assert(app.dispatchEvent(Event{.key = Key::Tab}));
+    assert(app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(clicks == 13);
     app.render([](Painter&, Size) {});
     app.renderOnce();
     bool received = false;

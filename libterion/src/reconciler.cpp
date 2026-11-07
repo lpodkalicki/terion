@@ -33,13 +33,22 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
 {
     const auto& props = component.props();
     if (!node || node->type_ != props.type || node->key_ != props.key)
+    {
         node.reset(new RenderNode(next_id_++,props.type,props.key));
+        node->cursor_byte_ = props.text.size();
+    }
 
     node->text_ = props.text;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
     node->on_click_ = props.on_click;
+    node->on_change_ = props.on_change;
+    node->placeholder_ = props.placeholder;
     node->disabled_ = props.disabled;
+    if (node->cursor_byte_ > node->text_.size()) node->cursor_byte_ = node->text_.size();
+    while (node->cursor_byte_ > 0 && node->cursor_byte_ < node->text_.size() &&
+        (static_cast<unsigned char>(node->text_[node->cursor_byte_]) & 0xC0) == 0x80)
+        --node->cursor_byte_;
     auto previous = std::move(node->children_);
     node->children_.reserve(props.children.size());
 

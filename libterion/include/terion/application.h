@@ -76,7 +76,7 @@ private:
     DependencyTracker tracker_;
     EventCallback on_event_;
     FocusManager focus_;
-    std::vector<std::string> button_focus_ids_;
+    std::vector<std::string> component_focus_ids_;
     std::string hovered_button_id_;
     std::string pressed_button_id_;
     bool running_ = false;

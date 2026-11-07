@@ -45,11 +45,11 @@ void Application::renderOnce()
 void Application::syncFocusTargets()
 {
     const std::string previous_focus(focus_.current());
-    for (const auto& id : button_focus_ids_) focus_.remove(id);
-    button_focus_ids_.clear();
+    for (const auto& id : component_focus_ids_) focus_.remove(id);
+    component_focus_ids_.clear();
     if (!component_) return;
 
-    const auto visit = [&](const auto& self, const RenderNode& node) -> void {
+    const auto visit = [&](const auto& self, RenderNode& node) -> void {
         if (node.type() == Component::Type::Button && !node.disabled() && node.onClick())
         {
             const auto id = std::to_string(node.id());
@@ -60,38 +60,52 @@ void Application::syncFocusTargets()
                 callback();
                 return true;
             });
-            button_focus_ids_.push_back(id);
+            component_focus_ids_.push_back(id);
+        }
+        else if (node.type() == Component::Type::TextField && node.editable())
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleTextInput(event); });
+            component_focus_ids_.push_back(id);
         }
         for (const auto& child : node.children()) self(self,*child);
     };
-    if (const auto* root = reconciler_.root()) visit(visit,*root);
+    if (auto* root = reconciler_.root()) visit(visit,*root);
     if (!previous_focus.empty()) focus_.focus(previous_focus);
-    if (std::ranges::find(button_focus_ids_,hovered_button_id_) == button_focus_ids_.end()) hovered_button_id_.clear();
-    if (std::ranges::find(button_focus_ids_,pressed_button_id_) == button_focus_ids_.end()) pressed_button_id_.clear();
+    if (std::ranges::find(component_focus_ids_,hovered_button_id_) == component_focus_ids_.end()) hovered_button_id_.clear();
+    if (std::ranges::find(component_focus_ids_,pressed_button_id_) == component_focus_ids_.end()) pressed_button_id_.clear();
 }
 
 bool Application::handleMouse(const MouseEvent& mouse)
 {
-    const RenderNode* hit = nullptr;
+    RenderNode* hit = nullptr;
     if (component_ && reconciler_.root()) hit = reconciler_.root()->hitTest(mouse.position);
-    if (hit && (hit->type() != Component::Type::Button || hit->disabled() || !hit->onClick())) hit = nullptr;
+    if (hit && !((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
+        (hit->type() == Component::Type::TextField && hit->editable()))) hit = nullptr;
     const std::string target = hit ? std::to_string(hit->id()) : std::string{};
 
-    if (hovered_button_id_ != target)
+    const std::string hovered = hit && hit->type() == Component::Type::Button ? target : std::string{};
+    if (hovered_button_id_ != hovered)
     {
-        hovered_button_id_ = target;
+        hovered_button_id_ = hovered;
         invalidate();
     }
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
     {
         pressed_button_id_ = target;
         if (hit) focus_.focus(target);
+        if (hit && hit->type() == Component::Type::TextField)
+        {
+            hit->setCursorFromX(mouse.position.x);
+            pressed_button_id_.clear();
+        }
         return hit != nullptr;
     }
     if (mouse.action == MouseAction::Release &&
         (mouse.button == MouseButton::Left || mouse.button == MouseButton::None))
     {
-        const bool activate = hit && !pressed_button_id_.empty() && pressed_button_id_ == target;
+        const bool activate = hit && hit->type() == Component::Type::Button &&
+            !pressed_button_id_.empty() && pressed_button_id_ == target;
         pressed_button_id_.clear();
         if (activate) { hit->onClick()(); return true; }
     }

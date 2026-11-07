@@ -23,7 +23,8 @@ public:
         Column,
         Row,
         Box,
-        Button
+        Button,
+        TextField
     }; /* End of enum Type */
 
     struct Props
@@ -35,6 +36,8 @@ public:
         LayoutStyle layout = {};
         TextStyle text_style = {};
         std::function<void()> on_click = {};
+        std::function<void(std::string)> on_change = {};
+        std::string placeholder = {};
         bool disabled = false;
     }; /* End of struct Props */
 

@@ -43,6 +43,68 @@ std::string clipText(const std::string_view text, const int columns)
     return clipped;
 }
 
+std::size_t previousCodepoint(const std::string_view text, const std::size_t cursor)
+{
+    std::size_t previous = 0;
+    for (std::size_t i = 0; i < cursor;)
+    {
+        const auto decoded = decodeUtf8(text,i);
+        if (!decoded.bytes || i + decoded.bytes >= cursor) return i;
+        previous = i;
+        i += decoded.bytes;
+    }
+    return previous;
+}
+
+std::size_t nextCodepoint(const std::string_view text, const std::size_t cursor)
+{
+    if (cursor >= text.size()) return text.size();
+    const auto decoded = decodeUtf8(text,cursor);
+    return std::min(text.size(),cursor + std::max<std::size_t>(1,decoded.bytes));
+}
+
+std::size_t previousBoundary(const std::string_view text, const std::size_t cursor)
+{
+    std::size_t start = previousCodepoint(text,cursor);
+    while (start > 0 && codePointWidth(decodeUtf8(text,start).code_point) == 0)
+        start = previousCodepoint(text,start);
+    return start;
+}
+
+std::size_t nextBoundary(const std::string_view text, const std::size_t cursor)
+{
+    std::size_t end = nextCodepoint(text,cursor);
+    while (end < text.size() && codePointWidth(decodeUtf8(text,end).code_point) == 0)
+        end = nextCodepoint(text,end);
+    return end;
+}
+
+std::string encodeUtf8(const char32_t code_point)
+{
+    const char32_t c = code_point > 0x10FFFF || (code_point >= 0xD800 && code_point <= 0xDFFF) ? 0xFFFD : code_point;
+    std::string result;
+    if (c < 0x80) result += static_cast<char>(c);
+    else if (c < 0x800)
+    {
+        result += static_cast<char>(0xC0 | (c >> 6));
+        result += static_cast<char>(0x80 | (c & 0x3F));
+    }
+    else if (c < 0x10000)
+    {
+        result += static_cast<char>(0xE0 | (c >> 12));
+        result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+        result += static_cast<char>(0x80 | (c & 0x3F));
+    }
+    else
+    {
+        result += static_cast<char>(0xF0 | (c >> 18));
+        result += static_cast<char>(0x80 | ((c >> 12) & 0x3F));
+        result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+        result += static_cast<char>(0x80 | (c & 0x3F));
+    }
+    return result;
+}
+
 int addBounded(const int a, const int b)
 {
     return static_cast<int>(std::min(static_cast<long long>(a) + b,
@@ -57,9 +119,11 @@ Size RenderNode::measure(const Constraints& constraints) const
     const int gap = std::max(0,style_.gap);
     Size content{};
 
-    if (type_ == Component::Type::Text || type_ == Component::Type::Button)
+    if (type_ == Component::Type::Text || type_ == Component::Type::Button || type_ == Component::Type::TextField)
     {
-        content = {.width = addBounded(textWidth(text_),type_ == Component::Type::Button ? 2 : 0),.height = 1};
+        const auto& value = type_ == Component::Type::TextField && text_.empty() ? placeholder_ : text_;
+        content = {.width = addBounded(textWidth(value),type_ == Component::Type::Text ? 0 :
+            type_ == Component::Type::TextField ? 3 : 2),.height = 1};
     }
     else
     {
@@ -96,7 +160,8 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
 {
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
-    if (type_ == Component::Type::Text || type_ == Component::Type::Button) return;
+    if (type_ == Component::Type::Text || type_ == Component::Type::Button ||
+        type_ == Component::Type::TextField) return;
 
     const int padding = std::max(0,style_.padding);
     const int gap = std::max(0,style_.gap);
@@ -128,7 +193,8 @@ const RenderNode* RenderNode::hitTest(const Point position) const noexcept
 void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     const std::string_view hovered_id) const
 {
-    if (type_ == Component::Type::Text || type_ == Component::Type::Button)
+    if (type_ == Component::Type::Text || type_ == Component::Type::Button ||
+        type_ == Component::Type::TextField)
     {
         if (bounds_.height > 0 && bounds_.width > 0)
         {
@@ -140,6 +206,13 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                 else if (hovered_id == std::to_string(id_)) label = "{" + label + "}";
                 else label = "[" + label + "]";
             }
+            else if (type_ == Component::Type::TextField)
+            {
+                if (text_.empty()) label = placeholder_;
+                if (focused_id == std::to_string(id_) && !disabled_)
+                    label.insert(std::min(cursor_byte_,label.size()),"|");
+                label = disabled_ ? "(" + label + ")" : "[" + label + "]";
+            }
             painter.text(bounds_.x,bounds_.y,clipText(label,bounds_.width),text_style_);
         }
         return;
@@ -150,4 +223,55 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
 int RenderNode::height() const noexcept
 {
     return bounds_.height;
+}
+
+bool RenderNode::handleTextInput(const Event& event)
+{
+    if (type_ != Component::Type::TextField || !editable()) return false;
+    switch (event.key)
+    {
+        case Key::Left: cursor_byte_ = previousBoundary(text_,cursor_byte_); return true;
+        case Key::Right: cursor_byte_ = nextBoundary(text_,cursor_byte_); return true;
+        case Key::Home: cursor_byte_ = 0; return true;
+        case Key::End: cursor_byte_ = text_.size(); return true;
+        case Key::Backspace:
+            if (cursor_byte_ == 0) return true;
+            {
+                const auto previous = previousBoundary(text_,cursor_byte_);
+                text_.erase(previous,cursor_byte_ - previous);
+                cursor_byte_ = previous;
+                on_change_(text_);
+                return true;
+            }
+        case Key::Delete:
+            if (cursor_byte_ == text_.size()) return true;
+            text_.erase(cursor_byte_,nextBoundary(text_,cursor_byte_) - cursor_byte_);
+            on_change_(text_);
+            return true;
+        case Key::Character:
+            if (event.character < 32 || event.character == 127) return false;
+            {
+                const auto encoded = encodeUtf8(event.character);
+                text_.insert(cursor_byte_,encoded);
+                cursor_byte_ += encoded.size();
+                on_change_(text_);
+                return true;
+            }
+        default: return false;
+    }
+}
+
+void RenderNode::setCursorFromX(const int x)
+{
+    if (type_ != Component::Type::TextField) return;
+    const int desired = std::max(0,x - bounds_.x - 1);
+    int columns = 0;
+    cursor_byte_ = 0;
+    while (cursor_byte_ < text_.size())
+    {
+        const auto decoded = decodeUtf8(text_,cursor_byte_);
+        if (!decoded.bytes || columns + codePointWidth(decoded.code_point) > desired) break;
+        columns += codePointWidth(decoded.code_point);
+        cursor_byte_ += decoded.bytes;
+    }
 }

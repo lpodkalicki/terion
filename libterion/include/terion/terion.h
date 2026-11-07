@@ -12,6 +12,7 @@
 #include <terion/components/column.h>
 #include <terion/components/typography.h>
 #include <terion/components/button.h>
+#include <terion/components/text_field.h>
 #include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/layout.h>

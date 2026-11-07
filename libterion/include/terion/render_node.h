@@ -14,6 +14,7 @@
 #include <terion/component.h>
 #include <terion/layout.h>
 #include <terion/render/painter.h>
+#include <terion/terminal.h>
 
 namespace terion {
 
@@ -27,8 +28,15 @@ public:
     [[nodiscard]] const std::vector<std::unique_ptr<RenderNode>>& children() const noexcept { return children_; }
     [[nodiscard]] Rect bounds() const noexcept { return bounds_; }
     [[nodiscard]] const RenderNode* hitTest(Point position) const noexcept;
+    [[nodiscard]] RenderNode* hitTest(Point position) noexcept
+    {
+        return const_cast<RenderNode*>(static_cast<const RenderNode&>(*this).hitTest(position));
+    }
     [[nodiscard]] bool disabled() const noexcept { return disabled_; }
     [[nodiscard]] const std::function<void()>& onClick() const noexcept { return on_click_; }
+    [[nodiscard]] bool editable() const noexcept { return static_cast<bool>(on_change_) && !disabled_; }
+    bool handleTextInput(const Event& event);
+    void setCursorFromX(int x);
 
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
@@ -49,6 +57,9 @@ private:
     LayoutStyle style_;
     TextStyle text_style_;
     std::function<void()> on_click_;
+    std::function<void(std::string)> on_change_;
+    std::string placeholder_;
+    std::size_t cursor_byte_ = 0;
     bool disabled_ = false;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
