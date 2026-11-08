@@ -26,3 +26,20 @@ TEST(Focus, CyclesThroughRegisteredHandlers)
     EXPECT_TRUE(!focus.focus("missing"));
 
 }
+
+TEST(Focus, BlurStopsKeyboardDispatchUntilNextFocus)
+{
+    FocusManager focus;
+    int calls = 0;
+    focus.add("first",[&](const Event&) { ++calls; return true; });
+    focus.add("second",[&](const Event&) { ++calls; return true; });
+    focus.blur();
+    EXPECT_TRUE(focus.current().empty());
+    EXPECT_FALSE(focus.dispatch(Event{.key = Key::Character,.character = U'x'}));
+    EXPECT_EQ(calls,0);
+    EXPECT_TRUE(focus.dispatch(Event{.key = Key::Tab}));
+    EXPECT_EQ(focus.current(),"first");
+    focus.blur();
+    EXPECT_TRUE(focus.previous());
+    EXPECT_EQ(focus.current(),"second");
+}

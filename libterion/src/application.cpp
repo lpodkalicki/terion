@@ -55,6 +55,7 @@ void Application::syncFocusTargets()
 {
     const std::string previous_focus(focus_.current());
     const std::string previous_scope(focus_.activeScope());
+    const bool previous_targets = !component_focus_ids_.empty();
     const auto* dialog = overlays_.activeDialog();
     std::string next_scope = dialog ? std::to_string(dialog->id()) : std::string{};
     if (!dialog && reconciler_.root())
@@ -139,6 +140,7 @@ void Application::syncFocusTargets()
     if (auto* root = reconciler_.root()) visit(visit,*root,{});
     focus_.setActiveScope(next_scope);
     if (previous_scope == next_scope && !previous_focus.empty()) focus_.focus(previous_focus);
+    if (previous_scope == next_scope && previous_focus.empty() && previous_targets) focus_.blur();
     if (!previous_scope.empty() && next_scope.empty() && !background_focus_id_.empty())
     {
         focus_.focus(background_focus_id_);
@@ -230,6 +232,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
     {
         pressed_button_id_ = target;
         if (hit) focus_.focus(target);
+        else if (focus_.activeScope().empty()) focus_.blur();
         if (hit && (hit->type() == Component::Type::Select || hit->type() == Component::Type::DropdownMenu))
         {
             overlays_.dismissExcept(hit);

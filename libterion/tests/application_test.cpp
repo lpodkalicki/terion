@@ -167,6 +167,31 @@ TEST(Application, EditsUtf8TextAndMovesFocus)
     EXPECT_EQ(clicks,1);
 }
 
+TEST(Application, ClickingOutsideTextFieldRemovesFocusAndKeepsItRemovedAfterRender)
+{
+    auto backend = std::make_unique<HeadlessTerminalBackend>(Size{40,10});
+    Application app(std::move(backend));
+    State<std::string> input{std::string{}};
+    app.render([&] {
+        return Column({.children = {
+            TextField({.value = input.get(),.onChange = [&](std::string value) {
+                input.set(std::move(value)); },.size = ButtonSize::Compact}),
+            Typography({.text = "Static label"})
+        }});
+    });
+    app.renderOnce();
+    EXPECT_FALSE(app.focus().current().empty());
+    app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 30,.y = 7},.button = MouseButton::Left,.action = MouseAction::Press}});
+    EXPECT_TRUE(app.focus().current().empty());
+    app.renderOnce();
+    EXPECT_TRUE(app.focus().current().empty());
+    EXPECT_FALSE(app.dispatchEvent(Event{.key = Key::Character,.character = U'x'}));
+    EXPECT_TRUE(input.get().empty());
+    EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Tab}));
+    EXPECT_FALSE(app.focus().current().empty());
+}
+
 TEST(Application, DispatchesCustomEventsAndStopsHeadlessLoop)
 {
     auto backend = std::make_unique<HeadlessTerminalBackend>(Size{20,5});
