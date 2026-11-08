@@ -184,11 +184,11 @@ int main()
             .children = {
                 Typography({.text = "Files / " + node.get(),.variant = TypographyVariant::H2}),
                 Row({.children = {
-                    Button({.text = "Import",.key = "import-file",.variant = ButtonVariant::Contained,
+                    Tooltip({.child = Button({.text = "Import",.key = "import-file",.variant = ButtonVariant::Contained,
                         .onClick = [&] {
                             imported.set(imported.get()+1);
                             last_action.set("Simulated import #"+std::to_string(imported.get()));
-                        }}),
+                        }}),.text = "Import files into the current collection",.key = "import-tooltip"}),
                     Button({.text = "File details",.key = "file-details",
                         .onClick = [&] { page.set("details"); }}),
                     Button({.text = "Delete...",.key = "delete-file",
@@ -196,7 +196,7 @@ int main()
                 },.layout = {.gap = 1}}),
                 TextField({.value = filter.get(),.placeholder = "Search files...",.key = "table-filter",
                     .onChange = [&](std::string value) { filter.set(std::move(value)); }}),
-                Table({.columns = compact ? std::vector<TableColumn>{{"Name",22},{"Type",10}} :
+                ContextMenu({.child = Table({.columns = compact ? std::vector<TableColumn>{{"Name",22},{"Type",10}} :
                     std::vector<TableColumn>{{"Name",22},{"Type",10,TableAlignment::Center},
                         {"Size",10,TableAlignment::Right},{"Modified",14}},
                     .rows = rows,
@@ -218,6 +218,13 @@ int main()
                     .value = selected_row.get(),.key = "files-table",
                     .layout = {.height = std::max(3,std::min(12,body_height - 10))},
                     .onChange = [&](std::string value) { selected_row.set(std::move(value)); }}),
+                    .options = {{"Open details","open"},{"Rename","rename"},
+                        {"Delete...","delete"}},.key = "file-context-menu",
+                    .onSelect = [&](std::string action) {
+                        if (action == "open") page.set("details");
+                        else if (action == "delete") dialog_open.set(true);
+                        last_action.set("Context menu: " + action + " (" + selected_row.get() + ")");
+                    }}),
                 Checkbox({.label = "Show hidden files",.key = "show-hidden",.checked = show_hidden.get(),
                     .onChange = [&](bool value) { show_hidden.set(value); }}),
                 Typography({.text = "Selected: " + selected_row.get() + " | Demo imports: " +

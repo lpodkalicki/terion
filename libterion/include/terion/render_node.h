@@ -37,6 +37,8 @@ public:
         return const_cast<RenderNode*>(static_cast<const RenderNode&>(*this).hitTest(position));
     }
     [[nodiscard]] RenderNode* scrollTarget(Point position) noexcept;
+    [[nodiscard]] RenderNode* contextTarget(Point position) noexcept;
+    bool openContextMenu(Point position, Size screen);
     bool scrollBy(int delta);
     bool handleScrollKey(const Event& event);
     [[nodiscard]] Rect scrollbarTrack() const;
@@ -90,7 +92,8 @@ public:
     void setCursorFromX(int x);
     [[nodiscard]] bool selectOpen() const noexcept
     {
-        return (type_ == Component::Type::Select || type_ == Component::Type::DropdownMenu) && select_open_;
+        return (type_ == Component::Type::Select || type_ == Component::Type::DropdownMenu ||
+            type_ == Component::Type::ContextMenu) && select_open_;
     }
     [[nodiscard]] Rect selectPopupRect(Size screen) const noexcept;
     [[nodiscard]] bool selectContains(Point point, Size screen) const noexcept;
@@ -101,6 +104,9 @@ public:
     [[nodiscard]] Rect selectScrollbarThumb(Size screen) const noexcept;
     void closeSelect() noexcept { select_open_ = false; select_dragging_ = false; }
     void paintOverlay(Painter& painter, Size screen, const Theme& theme) const;
+    [[nodiscard]] bool tooltipContains(Point point) const noexcept;
+    [[nodiscard]] Rect tooltipRect(Point point, Size screen) const noexcept;
+    void paintTooltip(Painter& painter, Point point, Size screen, const Theme& theme) const;
     void paintOverlays(Painter& painter, Size screen, const Theme& theme) const;
     [[nodiscard]] bool dialogOpen() const noexcept { return type_ == Component::Type::Dialog && dialog_open_; }
     [[nodiscard]] bool focusScopeActive() const noexcept
@@ -186,6 +192,7 @@ private:
     int select_highlight_ = 0;
     int select_scroll_ = 0;
     bool select_dragging_ = false;
+    Point context_anchor_{};
     int select_grab_offset_ = 0;
     bool dialog_open_ = false;
     bool focus_scope_active_ = false;

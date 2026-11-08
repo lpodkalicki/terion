@@ -1046,9 +1046,45 @@ bool RenderNode::handleScrollKey(const Event& event)
     }
 }
 
+RenderNode* RenderNode::contextTarget(const Point position) noexcept
+{
+    if (position.x < bounds_.x || position.y < bounds_.y ||
+        position.x >= bounds_.x+bounds_.width || position.y >= bounds_.y+bounds_.height ||
+        !tabPanelActive()) return nullptr;
+    for (auto it = children_.rbegin(); it != children_.rend(); ++it)
+        if (auto* child = (*it)->contextTarget(position)) return child;
+    return type_ == Component::Type::ContextMenu && !disabled_ && !select_options_.empty() ? this : nullptr;
+}
+
+bool RenderNode::openContextMenu(const Point position, const Size screen)
+{
+    if (type_ != Component::Type::ContextMenu || disabled_ || select_options_.empty()) return false;
+    context_anchor_ = position;
+    select_open_ = true;
+    select_dragging_ = false;
+    select_scroll_ = 0;
+    select_highlight_ = 0;
+    for (std::size_t i = 0; i < select_options_.size(); ++i)
+        if (!select_options_[i].disabled) { select_highlight_ = static_cast<int>(i); break; }
+    const int viewport = std::max(1,selectPopupRect(screen).height);
+    select_scroll_ = std::clamp(select_highlight_-viewport/2,0,
+        std::max(0,static_cast<int>(select_options_.size())-viewport));
+    return true;
+}
+
 Rect RenderNode::selectPopupRect(const Size screen) const noexcept
 {
     if (!selectOpen() || select_options_.empty()) return {};
+    if (type_ == Component::Type::ContextMenu)
+    {
+        int width = 8;
+        for (const auto& option : select_options_) width = std::max(width,textWidth(option.label)+3);
+        width = std::min(width,std::max(0,screen.width));
+        const int height = std::min({10,static_cast<int>(select_options_.size()),std::max(0,screen.height)});
+        if (height == 0 || width == 0) return {};
+        return {.x = std::clamp(context_anchor_.x,0,screen.width-width),
+            .y = std::clamp(context_anchor_.y,0,screen.height-height),.width = width,.height = height};
+    }
     const int below = std::max(0,screen.height - std::max(0,bounds_.y+bounds_.height));
     const int above = std::clamp(bounds_.y,0,screen.height);
     const int height = std::min({6,static_cast<int>(select_options_.size()),std::max(below,above)});
@@ -1087,9 +1123,11 @@ bool RenderNode::selectContains(const Point point, const Size screen) const noex
 
 bool RenderNode::handleSelectKey(const Event& event, const Size screen)
 {
-    if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu) || disabled_) return false;
+    if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu &&
+        type_ != Component::Type::ContextMenu) || disabled_) return false;
     if (!select_open_)
     {
+        if (type_ == Component::Type::ContextMenu) return false;
         if (event.key != Key::Enter && event.key != Key::Down &&
             !(event.key == Key::Character && event.character == U' ')) return false;
         if (select_options_.empty()) return true;
@@ -1120,7 +1158,7 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
             if (event.key == Key::PageUp) next -= std::max(1,selectPopupRect(screen).height);
             if (event.key == Key::PageDown) next += std::max(1,selectPopupRect(screen).height);
             select_highlight_ = std::clamp(next,0,count-1);
-            if (type_ == Component::Type::DropdownMenu && select_options_[select_highlight_].disabled)
+            if (type_ != Component::Type::Select && select_options_[select_highlight_].disabled)
             {
                 const int direction = event.key == Key::Up || event.key == Key::PageUp ||
                     event.key == Key::End ? -1 : 1;
@@ -1146,7 +1184,8 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
 
 bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
 {
-    if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu) || disabled_) return false;
+    if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu &&
+        type_ != Component::Type::ContextMenu) || disabled_) return false;
     if (select_dragging_)
     {
         if (mouse.action == MouseAction::Release) { select_dragging_ = false; return true; }
@@ -1206,6 +1245,7 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
         }
         return true;
     }
+    if (type_ == Component::Type::ContextMenu) return false;
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
     {
         if (mouse.position.x >= bounds_.x && mouse.position.x < bounds_.x+bounds_.width &&
@@ -1237,6 +1277,43 @@ void RenderNode::paintOverlays(Painter& painter, const Size screen, const Theme&
 {
     for (const auto& child : children_) child->paintOverlays(painter,screen,theme);
     paintOverlay(painter,screen,theme);
+}
+
+bool RenderNode::tooltipContains(const Point point) const noexcept
+{
+    return type_ == Component::Type::Tooltip && !disabled_ && !text_.empty() &&
+        point.x >= bounds_.x && point.x < bounds_.x+bounds_.width &&
+        point.y >= bounds_.y && point.y < bounds_.y+bounds_.height;
+}
+
+Rect RenderNode::tooltipRect(const Point point, const Size screen) const noexcept
+{
+    if (!tooltipContains(point) || screen.width <= 0 || screen.height <= 0) return {};
+    const int height = screen.height >= 3 ? 3 : 1;
+    const int width = std::min(screen.width,textWidth(text_)+(height == 3 ? 4 : 0));
+    if (width <= 0) return {};
+    int y = point.y+1;
+    if (y+height > screen.height) y = point.y-height;
+    return {.x = std::clamp(point.x+1,0,screen.width-width),
+        .y = std::clamp(y,0,screen.height-height),.width = width,.height = height};
+}
+
+void RenderNode::paintTooltip(Painter& painter, const Point point, const Size screen,
+    const Theme& theme) const
+{
+    const Rect popup = tooltipRect(point,screen);
+    if (popup.width <= 0 || popup.height <= 0) return;
+    const auto& palette = theme.palette;
+    const TextStyle style {.foreground = palette.foreground,.background = palette.surface};
+    painter.fillBackground(popup,palette.surface);
+    if (popup.height >= 3)
+    {
+        TextStyle border_style = style;
+        border_style.foreground = palette.muted;
+        painter.border(popup,BorderStyle::Rounded,border_style);
+        painter.text(popup.x+2,popup.y+1,clipText(text_,std::max(0,popup.width-4)),style);
+    }
+    else painter.text(popup.x,popup.y,clipText(text_,popup.width),style);
 }
 
 void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& theme) const
@@ -1499,8 +1576,8 @@ Rect RenderNode::scrollbarThumb() const
     }
     const int thumb_height = std::max(1,static_cast<int>(static_cast<long long>(track.height) *
         track.height / (max_scroll_offset_ + static_cast<long long>(track.height))));
-    const int top = static_cast<int>(static_cast<long long>(std::clamp(scroll_offset_,0,max_scroll_offset_)) *
-        (track.height-thumb_height) / max_scroll_offset_);
+    const int top = static_cast<int>((static_cast<long long>(std::clamp(scroll_offset_,0,max_scroll_offset_)) *
+        (track.height-thumb_height) + max_scroll_offset_/2) / max_scroll_offset_);
     return {.x = track.x,.y = track.y + top,.width = 1,.height = thumb_height};
 }
 

@@ -6,6 +6,7 @@
 #define TERION_OVERLAY_H
 
 #include <vector>
+#include <optional>
 #include <terion/render_node.h>
 
 namespace terion {
@@ -30,9 +31,11 @@ public:
     [[nodiscard]] RenderNode* activeDialog() const noexcept;
     void dismissOutside(const MouseEvent& mouse, Size screen);
     void dismissExcept(const RenderNode* active);
+    void setHover(std::optional<Point> position) noexcept { hover_position_ = position; }
 
 private:
     std::vector<Portal> portals_;
+    std::optional<Point> hover_position_;
 }; /* End of class OverlayManager */
 
 } /* End of namespace terion */

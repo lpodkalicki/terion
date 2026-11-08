@@ -20,6 +20,8 @@
 #include <terion/components/text_field.h>
 #include <terion/components/select.h>
 #include <terion/components/dropdown_menu.h>
+#include <terion/components/context_menu.h>
+#include <terion/components/tooltip.h>
 #include <terion/components/tabs.h>
 #include <terion/components/tab_panel.h>
 #include <terion/components/table.h>

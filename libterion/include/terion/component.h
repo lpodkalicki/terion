@@ -134,6 +134,8 @@ public:
         TextField,
         Select,
         DropdownMenu,
+        ContextMenu,
+        Tooltip,
         Tabs,
         TabPanel,
         Table,

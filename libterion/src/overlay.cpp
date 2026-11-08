@@ -13,7 +13,8 @@ void OverlayManager::collect(RenderNode* root)
     if (!root) return;
     const auto visit = [&](const auto& self, RenderNode& node) -> void {
         if (!node.tabPanelActive()) return;
-        if (node.type() == Component::Type::Select || node.type() == Component::Type::DropdownMenu)
+        if (node.type() == Component::Type::Select || node.type() == Component::Type::DropdownMenu ||
+            node.type() == Component::Type::ContextMenu || node.type() == Component::Type::Tooltip)
             addPortal(node);
         if (node.type() == Component::Type::Dialog) addPortal(node,100);
         for (const auto& child : node.children()) self(self,*child);
@@ -43,6 +44,18 @@ void OverlayManager::paint(Painter& painter, const Size screen, const Theme& the
         for (const auto& portal : portals_)
             if (portal.owner->selectOpen() && modal->findById(portal.owner->id()))
                 portal.owner->paintOverlay(painter,screen,theme);
+    if (hover_position_ && !modal)
+    {
+        const Point point = *hover_position_;
+        for (const auto& portal : portals_)
+            if (portal.owner->selectOpen()) return;
+        for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
+            if (it->owner->tooltipContains(point))
+            {
+                it->owner->paintTooltip(painter,point,screen,theme);
+                break;
+            }
+    }
 }
 
 bool OverlayManager::modalOpen() const noexcept
@@ -63,6 +76,12 @@ bool OverlayManager::handleKey(const Event& event)
 {
     for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
         if (it->owner->dialogOpen()) return it->owner->handleDialogKey(event);
+    for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
+        if (it->owner->type() == Component::Type::ContextMenu && it->owner->selectOpen())
+        {
+            (void)it->owner->handleSelectKey(event);
+            return true; // An open context menu captures keys, including shortcuts.
+        }
     return false;
 }
 
@@ -89,12 +108,14 @@ RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size scre
 
 void OverlayManager::dismissOutside(const MouseEvent& mouse, const Size screen)
 {
-    if (mouse.action != MouseAction::Press || mouse.button != MouseButton::Left) return;
+    if (mouse.action != MouseAction::Press ||
+        (mouse.button != MouseButton::Left && mouse.button != MouseButton::Right)) return;
     for (const auto& entry : portals_)
     {
         auto* portal = entry.owner;
         if (portal->selectOpen() && !portal->selectContains(mouse.position,screen) &&
-            !portal->hitTest(mouse.position)) portal->closeSelect();
+            (portal->type() == Component::Type::ContextMenu || !portal->hitTest(mouse.position)))
+            portal->closeSelect();
     }
 }
 

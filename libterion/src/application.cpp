@@ -213,6 +213,8 @@ void Application::syncFocusTargets()
 
 bool Application::handleMouse(const MouseEvent& mouse)
 {
+    overlays_.setHover(mouse.action == MouseAction::Move ?
+        std::optional<Point>{mouse.position} : std::nullopt);
     if (auto* dialog = overlays_.activeDialog())
     {
         if (mouse.action == MouseAction::Press)
@@ -228,10 +230,19 @@ bool Application::handleMouse(const MouseEvent& mouse)
         if (auto* target = overlays_.handleMouse(mouse,backend_->size()))
         {
             overlays_.dismissExcept(target);
-            focus_.focus(std::to_string(target->id()));
+            if (target->type() != Component::Type::ContextMenu)
+                focus_.focus(std::to_string(target->id()));
             return true;
         }
         overlays_.dismissOutside(mouse,backend_->size());
+        if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Right)
+        {
+            if (auto* menu = reconciler_.root()->contextTarget(mouse.position))
+            {
+                overlays_.dismissExcept(menu);
+                return menu->openContextMenu(mouse.position,backend_->size());
+            }
+        }
     }
     if (scrollbar_drag_id_ != 0)
     {
