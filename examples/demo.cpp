@@ -361,7 +361,9 @@ int main()
                         last_action.set("Simulated delete: "+selected_row.get());
                         dialog_open.set(false);
                     },
-                    .onClose = [&] { dialog_open.set(false); }})
+                    .onClose = [&] { dialog_open.set(false); }}),
+                Toast({.open = last_action.get() != "Ready",.message = last_action.get(),
+                    .severity = ToastSeverity::Info,.durationMs = 3000,.key = "demo-toast"})
             },
             .layout = {.width = screen.width,.height = screen.height,.gap = 0,
                 .alignItems = AlignItems::Stretch}

@@ -171,7 +171,7 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         content = {.width = constraints.maximum.width,.height = 1};
     }
-    else if (type_ == Component::Type::Dialog)
+    else if (type_ == Component::Type::Dialog || type_ == Component::Type::Toast)
     {
         content = {};
     }
@@ -319,7 +319,8 @@ Size RenderNode::measure(const Constraints& constraints) const
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
             const auto& child = children_[i];
-            if (child->type_ == Component::Type::Dialog || !child->tabPanelActive()) continue;
+            if (child->type_ == Component::Type::Dialog || child->type_ == Component::Type::Toast ||
+                !child->tabPanelActive()) continue;
             const auto child_size = child->measure(Constraints{.maximum = max_content});
             if (type_ == Component::Type::Row)
             {
@@ -390,7 +391,8 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
                 Point{.x = origin.x,.y = origin.y+first+1});
         return;
     }
-    if (type_ == Component::Type::Text || type_ == Component::Type::Dialog || type_ == Component::Type::Button ||
+    if (type_ == Component::Type::Text || type_ == Component::Type::Dialog ||
+        type_ == Component::Type::Toast || type_ == Component::Type::Button ||
         type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
         type_ == Component::Type::Tabs || type_ == Component::Type::Table ||
@@ -575,7 +577,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     int placed_children = 0;
     for (const auto& child : children_)
     {
-        if (child->type_ == Component::Type::Dialog)
+        if (child->type_ == Component::Type::Dialog || child->type_ == Component::Type::Toast)
         {
             child->layout(Constraints{.maximum = {}},{.x = origin.x,.y = origin.y});
             continue;
@@ -1316,6 +1318,53 @@ void RenderNode::paintTooltip(Painter& painter, const Point point, const Size sc
     else painter.text(popup.x,popup.y,clipText(text_,popup.width),style);
 }
 
+Rect RenderNode::toastRect(const Size screen, const int bottom_offset) const noexcept
+{
+    if (!toastOpen() || screen.width <= 0 || screen.height <= bottom_offset) return {};
+    const int height = screen.height-bottom_offset >= 3 ? 3 : 1;
+    const int width = std::min(std::max(1,screen.width-2),std::max(12,textWidth(text_)+7));
+    return {.x = std::max(0,screen.width-width-1),
+        .y = screen.height-bottom_offset-height,.width = width,.height = height};
+}
+
+void RenderNode::paintToast(Painter& painter, const Size screen, const Theme& theme,
+    const int bottom_offset) const
+{
+    const Rect popup = toastRect(screen,bottom_offset);
+    if (popup.width <= 0 || popup.height <= 0) return;
+    const auto& palette = theme.palette;
+    const Color accent = toast_severity_ == 1 ? Color::rgb(85,200,125) :
+        toast_severity_ == 2 ? Color::rgb(240,185,80) :
+        toast_severity_ == 3 ? Color::rgb(235,95,105) : palette.primary;
+    const TextStyle style {.foreground = palette.foreground,.background = palette.surface};
+    TextStyle emphasis = style;
+    emphasis.foreground = accent;
+    emphasis.bold = true;
+    painter.fillBackground(popup,palette.surface);
+    const int y = popup.y+(popup.height >= 3 ? 1 : 0);
+    if (popup.height >= 3) painter.border(popup,BorderStyle::Rounded,emphasis);
+    const int inset = popup.height >= 3 ? 2 : 0;
+    const std::string_view indicator = toast_severity_ == 1 ? "✓" :
+        toast_severity_ == 2 ? "!" : toast_severity_ == 3 ? "×" : "i";
+    painter.text(popup.x+inset,y,indicator,emphasis);
+    painter.text(popup.x+inset+2,y,clipText(text_,std::max(0,popup.width-inset*2-2)),style);
+}
+
+void RenderNode::closeToast()
+{
+    if (!toastOpen()) return;
+    toast_visible_ = false;
+    if (toast_on_close_) toast_on_close_();
+}
+
+bool RenderNode::expireToast(const std::chrono::steady_clock::time_point now)
+{
+    if (!toastOpen() || toast_duration_ms_ == 0 ||
+        now-toast_started_ < std::chrono::milliseconds(toast_duration_ms_)) return false;
+    closeToast();
+    return true;
+}
+
 void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& theme) const
 {
     const Rect popup = selectPopupRect(screen);
@@ -1622,7 +1671,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     const std::string_view hovered_id, const std::optional<Color> background, const Theme* theme,
     const bool unicode) const
 {
-    if (type_ == Component::Type::Dialog || (type_ == Component::Type::TabPanel && !tab_panel_active_)) return;
+    if (type_ == Component::Type::Dialog || type_ == Component::Type::Toast ||
+        (type_ == Component::Type::TabPanel && !tab_panel_active_)) return;
     std::optional<Painter::ClipScope> clipping;
     if (style_.clip || type_ == Component::Type::ScrollView) clipping.emplace(painter,bounds_);
     std::optional<Color> effective_background = background;

@@ -32,6 +32,7 @@ public:
     void dismissOutside(const MouseEvent& mouse, Size screen);
     void dismissExcept(const RenderNode* active);
     void setHover(std::optional<Point> position) noexcept { hover_position_ = position; }
+    bool tick(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now());
 
 private:
     std::vector<Portal> portals_;

@@ -6,6 +6,7 @@
 #define TERION_RENDER_NODE_H
 
 #include <cstdint>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <functional>
@@ -107,6 +108,11 @@ public:
     [[nodiscard]] bool tooltipContains(Point point) const noexcept;
     [[nodiscard]] Rect tooltipRect(Point point, Size screen) const noexcept;
     void paintTooltip(Painter& painter, Point point, Size screen, const Theme& theme) const;
+    [[nodiscard]] bool toastOpen() const noexcept { return type_ == Component::Type::Toast && toast_visible_; }
+    [[nodiscard]] Rect toastRect(Size screen, int bottom_offset = 0) const noexcept;
+    void paintToast(Painter& painter, Size screen, const Theme& theme, int bottom_offset = 0) const;
+    bool expireToast(std::chrono::steady_clock::time_point now);
+    void closeToast();
     void paintOverlays(Painter& painter, Size screen, const Theme& theme) const;
     [[nodiscard]] bool dialogOpen() const noexcept { return type_ == Component::Type::Dialog && dialog_open_; }
     [[nodiscard]] bool focusScopeActive() const noexcept
@@ -195,6 +201,12 @@ private:
     Point context_anchor_{};
     int select_grab_offset_ = 0;
     bool dialog_open_ = false;
+    bool toast_requested_ = false;
+    bool toast_visible_ = false;
+    int toast_duration_ms_ = 3500;
+    int toast_severity_ = 0;
+    std::function<void()> toast_on_close_;
+    std::chrono::steady_clock::time_point toast_started_{};
     bool focus_scope_active_ = false;
     bool dialog_close_on_backdrop_ = true;
     bool dialog_confirm_focused_ = false;

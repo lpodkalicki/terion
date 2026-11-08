@@ -136,6 +136,7 @@ public:
         DropdownMenu,
         ContextMenu,
         Tooltip,
+        Toast,
         Tabs,
         TabPanel,
         Table,
@@ -199,6 +200,10 @@ public:
         bool dialog_close_on_backdrop = true;
         std::function<void()> dialog_on_close = {};
         bool focus_scope_active = false;
+        bool toast_open = false;
+        int toast_duration_ms = 3500;
+        int toast_severity = 0;
+        std::function<void()> toast_on_close = {};
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

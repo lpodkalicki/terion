@@ -230,7 +230,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
         if (auto* target = overlays_.handleMouse(mouse,backend_->size()))
         {
             overlays_.dismissExcept(target);
-            if (target->type() != Component::Type::ContextMenu)
+            if (target->type() != Component::Type::ContextMenu &&
+                target->type() != Component::Type::Toast)
                 focus_.focus(std::to_string(target->id()));
             return true;
         }
@@ -539,6 +540,7 @@ int Application::run()
     Size lastSize {.width = -1,.height = -1};
     while (running_)
     {
+        if (overlays_.tick()) invalidate();
         const auto size = backend_->size();
         if (size != lastSize) { renderer_.invalidate(); lastSize = size; invalidate(); }
         if (needsRender()) renderOnce();

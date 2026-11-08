@@ -52,6 +52,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         node->cursor_byte_ = props.text.size();
     }
 
+    const bool message_changed = node->text_ != props.text;
     node->text_ = props.text;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
@@ -101,6 +102,19 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->tab_panel_active_ = props.tab_panel_active;
     node->checked_ = props.checked;
     node->dialog_open_ = props.dialog_open;
+    node->toast_duration_ms_ = std::max(0,props.toast_duration_ms);
+    node->toast_severity_ = std::clamp(props.toast_severity,0,3);
+    node->toast_on_close_ = props.toast_on_close;
+    if (props.type == Component::Type::Toast)
+    {
+        if (props.toast_open && (!node->toast_requested_ || message_changed))
+        {
+            node->toast_visible_ = true;
+            node->toast_started_ = std::chrono::steady_clock::now();
+        }
+        if (!props.toast_open) node->toast_visible_ = false;
+        node->toast_requested_ = props.toast_open;
+    }
     node->focus_scope_active_ = props.focus_scope_active;
     node->dialog_title_ = props.dialog_title;
     node->dialog_confirm_text_ = props.dialog_confirm_text;

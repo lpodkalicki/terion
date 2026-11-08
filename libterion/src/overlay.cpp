@@ -17,6 +17,7 @@ void OverlayManager::collect(RenderNode* root)
             node.type() == Component::Type::ContextMenu || node.type() == Component::Type::Tooltip)
             addPortal(node);
         if (node.type() == Component::Type::Dialog) addPortal(node,100);
+        if (node.type() == Component::Type::Toast) addPortal(node,200);
         for (const auto& child : node.children()) self(self,*child);
     };
     visit(visit,*root);
@@ -47,15 +48,32 @@ void OverlayManager::paint(Painter& painter, const Size screen, const Theme& the
     if (hover_position_ && !modal)
     {
         const Point point = *hover_position_;
-        for (const auto& portal : portals_)
-            if (portal.owner->selectOpen()) return;
-        for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
-            if (it->owner->tooltipContains(point))
-            {
-                it->owner->paintTooltip(painter,point,screen,theme);
-                break;
-            }
+        const bool menu_open = std::any_of(portals_.begin(),portals_.end(),
+            [](const Portal& portal) { return portal.owner->selectOpen(); });
+        if (!menu_open)
+            for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
+                if (it->owner->tooltipContains(point))
+                {
+                    it->owner->paintTooltip(painter,point,screen,theme);
+                    break;
+                }
     }
+    int offset = 0;
+    for (const auto& portal : portals_)
+        if (portal.owner->toastOpen())
+        {
+            const Rect popup = portal.owner->toastRect(screen,offset);
+            portal.owner->paintToast(painter,screen,theme,offset);
+            if (popup.height > 0) offset += popup.height+1;
+        }
+}
+
+bool OverlayManager::tick(const std::chrono::steady_clock::time_point now)
+{
+    bool changed = false;
+    for (const auto& portal : portals_)
+        if (portal.owner->expireToast(now)) changed = true;
+    return changed;
 }
 
 bool OverlayManager::modalOpen() const noexcept
@@ -87,6 +105,22 @@ bool OverlayManager::handleKey(const Event& event)
 
 RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size screen)
 {
+    if (!activeDialog() && mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
+    {
+        int offset = 0;
+        for (const auto& portal : portals_)
+            if (portal.owner->toastOpen())
+            {
+                const Rect popup = portal.owner->toastRect(screen,offset);
+                if (mouse.position.x >= popup.x && mouse.position.x < popup.x+popup.width &&
+                    mouse.position.y >= popup.y && mouse.position.y < popup.y+popup.height)
+                {
+                    portal.owner->closeToast();
+                    return portal.owner;
+                }
+                if (popup.height > 0) offset += popup.height+1;
+            }
+    }
     if (const auto* modal = activeDialog())
         for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
             if (it->owner->selectOpen() && modal->findById(it->owner->id()) &&
