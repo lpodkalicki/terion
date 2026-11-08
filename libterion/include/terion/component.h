@@ -42,6 +42,13 @@ enum class SurfaceTone
     Primary
 }; /* End of enum SurfaceTone */
 
+struct SelectOption
+{
+    std::string label;
+    std::string value;
+    bool disabled = false;
+}; /* End of struct SelectOption */
+
 class Component
 {
 public:
@@ -55,6 +62,7 @@ public:
         ScrollView,
         Button,
         TextField,
+        Select,
         Divider,
         Progress
     }; /* End of enum Type */
@@ -82,6 +90,7 @@ public:
         int scroll_offset = 0;
         std::function<void(int)> on_scroll = {};
         bool scrollbar_visible = true;
+        std::vector<SelectOption> select_options = {};
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

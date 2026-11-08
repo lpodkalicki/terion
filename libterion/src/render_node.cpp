@@ -165,12 +165,14 @@ Size RenderNode::measure(const Constraints& constraints) const
             (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
             .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
     }
-    else if (type_ == Component::Type::TextField)
+    else if (type_ == Component::Type::TextField || type_ == Component::Type::Select)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
-        const int content_width = std::max(textWidth(text_),textWidth(placeholder_));
+        int content_width = std::max(textWidth(text_),textWidth(placeholder_));
+        if (type_ == Component::Type::Select)
+            for (const auto& option : select_options_) content_width = std::max(content_width,textWidth(option.label));
         content = {.width = addBounded(content_width,padding * 2 +
-            (text_field_variant_ == TextFieldVariant::Outlined ? 2 : 0)),
+            (type_ == Component::Type::Select ? 3 : text_field_variant_ == TextFieldVariant::Outlined ? 2 : 0)),
             .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
     }
     else if (type_ == Component::Type::Text)
@@ -263,7 +265,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
     if (type_ == Component::Type::Text || type_ == Component::Type::Button ||
-        type_ == Component::Type::TextField || type_ == Component::Type::Divider ||
+        type_ == Component::Type::TextField || type_ == Component::Type::Select || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress) return;
 
     const int padding = std::max(0,style_.padding) + (border_ ? 1 : 0);
@@ -466,6 +468,130 @@ bool RenderNode::handleScrollKey(const Event& event)
     }
 }
 
+Rect RenderNode::selectPopupRect(const Size screen) const noexcept
+{
+    if (!selectOpen() || select_options_.empty()) return {};
+    const int height = std::min({6,static_cast<int>(select_options_.size()),screen.height});
+    const int width = std::min(bounds_.width,screen.width);
+    if (height <= 0 || width <= 0) return {};
+    const int below = screen.height - (bounds_.y + bounds_.height);
+    const int y = below >= height ? bounds_.y + bounds_.height : std::max(0,bounds_.y-height);
+    return {.x = std::clamp(bounds_.x,0,screen.width-width),.y = y,.width = width,.height = height};
+}
+
+bool RenderNode::selectContains(const Point point, const Size screen) const noexcept
+{
+    const Rect popup = selectPopupRect(screen);
+    return popup.width > 0 && point.x >= popup.x && point.x < popup.x + popup.width &&
+        point.y >= popup.y && point.y < popup.y + popup.height;
+}
+
+bool RenderNode::handleSelectKey(const Event& event)
+{
+    if (type_ != Component::Type::Select || disabled_) return false;
+    if (!select_open_)
+    {
+        if (event.key != Key::Enter && event.key != Key::Down &&
+            !(event.key == Key::Character && event.character == U' ')) return false;
+        if (select_options_.empty()) return true;
+        select_open_ = true;
+        for (std::size_t i = 0; i < select_options_.size(); ++i)
+            if (select_options_[i].value == text_) { select_highlight_ = static_cast<int>(i); break; }
+    }
+    else
+    {
+        if (event.key == Key::Escape) { select_open_ = false; return true; }
+        if (event.key == Key::Up || event.key == Key::Down || event.key == Key::Home ||
+            event.key == Key::End || event.key == Key::PageUp || event.key == Key::PageDown)
+        {
+            const int count = static_cast<int>(select_options_.size());
+            int next = select_highlight_;
+            if (event.key == Key::Up) --next;
+            if (event.key == Key::Down) ++next;
+            if (event.key == Key::Home) next = 0;
+            if (event.key == Key::End) next = count-1;
+            if (event.key == Key::PageUp) next -= 6;
+            if (event.key == Key::PageDown) next += 6;
+            select_highlight_ = std::clamp(next,0,count-1);
+        }
+        else if (event.key == Key::Enter || (event.key == Key::Character && event.character == U' '))
+        {
+            if (!select_options_[select_highlight_].disabled && on_change_)
+                on_change_(select_options_[select_highlight_].value);
+            select_open_ = false;
+            return true;
+        }
+        else return false;
+    }
+    select_scroll_ = std::clamp(select_scroll_,0,std::max(0,static_cast<int>(select_options_.size())-6));
+    if (select_highlight_ < select_scroll_) select_scroll_ = select_highlight_;
+    if (select_highlight_ >= select_scroll_+6) select_scroll_ = select_highlight_-5;
+    return true;
+}
+
+bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
+{
+    if (type_ != Component::Type::Select || disabled_) return false;
+    if (selectContains(mouse.position,screen) && select_open_)
+    {
+        const Rect popup = selectPopupRect(screen);
+        if (mouse.action == MouseAction::Scroll)
+        {
+            select_scroll_ = std::clamp(select_scroll_-mouse.scrollY,0,
+                std::max(0,static_cast<int>(select_options_.size())-popup.height));
+            return true;
+        }
+        if (mouse.action == MouseAction::Move)
+        {
+            select_highlight_ = std::min(static_cast<int>(select_options_.size())-1,
+                select_scroll_+mouse.position.y-popup.y);
+            return true;
+        }
+        if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
+        {
+            const int index = select_scroll_+mouse.position.y-popup.y;
+            if (index < static_cast<int>(select_options_.size()) && !select_options_[index].disabled)
+            {
+                if (on_change_) on_change_(select_options_[index].value);
+                select_open_ = false;
+            }
+        }
+        return true;
+    }
+    if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
+    {
+        if (mouse.position.x >= bounds_.x && mouse.position.x < bounds_.x+bounds_.width &&
+            mouse.position.y >= bounds_.y && mouse.position.y < bounds_.y+bounds_.height)
+        {
+            select_open_ = !select_open_;
+            return true;
+        }
+        select_open_ = false;
+    }
+    return false;
+}
+
+void RenderNode::paintOverlays(Painter& painter, const Size screen, const Theme& theme) const
+{
+    for (const auto& child : children_) child->paintOverlays(painter,screen,theme);
+    const Rect popup = selectPopupRect(screen);
+    if (popup.width <= 0 || popup.height <= 0) return;
+    const Palette palette = theme.palette;
+    painter.fill(popup,Cell{.grapheme = " ",.style = {.background = palette.surface}});
+    for (int i = 0; i < popup.height; ++i)
+    {
+        const int index = select_scroll_+i;
+        if (index >= static_cast<int>(select_options_.size())) break;
+        const bool highlighted = index == select_highlight_;
+        const Color background = highlighted ? palette.primary : palette.surface;
+        painter.fill({.x = popup.x,.y = popup.y+i,.width = popup.width,.height = 1},
+            Cell{.grapheme = " ",.style = {.background = background}});
+        const TextStyle style {.foreground = select_options_[index].disabled ? palette.muted :
+            highlighted ? palette.on_primary : palette.foreground,.background = background};
+        painter.text(popup.x+1,popup.y+i,clipText(select_options_[index].label,std::max(0,popup.width-2)),style);
+    }
+}
+
 Rect RenderNode::scrollbarTrack() const noexcept
 {
     if (type_ != Component::Type::ScrollView || !scrollbar_visible_ || max_scroll_offset_ <= 0 ||
@@ -603,6 +729,36 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const int x = bounds_.x + inset + std::max(0,(label_width - textWidth(label)) / 2);
         const int y = bounds_.y + bounds_.height / 2;
         painter.text(x,y,label,button_style);
+        return;
+    }
+    if (type_ == Component::Type::Select)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const bool focused = focused_id == std::to_string(id_);
+        const bool hovered = hovered_id == std::to_string(id_);
+        const Color background_color = disabled_ ? palette.surface : hovered ?
+            blendColor(palette.surface,palette.primary,12) : palette.surface;
+        const TextStyle style {.foreground = disabled_ ? palette.muted : palette.foreground,
+            .background = background_color};
+        painter.fillBackground(bounds_,background_color);
+        TextStyle outline = style;
+        outline.foreground = disabled_ ? palette.muted : focused || select_open_ ? palette.primary :
+            hovered ? blendColor(palette.muted,palette.primary,55) : palette.muted;
+        if (bounds_.height >= 3) painter.border(bounds_,focused || select_open_ ? BorderStyle::Heavy : BorderStyle::Rounded,outline);
+        else
+        {
+            painter.put(bounds_.x,bounds_.y,"▏",outline);
+            if (bounds_.width > 1) painter.put(bounds_.x+bounds_.width-1,bounds_.y,"▕",outline);
+        }
+        std::string label = placeholder_;
+        for (const auto& option : select_options_)
+            if (option.value == text_) { label = option.label; break; }
+        TextStyle label_style = style;
+        if (label == placeholder_ && text_.empty()) label_style.foreground = palette.muted;
+        painter.text(bounds_.x+2,bounds_.y+bounds_.height/2,clipText(label,std::max(0,bounds_.width-6)),label_style);
+        if (bounds_.width >= 3) painter.put(bounds_.x+bounds_.width-3,bounds_.y+bounds_.height/2,
+            select_open_ ? "▴" : "▾",style);
         return;
     }
     if (type_ == Component::Type::TextField)

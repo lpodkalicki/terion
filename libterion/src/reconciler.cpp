@@ -4,6 +4,7 @@
 
 #include <terion/reconciler.h>
 #include <stdexcept>
+#include <algorithm>
 #include <unordered_set>
 
 using namespace terion;
@@ -56,6 +57,10 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->on_change_ = props.on_change;
     node->placeholder_ = props.placeholder;
     node->disabled_ = props.disabled;
+    node->select_options_ = props.select_options;
+    if (node->select_options_.empty() || node->disabled_) node->select_open_ = false;
+    if (!node->select_options_.empty())
+        node->select_highlight_ = std::clamp(node->select_highlight_,0,static_cast<int>(node->select_options_.size())-1);
     if (node->cursor_byte_ > node->text_.size()) node->cursor_byte_ = node->text_.size();
     while (node->cursor_byte_ > 0 && node->cursor_byte_ < node->text_.size() &&
         (static_cast<unsigned char>(node->text_[node->cursor_byte_]) & 0xC0) == 0x80)

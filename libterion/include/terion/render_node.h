@@ -46,6 +46,13 @@ public:
     [[nodiscard]] bool editable() const noexcept { return static_cast<bool>(on_change_) && !disabled_; }
     bool handleTextInput(const Event& event);
     void setCursorFromX(int x);
+    [[nodiscard]] bool selectOpen() const noexcept { return type_ == Component::Type::Select && select_open_; }
+    [[nodiscard]] Rect selectPopupRect(Size screen) const noexcept;
+    [[nodiscard]] bool selectContains(Point point, Size screen) const noexcept;
+    bool handleSelectKey(const Event& event);
+    bool handleSelectMouse(const MouseEvent& mouse, Size screen);
+    void closeSelect() noexcept { select_open_ = false; }
+    void paintOverlays(Painter& painter, Size screen, const Theme& theme) const;
 
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
@@ -85,6 +92,10 @@ private:
     bool scrollbar_visible_ = true;
     std::function<void(int)> on_scroll_;
     bool disabled_ = false;
+    std::vector<SelectOption> select_options_;
+    bool select_open_ = false;
+    int select_highlight_ = 0;
+    int select_scroll_ = 0;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
 }; /* End of class RenderNode */

@@ -13,6 +13,7 @@
 #include <terion/components/typography.h>
 #include <terion/components/button.h>
 #include <terion/components/text_field.h>
+#include <terion/components/select.h>
 #include <terion/components/divider.h>
 #include <terion/components/progress.h>
 #include <terion/components/grid.h>

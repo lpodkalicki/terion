@@ -13,6 +13,52 @@ using namespace terion;
 
 int main()
 {
+    State<std::string> chosen("a");
+    Application select_app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 30,.height = 12}));
+    select_app.render([&] {
+        return Column({.children = {
+            Select({.options = {{.label = "Alpha",.value = "a"},
+                {.label = "Beta",.value = "b"},
+                {.label = "Disabled",.value = "c",.disabled = true}},
+                .value = chosen.get(),.key = "choice",.layout = {.width = 15},
+                .onChange = [&](std::string value) { chosen.set(std::move(value)); }})
+        }});
+    });
+    select_app.renderOnce();
+    auto* select_node = select_app.reconciler().root()->children()[0].get();
+    assert(!select_node->selectOpen());
+    assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(select_node->selectOpen());
+    assert(select_app.dispatchEvent(Event{.key = Key::Down}));
+    assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(chosen.get() == "b");
+    assert(!select_node->selectOpen());
+    select_app.renderOnce();
+    select_node = select_app.reconciler().root()->children()[0].get();
+    assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
+    const Rect popup = select_node->selectPopupRect(select_app.backend().size());
+    assert(popup.height == 3);
+    ScreenBuffer select_buffer(select_app.backend().size());
+    Painter select_painter(select_buffer);
+    select_painter.text(popup.x+2,popup.y,"Text behind the popup");
+    select_painter.text(popup.x+3,popup.y+1,"Another underlying label");
+    select_app.reconciler().root()->paintOverlays(select_painter,select_buffer.size(),Theme::dark());
+    assert(select_buffer.at(popup.x+1,popup.y).grapheme == "A");
+    assert(select_buffer.at(popup.x+8,popup.y).grapheme == " ");
+    assert(select_buffer.at(popup.x+8,popup.y+1).grapheme == " ");
+    assert(select_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = popup.x+1,.y = popup.y},.button = MouseButton::Left,.action = MouseAction::Press}}));
+    assert(chosen.get() == "a");
+    assert(!select_node->selectOpen());
+    select_app.renderOnce();
+    assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(select_app.dispatchEvent(Event{.key = Key::Escape}));
+    assert(!select_app.reconciler().root()->children()[0]->selectOpen());
+    assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(select_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 25,.y = 10},.button = MouseButton::Left,.action = MouseAction::Press}}) == false);
+    assert(!select_app.reconciler().root()->children()[0]->selectOpen());
+
     assert(!AnsiTerminalBackend::detectCapabilities("Apple_Terminal").mousePointerShape);
     assert(!AnsiTerminalBackend::detectCapabilities("vscode").mousePointerShape);
     assert(!AnsiTerminalBackend::detectCapabilities("iTerm.app").mousePointerShape);

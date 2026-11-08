@@ -37,7 +37,11 @@ void Application::renderOnce()
     syncFocusTargets();
     if (component_)
     {
-        if (const auto* root = reconciler_.root()) root->paint(painter,focus_.current(),hovered_component_id_,std::nullopt,&theme_);
+        if (const auto* root = reconciler_.root())
+        {
+            root->paint(painter,focus_.current(),hovered_component_id_,std::nullopt,&theme_);
+            root->paintOverlays(painter,buffer.size(),theme_);
+        }
     }
     else if (paint_) paint_(painter,buffer.size());
     renderer_.render(buffer,*backend_);
@@ -75,6 +79,12 @@ void Application::syncFocusTargets()
             focus_.add(id,[&node](const Event& event) { return node.handleScrollKey(event); });
             component_focus_ids_.push_back(id);
         }
+        else if (node.type() == Component::Type::Select && !node.disabled())
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleSelectKey(event); });
+            component_focus_ids_.push_back(id);
+        }
         for (const auto& child : node.children()) self(self,*child);
     };
     if (auto* root = reconciler_.root()) visit(visit,*root);
@@ -87,6 +97,30 @@ bool Application::handleMouse(const MouseEvent& mouse)
 {
     updateHover(mouse);
     updateMousePointer(mouse);
+    if (component_ && reconciler_.root())
+    {
+        const auto visit = [&](const auto& self, RenderNode& node) -> bool {
+            for (const auto& child : node.children())
+                if (self(self,*child)) return true;
+            if (node.type() != Component::Type::Select) return false;
+            if (node.selectOpen() && node.selectContains(mouse.position,backend_->size()))
+            {
+                const bool consumed = node.handleSelectMouse(mouse,backend_->size());
+                if (consumed) focus_.focus(std::to_string(node.id()));
+                return consumed;
+            }
+            return false;
+        };
+        if (visit(visit,*reconciler_.root())) return true;
+        const auto dismiss = [&](const auto& self, RenderNode& node) -> void {
+            if (node.selectOpen() && mouse.action == MouseAction::Press &&
+                mouse.button == MouseButton::Left && !node.selectContains(mouse.position,backend_->size()) &&
+                !node.hitTest(mouse.position))
+                node.closeSelect();
+            for (const auto& child : node.children()) self(self,*child);
+        };
+        dismiss(dismiss,*reconciler_.root());
+    }
     if (scrollbar_drag_id_ != 0)
     {
         if (mouse.action == MouseAction::Release)
@@ -135,7 +169,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
     }
     RenderNode* hit = nullptr;
     if (component_ && reconciler_.root()) hit = reconciler_.root()->hitTest(mouse.position);
-    if (hit && !((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
+    if (hit && !((hit->type() == Component::Type::Select && !hit->disabled()) ||
+        (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
         (hit->type() == Component::Type::TextField && hit->editable()))) hit = nullptr;
     const std::string target = hit ? std::to_string(hit->id()) : std::string{};
 
@@ -143,6 +178,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
     {
         pressed_button_id_ = target;
         if (hit) focus_.focus(target);
+        if (hit && hit->type() == Component::Type::Select)
+            return hit->handleSelectMouse(mouse,backend_->size());
         if (!hit && component_ && reconciler_.root())
         {
             if (auto* scroll = reconciler_.root()->scrollTarget(mouse.position))
@@ -190,7 +227,8 @@ void Application::updateHover(const MouseEvent& mouse)
         {
             if (const auto* hit = root->hitTest(mouse.position))
             {
-                if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
+                if ((hit->type() == Component::Type::Select && !hit->disabled()) ||
+                    (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
                     (hit->type() == Component::Type::TextField && hit->editable()))
                     hovered = std::to_string(hit->id());
             }
@@ -226,7 +264,8 @@ void Application::updateMousePointer(const MouseEvent& mouse)
             {
                 if (hit->type() == Component::Type::TextField || hit->type() == Component::Type::Text)
                     shape = MousePointerShape::Text;
-                else if (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick())
+                else if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
+                    (hit->type() == Component::Type::Select && !hit->disabled()))
                     shape = MousePointerShape::Pointer;
             }
         }
