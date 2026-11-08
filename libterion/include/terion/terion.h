@@ -7,6 +7,7 @@
 
 #include <terion/application.h>
 #include <terion/component.h>
+#include <terion/event.h>
 #include <terion/components/box.h>
 #include <terion/components/row.h>
 #include <terion/components/column.h>
@@ -15,6 +16,7 @@
 #include <terion/components/text_field.h>
 #include <terion/components/select.h>
 #include <terion/components/dialog.h>
+#include <terion/components/focus_scope.h>
 #include <terion/components/divider.h>
 #include <terion/components/progress.h>
 #include <terion/components/grid.h>

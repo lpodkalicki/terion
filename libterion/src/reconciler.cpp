@@ -54,11 +54,14 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->columns_ = std::max(1,props.columns);
     node->surface_tone_ = props.surface_tone;
     node->on_click_ = props.on_click;
+    node->on_event_capture_ = props.on_event_capture;
+    node->on_event_ = props.on_event;
     node->on_change_ = props.on_change;
     node->placeholder_ = props.placeholder;
     node->disabled_ = props.disabled;
     node->select_options_ = props.select_options;
     node->dialog_open_ = props.dialog_open;
+    node->focus_scope_active_ = props.focus_scope_active;
     node->dialog_title_ = props.dialog_title;
     node->dialog_confirm_text_ = props.dialog_confirm_text;
     node->dialog_cancel_text_ = props.dialog_cancel_text;

@@ -40,6 +40,9 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `OverlayManager` collects non-owning `Portal` entries after reconciliation, paints them above the component tree in z-index order, routes popup mouse events and dismisses inactive menus.
 - `Select` menus choose the available space above/below the field, open near the selected option and show a draggable scrollbar for long lists. The example contains two independent selects.
 - Controlled modal `Dialog` overlays the screen with a dimmed backdrop, title, message and Cancel/Confirm actions; it intercepts keyboard/mouse events while open (`examples/dialog.cpp`).
+- Event handlers support capture → target → bubble propagation (`onEventCapture`, `onEvent`) with `stopPropagation()` and `preventDefault()`.
+- `FocusScope` confines keyboard focus to one active subtree (for example a form). An open `Dialog` automatically creates a modal focus scope and restores the previously focused background element when closed.
+- `Dialog::Props::children` accepts arbitrary nested components; the overlay lays them out and paints them inside the dialog. See `examples/architecture.cpp` for a composed dialog with a `TextField` and a `Button`.
 - UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.
 - Cmdly integration will be an optional `Console` component in a later milestone.
 

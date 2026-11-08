@@ -27,13 +27,20 @@ void OverlayManager::addPortal(RenderNode& owner, const int z_index)
     });
 }
 
-void OverlayManager::paint(Painter& painter, const Size screen, const Theme& theme) const
+void OverlayManager::paint(Painter& painter, const Size screen, const Theme& theme,
+    const std::string_view focused_id) const
 {
+    const auto* modal = activeDialog();
     for (const auto& portal : portals_)
     {
-        if (portal.owner->selectOpen()) portal.owner->paintOverlay(painter,screen,theme);
-        if (portal.owner->dialogOpen()) portal.owner->paintDialog(painter,screen,theme);
+        if (portal.owner->selectOpen() && (!modal || !modal->findById(portal.owner->id())))
+            portal.owner->paintOverlay(painter,screen,theme);
+        if (portal.owner->dialogOpen()) portal.owner->paintDialog(painter,screen,theme,focused_id);
     }
+    if (modal)
+        for (const auto& portal : portals_)
+            if (portal.owner->selectOpen() && modal->findById(portal.owner->id()))
+                portal.owner->paintOverlay(painter,screen,theme);
 }
 
 bool OverlayManager::modalOpen() const noexcept
@@ -41,6 +48,13 @@ bool OverlayManager::modalOpen() const noexcept
     for (const auto& portal : portals_)
         if (portal.owner->dialogOpen()) return true;
     return false;
+}
+
+RenderNode* OverlayManager::activeDialog() const noexcept
+{
+    for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
+        if (it->owner->dialogOpen()) return it->owner;
+    return nullptr;
 }
 
 bool OverlayManager::handleKey(const Event& event)
@@ -52,6 +66,11 @@ bool OverlayManager::handleKey(const Event& event)
 
 RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size screen)
 {
+    if (const auto* modal = activeDialog())
+        for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
+            if (it->owner->selectOpen() && modal->findById(it->owner->id()) &&
+                (it->owner->selectContains(mouse.position,screen) || it->owner->selectDragging()) &&
+                it->owner->handleSelectMouse(mouse,screen)) return it->owner;
     for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
     {
         auto* portal = it->owner;

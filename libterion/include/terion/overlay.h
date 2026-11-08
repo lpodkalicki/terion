@@ -23,10 +23,11 @@ class OverlayManager
 public:
     void collect(RenderNode* root);
     void addPortal(RenderNode& owner, int z_index = 0);
-    void paint(Painter& painter, Size screen, const Theme& theme) const;
+    void paint(Painter& painter, Size screen, const Theme& theme, std::string_view focused_id = {}) const;
     [[nodiscard]] RenderNode* handleMouse(const MouseEvent& mouse, Size screen);
     bool handleKey(const Event& event);
     [[nodiscard]] bool modalOpen() const noexcept;
+    [[nodiscard]] RenderNode* activeDialog() const noexcept;
     void dismissOutside(const MouseEvent& mouse, Size screen);
     void dismissExcept(const RenderNode* active);
 

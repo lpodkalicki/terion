@@ -86,6 +86,7 @@ private:
     FocusManager focus_;
     Theme theme_;
     std::vector<std::string> component_focus_ids_;
+    std::string background_focus_id_;
     std::string hovered_component_id_;
     std::string pressed_button_id_;
     std::uint64_t scrollbar_drag_id_ = 0;

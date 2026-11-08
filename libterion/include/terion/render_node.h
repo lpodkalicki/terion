@@ -28,6 +28,9 @@ public:
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
     [[nodiscard]] const std::vector<std::unique_ptr<RenderNode>>& children() const noexcept { return children_; }
     [[nodiscard]] Rect bounds() const noexcept { return bounds_; }
+    [[nodiscard]] bool propagateEvent(const Event& event, std::uint64_t target) const;
+    [[nodiscard]] RenderNode* findById(std::uint64_t id) noexcept;
+    [[nodiscard]] const RenderNode* findById(std::uint64_t id) const noexcept;
     [[nodiscard]] const RenderNode* hitTest(Point position) const noexcept;
     [[nodiscard]] RenderNode* hitTest(Point position) noexcept
     {
@@ -58,10 +61,17 @@ public:
     void paintOverlay(Painter& painter, Size screen, const Theme& theme) const;
     void paintOverlays(Painter& painter, Size screen, const Theme& theme) const;
     [[nodiscard]] bool dialogOpen() const noexcept { return type_ == Component::Type::Dialog && dialog_open_; }
-    [[nodiscard]] Rect dialogRect(Size screen) const noexcept;
+    [[nodiscard]] bool focusScopeActive() const noexcept
+    {
+        return type_ == Component::Type::FocusScope && focus_scope_active_;
+    }
+    [[nodiscard]] Rect dialogRect(Size screen) const;
+    void layoutDialogChildren(Size screen);
+    [[nodiscard]] RenderNode* dialogChildAt(Point point) noexcept;
     bool handleDialogKey(const Event& event);
     bool handleDialogMouse(const MouseEvent& mouse, Size screen);
-    void paintDialog(Painter& painter, Size screen, const Theme& theme) const;
+    void paintDialog(Painter& painter, Size screen, const Theme& theme,
+        std::string_view focused_id = {}) const;
 
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
@@ -91,6 +101,8 @@ private:
     int columns_ = 1;
     SurfaceTone surface_tone_ = SurfaceTone::None;
     std::function<void()> on_click_;
+    std::function<void(ComponentEvent&)> on_event_capture_;
+    std::function<void(ComponentEvent&)> on_event_;
     std::function<void(std::string)> on_change_;
     std::string placeholder_;
     std::size_t cursor_byte_ = 0;
@@ -108,6 +120,7 @@ private:
     bool select_dragging_ = false;
     int select_grab_offset_ = 0;
     bool dialog_open_ = false;
+    bool focus_scope_active_ = false;
     bool dialog_close_on_backdrop_ = true;
     bool dialog_confirm_focused_ = false;
     int dialog_width_ = 48;
@@ -115,6 +128,7 @@ private:
     std::string dialog_confirm_text_;
     std::string dialog_cancel_text_;
     std::function<void()> dialog_on_close_;
+    std::uint64_t dialog_pressed_child_ = 0;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
 }; /* End of class RenderNode */

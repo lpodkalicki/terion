@@ -17,10 +17,14 @@ public:
         std::vector<Component> children = {};
         std::string key = {};
         LayoutStyle layout = {};
+        std::function<void(ComponentEvent&)> onEventCapture = {};
+        std::function<void(ComponentEvent&)> onEvent = {};
     }; /* End of struct Props */
 
     explicit Column(Props props) :
-        Component(Component::column(std::move(props.children),std::move(props.key),props.layout))
+        Component({.type = Type::Column,.key = std::move(props.key),
+            .children = std::move(props.children),.layout = props.layout,
+            .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent)})
     {}
 }; /* End of class Column */
 

@@ -22,11 +22,15 @@ public:
         TextStyle style = {};
         LayoutStyle layout = {};
         ButtonSize size = ButtonSize::Medium;
+        std::function<void(ComponentEvent&)> onEventCapture = {};
+        std::function<void(ComponentEvent&)> onEvent = {};
     }; /* End of struct Props */
 
     explicit Button(Props props) :
         Component({.type = Type::Button,.key = std::move(props.key),.text = std::move(props.text),
-            .layout = props.layout,.text_style = props.style,.on_click = std::move(props.onClick),.disabled = props.disabled,
+            .layout = props.layout,.text_style = props.style,.on_click = std::move(props.onClick),
+            .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
+            .disabled = props.disabled,
             .button_variant = props.variant,.button_size = props.size})
     {}
 }; /* End of class Button */

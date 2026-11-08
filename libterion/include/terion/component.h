@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 #include <terion/layout.h>
+#include <terion/event.h>
 #include <terion/render/color.h>
 
 namespace terion {
@@ -64,6 +65,7 @@ public:
         TextField,
         Select,
         Dialog,
+        FocusScope,
         Divider,
         Progress
     }; /* End of enum Type */
@@ -77,6 +79,8 @@ public:
         LayoutStyle layout = {};
         TextStyle text_style = {};
         std::function<void()> on_click = {};
+        std::function<void(ComponentEvent&)> on_event_capture = {};
+        std::function<void(ComponentEvent&)> on_event = {};
         std::function<void(std::string)> on_change = {};
         std::string placeholder = {};
         bool disabled = false;
@@ -99,6 +103,7 @@ public:
         int dialog_width = 48;
         bool dialog_close_on_backdrop = true;
         std::function<void()> dialog_on_close = {};
+        bool focus_scope_active = false;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

@@ -703,13 +703,88 @@ void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& 
     }
 }
 
-Rect RenderNode::dialogRect(const Size screen) const noexcept
+const RenderNode* RenderNode::findById(const std::uint64_t id) const noexcept
+{
+    if (id_ == id) return this;
+    for (const auto& child : children_)
+        if (const auto* found = child->findById(id)) return found;
+    return nullptr;
+}
+
+RenderNode* RenderNode::findById(const std::uint64_t id) noexcept
+{
+    return const_cast<RenderNode*>(static_cast<const RenderNode&>(*this).findById(id));
+}
+
+bool RenderNode::propagateEvent(const Event& event, const std::uint64_t target) const
+{
+    std::vector<const RenderNode*> path;
+    const auto visit = [&](const auto& self, const RenderNode& node) -> bool {
+        path.push_back(&node);
+        if (node.id_ == target) return true;
+        for (const auto& child : node.children_)
+            if (self(self,*child)) return true;
+        path.pop_back();
+        return false;
+    };
+    if (!visit(visit,*this)) return false;
+    ComponentEvent propagated(event,target);
+    for (std::size_t i = 0; i + 1 < path.size(); ++i)
+    {
+        propagated.currentTarget = path[i]->id_;
+        propagated.phase = EventPhase::Capture;
+        if (path[i]->on_event_capture_) path[i]->on_event_capture_(propagated);
+        if (propagated.propagationStopped()) return propagated.defaultPrevented();
+    }
+    propagated.currentTarget = target;
+    propagated.phase = EventPhase::Target;
+    if (path.back()->on_event_capture_) path.back()->on_event_capture_(propagated);
+    if (!propagated.propagationStopped() && path.back()->on_event_)
+        path.back()->on_event_(propagated);
+    if (propagated.propagationStopped()) return propagated.defaultPrevented();
+    for (std::size_t i = path.size() - 1; i > 0; --i)
+    {
+        propagated.currentTarget = path[i-1]->id_;
+        propagated.phase = EventPhase::Bubble;
+        if (path[i-1]->on_event_) path[i-1]->on_event_(propagated);
+        if (propagated.propagationStopped()) break;
+    }
+    return propagated.defaultPrevented();
+}
+
+Rect RenderNode::dialogRect(const Size screen) const
 {
     if (!dialogOpen() || screen.width <= 0 || screen.height <= 0) return {};
     const int width = std::min(screen.width,std::max(20,dialog_width_));
-    const int height = std::min(screen.height,9);
+    int contents_height = 0;
+    for (const auto& child : children_)
+        contents_height += child->measure(Constraints{.maximum = {.width = std::max(0,width-4),
+            .height = std::max(0,screen.height-8)}}).height + 1;
+    const int height = std::min(screen.height,std::max(9,8+contents_height));
     return {.x = (screen.width-width)/2,.y = (screen.height-height)/2,
         .width = width,.height = height};
+}
+
+void RenderNode::layoutDialogChildren(const Size screen)
+{
+    if (!dialogOpen()) return;
+    const Rect rect = dialogRect(screen);
+    int y = rect.y + (text_.empty() ? 3 : 5);
+    const int available_width = std::max(0,rect.width-4);
+    for (auto& child : children_)
+    {
+        const int available_height = std::max(0,rect.y+rect.height-3-y);
+        child->layout(Constraints{.maximum = {.width = available_width,.height = available_height}},
+            {.x = rect.x+2,.y = y});
+        y += child->bounds().height + 1;
+    }
+}
+
+RenderNode* RenderNode::dialogChildAt(const Point point) noexcept
+{
+    for (auto it = children_.rbegin(); it != children_.rend(); ++it)
+        if (auto* hit = (*it)->hitTest(point)) return hit;
+    return nullptr;
 }
 
 bool RenderNode::handleDialogKey(const Event& event)
@@ -735,7 +810,26 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
     const Rect rect = dialogRect(screen);
     const bool inside = mouse.position.x >= rect.x && mouse.position.x < rect.x+rect.width &&
         mouse.position.y >= rect.y && mouse.position.y < rect.y+rect.height;
+    if (auto* child = dialogChildAt(mouse.position))
+    {
+        if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
+        {
+            dialog_pressed_child_ = child->id();
+            if (child->type() == Component::Type::TextField)
+                child->setCursorFromX(mouse.position.x);
+            return true;
+        }
+        if (mouse.action == MouseAction::Release)
+        {
+            if (dialog_pressed_child_ == child->id() && child->type() == Component::Type::Button &&
+                !child->disabled() && child->onClick()) child->onClick()();
+            dialog_pressed_child_ = 0;
+            return true;
+        }
+    }
+    if (mouse.action == MouseAction::Release) { dialog_pressed_child_ = 0; return true; }
     if (mouse.action != MouseAction::Press || mouse.button != MouseButton::Left) return true;
+    dialog_pressed_child_ = 0;
     if (!inside)
     {
         if (dialog_close_on_backdrop_ && dialog_on_close_) dialog_on_close_();
@@ -761,7 +855,8 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
     return true;
 }
 
-void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& theme) const
+void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& theme,
+    const std::string_view focused_id) const
 {
     const Rect rect = dialogRect(screen);
     if (rect.width <= 0 || rect.height <= 0) return;
@@ -780,6 +875,11 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
     if (rect.height >= 5)
     {
         painter.text(rect.x+2,rect.y+3,clipText(text_,std::max(0,rect.width-4)),style);
+        {
+            Painter::ClipScope clip(painter,{.x = rect.x+1,.y = rect.y+2,
+                .width = std::max(0,rect.width-2),.height = std::max(0,rect.height-4)});
+            for (const auto& child : children_) child->paint(painter,focused_id,{},palette.surface,&theme);
+        }
         const int row = rect.y+rect.height-2;
         const int confirm_x = rect.x+std::max(1,rect.width-static_cast<int>(dialog_confirm_text_.size())-3);
         TextStyle cancel_style = style;

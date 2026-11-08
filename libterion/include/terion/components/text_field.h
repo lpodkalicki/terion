@@ -22,11 +22,14 @@ public:
         std::function<void(std::string)> onChange = {};
         TextFieldVariant variant = TextFieldVariant::Outlined;
         ButtonSize size = ButtonSize::Medium;
+        std::function<void(ComponentEvent&)> onEventCapture = {};
+        std::function<void(ComponentEvent&)> onEvent = {};
     }; /* End of struct Props */
 
     explicit TextField(Props props) :
         Component({.type = Type::TextField,.key = std::move(props.key),
             .text = std::move(props.value),.layout = props.layout,
+            .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
             .on_change = std::move(props.onChange),.placeholder = std::move(props.placeholder),
             .disabled = props.disabled,.button_size = props.size,.text_field_variant = props.variant})
     {}

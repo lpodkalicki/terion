@@ -20,11 +20,14 @@ public:
         int scrollOffset = 0;
         std::function<void(int)> onScroll = {};
         bool showScrollbar = true;
+        std::function<void(ComponentEvent&)> onEventCapture = {};
+        std::function<void(ComponentEvent&)> onEvent = {};
     }; /* End of struct Props */
 
     explicit ScrollView(Props props) :
         Component({.type = Type::ScrollView,.key = std::move(props.key),
             .children = std::move(props.children),.layout = props.layout,
+            .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
             .scroll_offset = props.scrollOffset,.on_scroll = std::move(props.onScroll),
             .scrollbar_visible = props.showScrollbar})
     {}
