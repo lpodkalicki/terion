@@ -13,6 +13,29 @@ using namespace terion;
 
 int main()
 {
+    Reconciler graphic_buttons;
+    graphic_buttons.update(Row({.children = {
+        Button({.text = "Save",.key = "save",.variant = ButtonVariant::Contained}),
+        Button({.text = "Cancel",.key = "cancel",.variant = ButtonVariant::Outlined}),
+        Button({.text = "Help",.key = "help",.variant = ButtonVariant::Text}),
+        Button({.text = "Disabled",.key = "disabled",.variant = ButtonVariant::Contained,.disabled = true})
+    },.layout = {.gap = 1}}));
+    graphic_buttons.root()->layout(Constraints{.maximum = {.width = 80,.height = 5}});
+    const auto& buttons = graphic_buttons.root()->children();
+    assert(buttons[0]->bounds().height == 3);
+    assert(buttons[1]->bounds().height == 3);
+    ScreenBuffer buttons_buffer({.width = 80,.height = 5});
+    Painter buttons_painter(buttons_buffer);
+    const Theme dark = Theme::dark();
+    graphic_buttons.root()->paint(buttons_painter,{},std::to_string(buttons[0]->id()),std::nullopt,&dark);
+    assert(buttons_buffer.at(buttons[0]->bounds().x,1).style.background != dark.palette.primary);
+    assert(buttons_buffer.at(buttons[1]->bounds().x,0).grapheme == "╭");
+    assert(buttons_buffer.at(buttons[2]->bounds().x,0).grapheme != "╭");
+    assert(buttons_buffer.at(buttons[3]->bounds().x,1).style.background == dark.palette.surface);
+    buttons_buffer.clear();
+    graphic_buttons.root()->paint(buttons_painter,std::to_string(buttons[1]->id()),{},std::nullopt,&dark);
+    assert(buttons_buffer.at(buttons[1]->bounds().x,0).grapheme == "┏");
+
     Reconciler flexible;
     flexible.update(Column({.children = {
         Typography({.text = "Header"}),
@@ -98,7 +121,7 @@ int main()
     assert(light.palette.background == Color::rgb(248,249,251));
     Reconciler themed;
     themed.update(Component::column({
-        Button({.text = "OK",.variant = ButtonVariant::Contained}),
+        Button({.text = "OK",.variant = ButtonVariant::Contained,.size = ButtonSize::Compact}),
         Progress({.value = 0.5,.layout = {.width = 4}})
     }));
     themed.root()->layout(Constraints{.maximum = {.width = 15,.height = 4}});
@@ -384,9 +407,10 @@ int main()
     app.render([&] {
         return Column({.children = {
             Typography({.text = "Actions",.variant = TypographyVariant::H2}),
-            Button({.text = "First",.key = "first",.onClick = [&] { ++clicks; }}),
-            Button({.text = "Disabled",.key = "disabled",.disabled = true,.onClick = [&] { clicks += 100; }}),
-            Button({.text = "Second",.key = "second",.onClick = [&] { clicks += 10; }})
+            Button({.text = "First",.key = "first",.onClick = [&] { ++clicks; },.size = ButtonSize::Compact}),
+            Button({.text = "Disabled",.key = "disabled",.disabled = true,.onClick = [&] { clicks += 100; },
+                .size = ButtonSize::Compact}),
+            Button({.text = "Second",.key = "second",.onClick = [&] { clicks += 10; },.size = ButtonSize::Compact})
         }});
     });
     app.renderOnce();
@@ -420,13 +444,13 @@ int main()
     ScreenBuffer hover_buffer({.width = 20,.height = 5});
     Painter hover_painter(hover_buffer);
     app.reconciler().root()->paint(hover_painter,{},first_button_id);
-    assert(hover_buffer.at(0,1).grapheme == "{");
+    assert(hover_buffer.at(0,1).grapheme == "▏");
     State<std::string> input{std::string{}};
     app.render([&] {
         return Column({.children = {
             TextField({.value = input.get(),.placeholder = "Name",.key = "name",
                 .onChange = [&](std::string value) { input.set(std::move(value)); }}),
-            Button({.text = "OK",.key = "ok",.onClick = [&] { ++clicks; }})
+            Button({.text = "OK",.key = "ok",.onClick = [&] { ++clicks; },.size = ButtonSize::Compact})
         }});
     });
     app.renderOnce();

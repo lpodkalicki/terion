@@ -28,6 +28,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - Theme-aware `Paper` and `Card`, plus `Stack` and equal-column `Grid` layouts.
 - `LayoutStyle` supports minimum/maximum dimensions, weighted `flex` in `Row`/`Column`, `justifyContent` and `alignItems`.
 - `examples/fullscreen.cpp` demonstrates a terminal-sized dashboard with all current declarative components.
+- Buttons have true-color surfaces, Unicode rounded borders, hover/focus states and compact/medium/large sizes (`examples/buttons.cpp`).
 - UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.
 - Cmdly integration will be an optional `Console` component in a later milestone.
 

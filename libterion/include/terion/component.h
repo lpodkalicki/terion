@@ -22,6 +22,13 @@ enum class ButtonVariant
     Contained
 }; /* End of enum ButtonVariant */
 
+enum class ButtonSize
+{
+    Compact,
+    Medium,
+    Large
+}; /* End of enum ButtonSize */
+
 enum class SurfaceTone
 {
     None,
@@ -63,6 +70,7 @@ public:
         double value = 0.0;
         int columns = 1;
         SurfaceTone surface_tone = SurfaceTone::None;
+        ButtonSize button_size = ButtonSize::Medium;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

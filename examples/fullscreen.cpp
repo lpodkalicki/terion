@@ -40,9 +40,9 @@ int main()
                             .children = {
                                 Typography({.text = "Overview"}),
                                 Divider({}),
-                                Button({.text = "Dashboard",.variant = ButtonVariant::Contained}),
-                                Button({.text = "Settings"}),
-                                Button({.text = "Reports",.disabled = true}),
+                                Button({.text = "Dashboard",.variant = ButtonVariant::Contained,.size = ButtonSize::Compact}),
+                                Button({.text = "Settings",.size = ButtonSize::Compact}),
+                                Button({.text = "Reports",.disabled = true,.size = ButtonSize::Compact}),
                                 Typography({.text = "Search",.variant = TypographyVariant::Subtitle}),
                                 TextField({.value = query.get(),.placeholder = "Type to search...",
                                     .key = "search",.onChange = [&](std::string text) { query.set(std::move(text)); }}),
@@ -100,7 +100,7 @@ int main()
                                 .variant = ButtonVariant::Text,.onClick = [&] {
                                     light.set(!light.get());
                                     app.setTheme(light.get() ? Theme::light() : Theme::dark());
-                                }})
+                                },.size = ButtonSize::Compact})
                         },.layout = {.width = screen.width,.justifyContent = JustifyContent::SpaceBetween}
                     })},
                     .layout = {.width = screen.width,.padding = 0}

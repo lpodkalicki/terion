@@ -20,12 +20,14 @@ public:
         bool disabled = false;
         std::function<void()> onClick = {};
         TextStyle style = {};
+        LayoutStyle layout = {};
+        ButtonSize size = ButtonSize::Medium;
     }; /* End of struct Props */
 
     explicit Button(Props props) :
         Component({.type = Type::Button,.key = std::move(props.key),.text = std::move(props.text),
-            .text_style = props.style,.on_click = std::move(props.onClick),.disabled = props.disabled,
-            .button_variant = props.variant})
+            .layout = props.layout,.text_style = props.style,.on_click = std::move(props.onClick),.disabled = props.disabled,
+            .button_variant = props.variant,.button_size = props.size})
     {}
 }; /* End of class Button */
 

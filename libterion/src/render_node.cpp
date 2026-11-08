@@ -111,6 +111,15 @@ int addBounded(const int a, const int b)
         static_cast<long long>(std::numeric_limits<int>::max())));
 }
 
+Color blendColor(const Color base, const Color overlay, const int overlay_percent)
+{
+    const auto mix = [&](const std::uint8_t a, const std::uint8_t b) {
+        return static_cast<std::uint8_t>((static_cast<int>(a) * (100 - overlay_percent) +
+            static_cast<int>(b) * overlay_percent) / 100);
+    };
+    return Color::rgb(mix(base.red,overlay.red),mix(base.green,overlay.green),mix(base.blue,overlay.blue));
+}
+
 } /* End of anonymous namespace */
 
 Size RenderNode::measure(const Constraints& constraints) const
@@ -127,11 +136,17 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         content = {.width = 20,.height = 1};
     }
-    else if (type_ == Component::Type::Text || type_ == Component::Type::Button || type_ == Component::Type::TextField)
+    else if (type_ == Component::Type::Button)
+    {
+        const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
+        content = {.width = addBounded(textWidth(text_),padding * 2 +
+            (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
+            .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
+    }
+    else if (type_ == Component::Type::Text || type_ == Component::Type::TextField)
     {
         const auto& value = type_ == Component::Type::TextField && text_.empty() ? placeholder_ : text_;
-        content = {.width = addBounded(textWidth(value),type_ == Component::Type::Text ? 0 :
-            type_ == Component::Type::TextField ? 3 : button_variant_ == ButtonVariant::Text ? 0 : 2),.height = 1};
+        content = {.width = addBounded(textWidth(value),type_ == Component::Type::Text ? 0 : 3),.height = 1};
     }
     else if (type_ == Component::Type::Grid)
     {
@@ -373,29 +388,63 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         }
         return;
     }
-    if (type_ == Component::Type::Text || type_ == Component::Type::Button ||
-        type_ == Component::Type::TextField)
+    if (type_ == Component::Type::Button)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const bool focused = focused_id == std::to_string(id_);
+        const bool hovered = hovered_id == std::to_string(id_);
+        const bool compact = bounds_.height < 3;
+        const bool outlined = button_variant_ == ButtonVariant::Outlined;
+        Color background_color = effective_background.value_or(palette.background);
+        Color foreground_color = palette.primary;
+        if (button_variant_ == ButtonVariant::Contained)
+        {
+            background_color = palette.primary;
+            foreground_color = palette.on_primary;
+        }
+        if (disabled_)
+        {
+            background_color = palette.surface;
+            foreground_color = palette.muted;
+        }
+        else if (hovered || focused)
+        {
+            const Color highlight = button_variant_ == ButtonVariant::Contained ?
+                palette.on_primary : palette.primary;
+            background_color = blendColor(background_color,highlight,hovered ? 16 : 24);
+        }
+        if (button_variant_ == ButtonVariant::Text && !hovered && !focused && !disabled_)
+            background_color = effective_background.value_or(palette.background);
+
+        if (text_style_ != TextStyle{}) foreground_color = text_style_.foreground;
+        const TextStyle button_style {.foreground = foreground_color,.background = background_color,
+            .bold = focused || text_style_.bold,.underline = text_style_.underline};
+        painter.fillBackground(bounds_,background_color);
+        if (outlined)
+        {
+            if (compact)
+            {
+                painter.put(bounds_.x,bounds_.y,"▏",button_style);
+                if (bounds_.width > 1) painter.put(bounds_.x+bounds_.width-1,bounds_.y,"▕",button_style);
+            }
+            else
+                painter.border(bounds_,focused ? BorderStyle::Heavy : BorderStyle::Rounded,button_style);
+        }
+        const int inset = outlined ? 1 : 0;
+        const int label_width = std::max(0,bounds_.width - inset * 2);
+        const std::string label = clipText(text_,label_width);
+        const int x = bounds_.x + inset + std::max(0,(label_width - textWidth(label)) / 2);
+        const int y = bounds_.y + bounds_.height / 2;
+        painter.text(x,y,label,button_style);
+        return;
+    }
+    if (type_ == Component::Type::Text || type_ == Component::Type::TextField)
     {
         if (bounds_.height > 0 && bounds_.width > 0)
         {
             std::string label = text_;
-            if (type_ == Component::Type::Button)
-            {
-                if (theme && button_variant_ == ButtonVariant::Contained)
-                {
-                    style.foreground = theme->palette.on_primary;
-                    style.background = theme->palette.primary;
-                }
-                else if (theme && button_variant_ == ButtonVariant::Outlined)
-                    style.foreground = theme->palette.primary;
-                if (disabled_) label = "(" + label + ")";
-                else if (button_variant_ == ButtonVariant::Text) {}
-                else if (focused_id == std::to_string(id_)) label = ">" + label + "<";
-                else if (hovered_id == std::to_string(id_)) label = "{" + label + "}";
-                else if (button_variant_ == ButtonVariant::Contained) label = " " + label + " ";
-                else label = "[" + label + "]";
-            }
-            else if (type_ == Component::Type::TextField)
+            if (type_ == Component::Type::TextField)
             {
                 if (text_.empty()) label = placeholder_;
                 if (focused_id == std::to_string(id_) && !disabled_)

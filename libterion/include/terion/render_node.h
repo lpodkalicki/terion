@@ -61,6 +61,7 @@ private:
     std::optional<BorderStyle> border_;
     std::optional<Color> background_;
     ButtonVariant button_variant_ = ButtonVariant::Outlined;
+    ButtonSize button_size_ = ButtonSize::Medium;
     double value_ = 0.0;
     int columns_ = 1;
     SurfaceTone surface_tone_ = SurfaceTone::None;
