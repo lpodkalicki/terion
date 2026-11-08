@@ -76,6 +76,19 @@ bool OverlayManager::tick(const std::chrono::steady_clock::time_point now)
     return changed;
 }
 
+int OverlayManager::toastOccupiedHeight(const Size screen) const noexcept
+{
+    int offset = 0;
+    for (const auto& portal : portals_)
+        if (portal.owner->toastOpen())
+        {
+            const Rect rect = portal.owner->toastRect(screen,offset);
+            if (rect.height <= 0) break;
+            offset += rect.height+1;
+        }
+    return offset;
+}
+
 bool OverlayManager::modalOpen() const noexcept
 {
     for (const auto& portal : portals_)

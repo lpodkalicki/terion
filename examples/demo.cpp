@@ -187,7 +187,10 @@ int main()
                     Tooltip({.child = Button({.text = "Import",.key = "import-file",.variant = ButtonVariant::Contained,
                         .onClick = [&] {
                             imported.set(imported.get()+1);
-                            last_action.set("Simulated import #"+std::to_string(imported.get()));
+                            const auto status = "Simulated import #"+std::to_string(imported.get());
+                            last_action.set(status);
+                            (void)app.toasts().enqueue({.message = status,
+                                .severity = ToastSeverity::Success});
                         }}),.text = "Import files into the current collection",.key = "import-tooltip"}),
                     Button({.text = "File details",.key = "file-details",
                         .onClick = [&] { page.set("details"); }}),
@@ -359,11 +362,11 @@ int main()
                     .confirmText = "Delete",.cancelText = "Cancel",
                     .onConfirm = [&] {
                         last_action.set("Simulated delete: "+selected_row.get());
+                        (void)app.toasts().enqueue({.message = "File deleted (demo)",
+                            .severity = ToastSeverity::Success});
                         dialog_open.set(false);
                     },
-                    .onClose = [&] { dialog_open.set(false); }}),
-                Toast({.open = last_action.get() != "Ready",.message = last_action.get(),
-                    .severity = ToastSeverity::Info,.durationMs = 3000,.key = "demo-toast"})
+                    .onClose = [&] { dialog_open.set(false); }})
             },
             .layout = {.width = screen.width,.height = screen.height,.gap = 0,
                 .alignItems = AlignItems::Stretch}

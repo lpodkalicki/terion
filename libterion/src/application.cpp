@@ -91,6 +91,8 @@ void Application::renderOnce()
         }
     }
     else if (paint_) paint_(painter,buffer.size());
+    if (!overlays_.modalOpen())
+        toasts_.paint(painter,buffer.size(),theme_,overlays_.toastOccupiedHeight(buffer.size()));
     renderer_.render(buffer,*backend_);
 }
 
@@ -225,6 +227,9 @@ bool Application::handleMouse(const MouseEvent& mouse)
     }
     updateHover(mouse);
     updateMousePointer(mouse);
+    if (!overlays_.modalOpen() &&
+        toasts_.handleMouse(mouse,backend_->size(),overlays_.toastOccupiedHeight(backend_->size())))
+        return true;
     if (component_ && reconciler_.root())
     {
         if (auto* target = overlays_.handleMouse(mouse,backend_->size()))
@@ -541,6 +546,7 @@ int Application::run()
     while (running_)
     {
         if (overlays_.tick()) invalidate();
+        (void)toasts_.tick();
         const auto size = backend_->size();
         if (size != lastSize) { renderer_.invalidate(); lastSize = size; invalidate(); }
         if (needsRender()) renderOnce();

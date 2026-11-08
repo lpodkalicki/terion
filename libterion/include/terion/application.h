@@ -14,6 +14,7 @@
 #include <terion/focus.h>
 #include <terion/reconciler.h>
 #include <terion/overlay.h>
+#include <terion/toast_manager.h>
 #include <terion/state.h>
 #include <terion/theme.h>
 #include <terion/terminal.h>
@@ -56,6 +57,7 @@ public:
     int run();
 
     [[nodiscard]] FocusManager& focus() noexcept { return focus_; }
+    [[nodiscard]] ToastManager& toasts() noexcept { return toasts_; }
     bool focus(std::string_view component_key);
     void blur() noexcept { focus_.blur(); invalidate(); }
     [[nodiscard]] std::string_view focused() const noexcept { return focus_.current(); }
@@ -88,6 +90,7 @@ private:
     OverlayManager overlays_;
     std::shared_ptr<std::atomic_bool> dirty_ = std::make_shared<std::atomic_bool>(true);
     DependencyTracker tracker_;
+    ToastManager toasts_{[this] { invalidate(); }};
     EventCallback on_event_;
     struct ShortcutEntry
     {

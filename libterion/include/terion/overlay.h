@@ -33,6 +33,7 @@ public:
     void dismissExcept(const RenderNode* active);
     void setHover(std::optional<Point> position) noexcept { hover_position_ = position; }
     bool tick(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now());
+    [[nodiscard]] int toastOccupiedHeight(Size screen) const noexcept;
 
 private:
     std::vector<Portal> portals_;
