@@ -62,6 +62,7 @@ private:
     std::optional<Color> background_;
     ButtonVariant button_variant_ = ButtonVariant::Outlined;
     ButtonSize button_size_ = ButtonSize::Medium;
+    TextFieldVariant text_field_variant_ = TextFieldVariant::Outlined;
     double value_ = 0.0;
     int columns_ = 1;
     SurfaceTone surface_tone_ = SurfaceTone::None;
@@ -69,6 +70,7 @@ private:
     std::function<void(std::string)> on_change_;
     std::string placeholder_;
     std::size_t cursor_byte_ = 0;
+    mutable int scroll_columns_ = 0;
     bool disabled_ = false;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;

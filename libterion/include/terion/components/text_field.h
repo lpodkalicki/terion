@@ -20,13 +20,15 @@ public:
         bool disabled = false;
         LayoutStyle layout = {};
         std::function<void(std::string)> onChange = {};
+        TextFieldVariant variant = TextFieldVariant::Outlined;
+        ButtonSize size = ButtonSize::Medium;
     }; /* End of struct Props */
 
     explicit TextField(Props props) :
         Component({.type = Type::TextField,.key = std::move(props.key),
             .text = std::move(props.value),.layout = props.layout,
             .on_change = std::move(props.onChange),.placeholder = std::move(props.placeholder),
-            .disabled = props.disabled})
+            .disabled = props.disabled,.button_size = props.size,.text_field_variant = props.variant})
     {}
 }; /* End of class TextField */
 

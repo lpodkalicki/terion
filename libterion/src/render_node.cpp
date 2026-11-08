@@ -43,6 +43,28 @@ std::string clipText(const std::string_view text, const int columns)
     return clipped;
 }
 
+std::string clipWindow(const std::string_view text, const int offset, const int columns)
+{
+    std::string result;
+    int position = 0;
+    int drawn = 0;
+    for (std::size_t i = 0; i < text.size();)
+    {
+        const auto [code_point,bytes] = decodeUtf8(text,i);
+        if (!bytes) break;
+        const int width = codePointWidth(code_point);
+        if (position >= offset && drawn + width <= columns)
+        {
+            result.append(text.substr(i,bytes));
+            drawn += width;
+        }
+        if (width > 0) position += width;
+        i += bytes;
+        if (drawn >= columns) break;
+    }
+    return result;
+}
+
 std::size_t previousCodepoint(const std::string_view text, const std::size_t cursor)
 {
     std::size_t previous = 0;
@@ -143,10 +165,17 @@ Size RenderNode::measure(const Constraints& constraints) const
             (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
             .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
     }
-    else if (type_ == Component::Type::Text || type_ == Component::Type::TextField)
+    else if (type_ == Component::Type::TextField)
     {
-        const auto& value = type_ == Component::Type::TextField && text_.empty() ? placeholder_ : text_;
-        content = {.width = addBounded(textWidth(value),type_ == Component::Type::Text ? 0 : 3),.height = 1};
+        const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
+        const int content_width = std::max(textWidth(text_),textWidth(placeholder_));
+        content = {.width = addBounded(content_width,padding * 2 +
+            (text_field_variant_ == TextFieldVariant::Outlined ? 2 : 0)),
+            .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
+    }
+    else if (type_ == Component::Type::Text)
+    {
+        content = {.width = textWidth(text_),.height = 1};
     }
     else if (type_ == Component::Type::Grid)
     {
@@ -439,19 +468,59 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         painter.text(x,y,label,button_style);
         return;
     }
-    if (type_ == Component::Type::Text || type_ == Component::Type::TextField)
+    if (type_ == Component::Type::TextField)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const bool focused = focused_id == std::to_string(id_) && !disabled_;
+        const bool outlined = text_field_variant_ == TextFieldVariant::Outlined;
+        const bool compact = bounds_.height < 3;
+        const Color background_color = disabled_ ? palette.surface :
+            outlined ? effective_background.value_or(palette.background) : palette.surface;
+        const Color foreground_color = disabled_ ? palette.muted : palette.foreground;
+        const TextStyle field_style {.foreground = foreground_color,.background = background_color};
+        painter.fillBackground(bounds_,background_color);
+        if (outlined)
+        {
+            TextStyle outline = field_style;
+            outline.foreground = disabled_ ? palette.muted : focused ? palette.primary : palette.muted;
+            if (compact)
+            {
+                painter.put(bounds_.x,bounds_.y,"▏",outline);
+                if (bounds_.width > 1) painter.put(bounds_.x+bounds_.width-1,bounds_.y,"▕",outline);
+            }
+            else painter.border(bounds_,focused ? BorderStyle::Heavy : BorderStyle::Rounded,outline);
+        }
+        else if (focused && bounds_.height > 1)
+        {
+            TextStyle underline = field_style;
+            underline.foreground = palette.primary;
+            painter.horizontalLine(bounds_.x,bounds_.y+bounds_.height-1,bounds_.width,underline);
+        }
+        const int inset = outlined ? 2 : 1;
+        const int columns = std::max(0,bounds_.width - inset * 2);
+        const int cursor_columns = textWidth(std::string_view(text_).substr(0,cursor_byte_));
+        scroll_columns_ = focused ? std::max(0,cursor_columns - std::max(0,columns - 1)) : 0;
+        TextStyle content_style = field_style;
+        if (text_.empty()) content_style.foreground = palette.muted;
+        const std::string_view display = text_.empty() ? std::string_view(placeholder_) : std::string_view(text_);
+        painter.text(bounds_.x+inset,bounds_.y+bounds_.height/2,
+            clipWindow(display,scroll_columns_,columns),content_style);
+        if (focused && columns > 0)
+        {
+            TextStyle caret_style = field_style;
+            caret_style.foreground = palette.on_primary;
+            caret_style.background = palette.primary;
+            painter.styleAt(bounds_.x+inset+std::clamp(cursor_columns-scroll_columns_,0,columns-1),
+                bounds_.y+bounds_.height/2,caret_style);
+        }
+        return;
+    }
+    if (type_ == Component::Type::Text)
     {
         if (bounds_.height > 0 && bounds_.width > 0)
         {
-            std::string label = text_;
-            if (type_ == Component::Type::TextField)
-            {
-                if (text_.empty()) label = placeholder_;
-                if (focused_id == std::to_string(id_) && !disabled_)
-                    label.insert(std::min(cursor_byte_,label.size()),"|");
-                label = disabled_ ? "(" + label + ")" : "[" + label + "]";
-            }
-            painter.text(bounds_.x,bounds_.y,clipText(label,bounds_.width),style);
+            painter.text(bounds_.x,bounds_.y,clipText(text_,bounds_.width),style);
         }
         return;
     }
@@ -503,7 +572,8 @@ bool RenderNode::handleTextInput(const Event& event)
 void RenderNode::setCursorFromX(const int x)
 {
     if (type_ != Component::Type::TextField) return;
-    const int desired = std::max(0,x - bounds_.x - 1);
+    const int inset = text_field_variant_ == TextFieldVariant::Outlined ? 2 : 1;
+    const int desired = std::max(0,x - bounds_.x - inset + scroll_columns_);
     int columns = 0;
     cursor_byte_ = 0;
     while (cursor_byte_ < text_.size())

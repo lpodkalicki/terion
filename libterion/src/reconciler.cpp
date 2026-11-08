@@ -45,6 +45,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->background_ = props.background;
     node->button_variant_ = props.button_variant;
     node->button_size_ = props.button_size;
+    node->text_field_variant_ = props.text_field_variant;
     node->value_ = props.value;
     node->columns_ = std::max(1,props.columns);
     node->surface_tone_ = props.surface_tone;

@@ -29,6 +29,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `LayoutStyle` supports minimum/maximum dimensions, weighted `flex` in `Row`/`Column`, `justifyContent` and `alignItems`.
 - `examples/fullscreen.cpp` demonstrates a terminal-sized dashboard with all current declarative components.
 - Buttons have true-color surfaces, Unicode rounded borders, hover/focus states and compact/medium/large sizes (`examples/buttons.cpp`).
+- Text fields have outlined/filled variants, themed focus/disabled states and horizontal text viewport (`examples/text_fields.cpp`).
 - UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.
 - Cmdly integration will be an optional `Console` component in a later milestone.
 

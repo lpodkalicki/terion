@@ -18,6 +18,7 @@ public:
     void text(int x, int y, std::string_view text, TextStyle style = {}) const;
     void fill(Rect rect, Cell cell = {}) const;
     void fillBackground(Rect rect, Color color) const;
+    void styleAt(int x, int y, TextStyle style) const;
     void horizontalLine(int x, int y, int length, TextStyle style = {}) const;
     void verticalLine(int x, int y, int length, TextStyle style = {}) const;
     void line(Point start, Point end, TextStyle style = {}) const;

@@ -29,6 +29,12 @@ enum class ButtonSize
     Large
 }; /* End of enum ButtonSize */
 
+enum class TextFieldVariant
+{
+    Outlined,
+    Filled
+}; /* End of enum TextFieldVariant */
+
 enum class SurfaceTone
 {
     None,
@@ -71,6 +77,7 @@ public:
         int columns = 1;
         SurfaceTone surface_tone = SurfaceTone::None;
         ButtonSize button_size = ButtonSize::Medium;
+        TextFieldVariant text_field_variant = TextFieldVariant::Outlined;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

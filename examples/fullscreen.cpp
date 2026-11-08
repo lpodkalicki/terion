@@ -45,7 +45,8 @@ int main()
                                 Button({.text = "Reports",.disabled = true,.size = ButtonSize::Compact}),
                                 Typography({.text = "Search",.variant = TypographyVariant::Subtitle}),
                                 TextField({.value = query.get(),.placeholder = "Type to search...",
-                                    .key = "search",.onChange = [&](std::string text) { query.set(std::move(text)); }}),
+                                    .key = "search",.onChange = [&](std::string text) { query.set(std::move(text)); },
+                                    .size = ButtonSize::Compact}),
                                 Typography({.text = "Input: " + query.get()})
                             },
                             .layout = {.width = sidebar_width,.padding = 1,.gap = 1}

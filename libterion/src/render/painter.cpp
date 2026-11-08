@@ -84,6 +84,15 @@ void Painter::fillBackground(const Rect rect, const Color color) const
         }
 }
 
+void Painter::styleAt(int x, const int y, const TextStyle style) const
+{
+    if (!buffer_.contains(x,y)) return;
+    if (buffer_.at(x,y).width == 0 && buffer_.contains(x-1,y)) --x;
+    auto& cell = buffer_.at(x,y);
+    cell.style = style;
+    if (cell.width == 2 && buffer_.contains(x+1,y)) buffer_.at(x+1,y).style = style;
+}
+
 void Painter::horizontalLine(const int x, const int y, const int length, const TextStyle style) const
 {
     for (int i = 0; i < length; ++i) put(x+i,y,"─",style);

@@ -13,6 +13,48 @@ using namespace terion;
 
 int main()
 {
+    Reconciler fields;
+    fields.update(Column({.children = {
+        TextField({.value = "Łódź",.key = "outlined",.layout = {.width = 16}}),
+        TextField({.placeholder = "Search",.key = "filled",.layout = {.width = 16},
+            .variant = TextFieldVariant::Filled}),
+        TextField({.value = "Disabled",.key = "disabled",.disabled = true,
+            .layout = {.width = 16}})
+    }}));
+    fields.root()->layout(Constraints{.maximum = {.width = 20,.height = 12}});
+    ScreenBuffer fields_buffer({.width = 20,.height = 12});
+    Painter fields_painter(fields_buffer);
+    const Theme field_theme = Theme::light();
+    const auto& field_nodes = fields.root()->children();
+    fields.root()->paint(fields_painter,std::to_string(field_nodes[0]->id()),{},std::nullopt,&field_theme);
+    assert(fields_buffer.at(0,0).grapheme == "┏");
+    assert(fields_buffer.at(2,1).grapheme == "Ł");
+    assert(fields_buffer.at(1,4).grapheme == "S");
+    assert(fields_buffer.at(1,4).style.foreground == field_theme.palette.muted);
+    assert(fields_buffer.at(0,4).style.background == field_theme.palette.surface);
+    assert(fields_buffer.at(0,6).grapheme == "╭");
+    field_nodes[0]->setCursorFromX(2);
+    fields_buffer.clear();
+    fields.root()->paint(fields_painter,std::to_string(field_nodes[0]->id()),{},std::nullopt,&field_theme);
+    assert(fields_buffer.at(2,1).grapheme == "Ł");
+    assert(fields_buffer.at(2,1).style.background == field_theme.palette.primary);
+    assert(fields_buffer.at(2,1).style.foreground == field_theme.palette.on_primary);
+    fields_buffer.clear();
+    fields.root()->paint(fields_painter,{},{},std::nullopt,&field_theme);
+    assert(fields_buffer.at(2,1).grapheme == "Ł");
+    assert(fields_buffer.at(2,1).style.background != field_theme.palette.primary);
+
+    std::string edited;
+    fields.update(TextField({.value = "123456789",.key = "long",.layout = {.width = 8},
+        .onChange = [&](std::string value) { edited = std::move(value); }}));
+    fields.root()->layout(Constraints{.maximum = {.width = 8,.height = 3}});
+    fields_buffer.clear();
+    fields.root()->paint(fields_painter,std::to_string(fields.root()->id()),{},std::nullopt,&field_theme);
+    assert(fields_buffer.at(2,1).grapheme == "7");
+    fields.root()->setCursorFromX(2);
+    assert(fields.root()->handleTextInput(Event{.key = Key::Backspace}));
+    assert(edited == "12345789");
+
     Reconciler graphic_buttons;
     graphic_buttons.update(Row({.children = {
         Button({.text = "Save",.key = "save",.variant = ButtonVariant::Contained}),
@@ -313,6 +355,14 @@ int main()
     assert(screen.at(11,1).grapheme == " ");
     painter.text(11,1,"A\xCC\x81");
     assert(screen.at(11,1).grapheme == "A\xCC\x81");
+    painter.styleAt(1,0,TextStyle{.foreground = Color::rgb(1,2,3),.background = Color::rgb(4,5,6)});
+    assert(screen.at(1,0).grapheme == "ó");
+    assert(screen.at(1,0).style.background == Color::rgb(4,5,6));
+    painter.text(4,2,"界");
+    painter.styleAt(5,2,TextStyle{.foreground = Color::rgb(3,2,1),.background = Color::rgb(6,5,4)});
+    assert(screen.at(4,2).grapheme == "界");
+    assert(screen.at(4,2).style.background == Color::rgb(6,5,4));
+    assert(screen.at(5,2).style.background == Color::rgb(6,5,4));
     assert(isValidUtf8("Łódź"));
     assert(!isValidUtf8("\xFF"));
     HeadlessTerminalBackend terminal({12,3});
@@ -449,7 +499,7 @@ int main()
     app.render([&] {
         return Column({.children = {
             TextField({.value = input.get(),.placeholder = "Name",.key = "name",
-                .onChange = [&](std::string value) { input.set(std::move(value)); }}),
+                .onChange = [&](std::string value) { input.set(std::move(value)); },.size = ButtonSize::Compact}),
             Button({.text = "OK",.key = "ok",.onClick = [&] { ++clicks; },.size = ButtonSize::Compact})
         }});
     });
@@ -475,7 +525,7 @@ int main()
     input.set("e\xCC\x81");
     app.renderOnce();
     app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
-        .position = {.x = 2,.y = 0},.button = MouseButton::Left,.action = MouseAction::Press}});
+        .position = {.x = 3,.y = 0},.button = MouseButton::Left,.action = MouseAction::Press}});
     app.dispatchEvent(Event{.key = Key::Backspace});
     assert(input.get().empty());
     app.renderOnce();
