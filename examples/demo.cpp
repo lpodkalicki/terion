@@ -42,6 +42,7 @@ int main()
     });
     State<int> sidebar_width{24};
     State<int> scroll_offset{0};
+    State<int> content_scroll{0};
     State<int> progress{65};
     State<std::string> page{"files"};
     State<std::string> node{"documents"};
@@ -86,8 +87,13 @@ int main()
 
     app.render([&] {
         const Size screen = app.backend().size();
+        const bool compact = screen.width < 76;
+        const bool narrow = screen.width < 52;
+        const bool short_screen = screen.height < 20;
         const int body_height = std::max(0,screen.height - 4);
-        const int content_width = std::max(0,screen.width - sidebar_width.get() - 4);
+        const int left_width = std::clamp(sidebar_width.get(),16,std::max(16,screen.width - 33));
+        const int content_width = compact ? std::max(0,screen.width - 2) :
+            std::max(0,screen.width - left_width - 4);
         const std::string active = page.get();
 
         Component overview = TabPanel({
@@ -103,7 +109,8 @@ int main()
                         Typography({.text = "68% indexed"}),
                         Progress({.value = 0.68,.layout = {.width = 15}})
                     },.layout = {.padding = 1,.gap = 1}})
-                },.layout = {.width = std::max(0,content_width - 4),.gap = 1},.columns = 2}),
+                },.layout = {.width = std::max(0,content_width - 4),.gap = 1},
+                    .columns = compact ? 1 : 2}),
                 Paper({.children = {
                     Typography({.text = "Indexing progress (simulated)",.variant = TypographyVariant::Subtitle}),
                     Progress({.value = progress.get() / 100.0,.layout = {.width = 25}}),
@@ -189,8 +196,9 @@ int main()
                 },.layout = {.gap = 1}}),
                 TextField({.value = filter.get(),.placeholder = "Search files...",.key = "table-filter",
                     .onChange = [&](std::string value) { filter.set(std::move(value)); }}),
-                Table({.columns = {{"Name",22},{"Type",10,TableAlignment::Center},
-                    {"Size",10,TableAlignment::Right},{"Modified",14}},
+                Table({.columns = compact ? std::vector<TableColumn>{{"Name",22},{"Type",10}} :
+                    std::vector<TableColumn>{{"Name",22},{"Type",10,TableAlignment::Center},
+                        {"Size",10,TableAlignment::Right},{"Modified",14}},
                     .rows = rows,
                     .filter = [query = filter.get(),hidden = show_hidden.get()](const TableRow& row) {
                         return (hidden || row.key != "hidden") &&
@@ -207,7 +215,8 @@ int main()
                         }
                         return cell;
                     },
-                    .value = selected_row.get(),.key = "files-table",.layout = {.height = 12},
+                    .value = selected_row.get(),.key = "files-table",
+                    .layout = {.height = std::max(3,std::min(12,body_height - 10))},
                     .onChange = [&](std::string value) { selected_row.set(std::move(value)); }}),
                 Checkbox({.label = "Show hidden files",.key = "show-hidden",.checked = show_hidden.get(),
                     .onChange = [&](bool value) { show_hidden.set(value); }}),
@@ -243,68 +252,94 @@ int main()
             .layout = {.padding = 1,.gap = 1}
         });
 
+        const auto makeFolderTree = [&]() -> Component { return Paper({.children = {
+            Typography({.text = "COLLECTIONS",.variant = TypographyVariant::Subtitle}),
+            TreeView({.items = navigation,.expanded = expanded.get(),.value = node.get(),
+                .key = "navigation-tree",.layout = {.height = std::max(3,body_height - 5)},
+                .onChange = [&](std::string value) {
+                    node.set(std::move(value));
+                    page.set("files");
+                    content_scroll.set(0);
+                },
+                .onToggle = [&](std::string key, bool open) {
+                    auto values = expanded.get();
+                    values.erase(std::remove(values.begin(),values.end(),key),values.end());
+                    if (open) values.push_back(std::move(key));
+                    expanded.set(std::move(values));
+                }})
+        },.layout = {.padding = 1,.gap = 1}}); };
+
+        Component folders = TabPanel({.children = compact ? std::vector<Component>{makeFolderTree()} :
+            std::vector<Component>{},
+            .key = "folders-panel",.active = compact && active == "folders",
+            .layout = {.padding = 0}});
+        // The narrow layout keeps the folder tree as a page, preserving keyboard access.
+        Component content = Column({.children = {
+            Tabs({.options = compact ? std::vector<TabOption>{{"Folders","folders"},{"Files","files"},
+                {"Details","details"},{"Settings","settings"},{"More","showcase"}} :
+                std::vector<TabOption>{{"Files","files"},{"Details","details"},
+                    {"Settings","settings"},{"Showcase","showcase"}},
+                .value = active,.key = "demo-tabs",
+                .onChange = [&](std::string value) {
+                    page.set(std::move(value));
+                    content_scroll.set(0);
+                }}),
+            ScrollView({.children = {std::move(folders),std::move(data),std::move(overview),
+                std::move(controls),std::move(layout)},
+                .key = "content-scroll",.layout = {.width = content_width,.gap = 0,.flex = 1},
+                .scrollOffset = content_scroll.get(),
+                .onScroll = [&](int value) { content_scroll.set(value); }})
+        },.layout = {.width = compact ? screen.width :
+            std::max(0,screen.width-left_width-1),.height = body_height,.gap = 0,.flex = 1}});
+
+        Component body = compact ? Component(std::move(content)) :
+            Component(ResizableSplit({.children = {makeFolderTree(),std::move(content)},
+                .direction = SplitDirection::Horizontal,.position = left_width,
+                .minFirst = 16,.minSecond = 28,.key = "demo-split",
+                .layout = {.width = screen.width,.height = body_height},
+                .onChange = [&](int value) { sidebar_width.set(value); }}));
+
+        std::vector<Component> menus;
+        menus.emplace_back(DropdownMenu({.label = "File",.options = {{"Import","import"},
+            {"New collection","new"},{"Exit","exit"}},.key = "top-file",
+            .onSelect = [&](std::string value) {
+                last_action.set("File: "+value);
+                if (value == "exit") app.quit();
+                else if (value == "import") imported.set(imported.get()+1);
+                else if (value == "new") page.set("settings");
+            }}));
+        if (!narrow)
+            menus.emplace_back(DropdownMenu({.label = "Edit",.options = {{"Rename","rename"},
+                {"Delete...","delete"}},.key = "top-edit",
+                .onSelect = [&](std::string value) {
+                    last_action.set("Edit: "+value);
+                    if (value == "delete") dialog_open.set(true);
+                    else page.set("details");
+                }}));
+        menus.emplace_back(DropdownMenu({.label = "View",.options = {{"Folders","folders"},
+            {"Files","files"},{"Details","details"},{"Settings","settings"},
+            {"Showcase","showcase"}},.key = "top-view",
+            .onSelect = [&](std::string value) { page.set(std::move(value)); }}));
+        if (!narrow)
+            menus.emplace_back(DropdownMenu({.label = "Help",.options = {{"About","about"}},.key = "top-help",
+                .onSelect = [&](std::string) { last_action.set("Terion C++20 / v1.0 demo"); }}));
+
         return Column({
             .children = {
                 Paper({.children = {Row({.children = {
-                    Typography({.text = "TERION  /  File Library  v1.0",.variant = TypographyVariant::H2}),
-                    Row({.children = {
-                        DropdownMenu({.label = "File",.options = {{"Import","import"},
-                            {"New collection","new"},{"Exit","exit"}},.key = "top-file",
-                            .onSelect = [&](std::string value) {
-                                last_action.set("File: "+value);
-                                if (value == "exit") app.quit();
-                                else if (value == "import") imported.set(imported.get()+1);
-                                else if (value == "new") page.set("settings");
-                            }}),
-                        DropdownMenu({.label = "Edit",.options = {{"Rename","rename"},
-                            {"Delete...","delete"}},.key = "top-edit",
-                            .onSelect = [&](std::string value) {
-                                last_action.set("Edit: "+value);
-                                if (value == "delete") dialog_open.set(true);
-                                else page.set("details");
-                            }}),
-                        DropdownMenu({.label = "View",.options = {{"Files","files"},
-                            {"Details","details"},{"Settings","settings"},
-                            {"Showcase","showcase"}},.key = "top-view",
-                            .onSelect = [&](std::string value) { page.set(std::move(value)); }}),
-                        DropdownMenu({.label = "Help",.options = {{"About","about"}},.key = "top-help",
-                            .onSelect = [&](std::string) { last_action.set("Terion C++20 / v1.0 demo"); }})
-                    },.layout = {.gap = 1}}),
+                    Typography({.text = narrow ? "TERION" : "TERION / File Library v1.0",
+                        .variant = TypographyVariant::H2}),
+                    Row({.children = std::move(menus),.layout = {.gap = narrow ? 0 : 1}}),
                     Typography({.text = currentTime()})
                 },.layout = {.width = screen.width,.justifyContent = JustifyContent::SpaceBetween}})},
                     .layout = {.width = screen.width,.padding = 0}}),
                 Divider({.layout = {.width = screen.width}}),
-                ResizableSplit({.children = {
-                    Paper({.children = {
-                        Typography({.text = "COLLECTIONS",.variant = TypographyVariant::Subtitle}),
-                        TreeView({.items = navigation,.expanded = expanded.get(),.value = node.get(),
-                            .key = "navigation-tree",.layout = {.height = std::max(5,body_height - 8)},
-                            .onChange = [&](std::string value) {
-                                node.set(std::move(value));
-                                page.set("files");
-                            },
-                            .onToggle = [&](std::string key, bool open) {
-                                auto values = expanded.get();
-                                values.erase(std::remove(values.begin(),values.end(),key),values.end());
-                                if (open) values.push_back(std::move(key));
-                                expanded.set(std::move(values));
-                            }})
-                    },.layout = {.padding = 1,.gap = 1}}),
-                    Column({.children = {
-                        Tabs({.options = {{"Files","files"},{"Details","details"},
-                            {"Settings","settings"},{"Showcase","showcase"}},.value = active,
-                            .key = "demo-tabs",
-                            .onChange = [&](std::string value) { page.set(std::move(value)); }}),
-                        std::move(data),std::move(overview),std::move(controls),std::move(layout)
-                    },.layout = {.padding = 0,.gap = 0,.flex = 1}})
-                },.direction = SplitDirection::Horizontal,.position = sidebar_width.get(),
-                    .minFirst = 16,.minSecond = 28,.key = "demo-split",
-                    .layout = {.width = screen.width,.height = body_height},
-                    .onChange = [&](int value) { sidebar_width.set(value); }}),
+                std::move(body),
                 Divider({.layout = {.width = screen.width}}),
                 Paper({.children = {Row({.children = {
-                    Typography({.text = "Ready  |  Tab: focus  |  Esc: close  |  View: " + active +
-                        "  |  " + last_action.get()}),
+                    Typography({.text = short_screen || narrow ? "View: " + active + " | " + last_action.get() :
+                        "Ready | Tab/Shift+Tab: focus | Esc: close | View: " + active +
+                        " | " + last_action.get()}),
                     Button({.text = light_theme.get() ? "Dark" : "Light",.key = "theme-toggle",
                         .variant = ButtonVariant::Text,.onClick = [&] {
                             light_theme.set(!light_theme.get());

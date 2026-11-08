@@ -262,3 +262,47 @@ TEST(Application, RegistersAndRemovesShortcutsWithoutHardcodedBindings)
     EXPECT_FALSE(app.dispatchEvent(Event{.key = Key::Character,.character = U'f',.ctrl = true}));
     EXPECT_EQ(count,1);
 }
+
+TEST(Application, TerminalResizeRebuildsResponsiveLayoutAndKeepsKeyedFocus)
+{
+    auto backend = std::make_unique<HeadlessTerminalBackend>(Size{100,30});
+    auto* terminal = backend.get();
+    Application app(std::move(backend));
+    int activations = 0;
+    app.render([&] {
+        const auto screen = app.backend().size();
+        return Column({.children = {
+            Typography({.text = screen.width < 76 ? "Compact" : "Wide"}),
+            Button({.text = "Action",.key = "action",.onClick = [&] { ++activations; }}),
+            Typography({.text = "Footer"})
+        },.layout = {.width = screen.width,.height = screen.height}});
+    });
+
+    app.renderOnce();
+    ASSERT_EQ(app.reconciler().root()->bounds().width,100);
+    EXPECT_EQ(app.reconciler().root()->children()[0]->text(),"Wide");
+    ASSERT_TRUE(app.focus("action"));
+    const auto action_id = app.reconciler().root()->children()[1]->id();
+
+    terminal->resize({.width = 45,.height = 12});
+    const auto resize = terminal->pollEvent();
+    ASSERT_TRUE(resize.has_value());
+    ASSERT_EQ(resize->key,Key::Resize);
+    EXPECT_FALSE(app.dispatchEvent(*resize));
+    EXPECT_TRUE(app.needsRender());
+    app.renderOnce();
+    EXPECT_EQ(app.reconciler().root()->bounds().width,45);
+    EXPECT_EQ(app.reconciler().root()->bounds().height,12);
+    EXPECT_EQ(app.reconciler().root()->children()[0]->text(),"Compact");
+    EXPECT_EQ(app.reconciler().root()->children()[1]->id(),action_id);
+    EXPECT_TRUE(app.hasFocus("action"));
+    EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Enter}));
+    EXPECT_EQ(activations,1);
+
+    terminal->resize({.width = 110,.height = 35});
+    ASSERT_TRUE(terminal->pollEvent().has_value());
+    app.renderOnce();
+    EXPECT_EQ(app.reconciler().root()->bounds().width,110);
+    EXPECT_EQ(app.reconciler().root()->children()[0]->text(),"Wide");
+    EXPECT_TRUE(app.hasFocus("action"));
+}
