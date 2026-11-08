@@ -19,6 +19,10 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - Terminal abstraction: `TerminalBackend`, `AnsiTerminalBackend`, `HeadlessTerminalBackend`.
 - `Application` supports both low-level paint callbacks and a first declarative `Component` tree.
 - `RenderNode` and `Reconciler` retain keyed node identity across view rebuilds.
+- User-defined, stateless components are ordinary C++ functions returning `Component`; use a
+  `Props` struct for inputs and pass `children`/callbacks as needed. See `examples/composition.cpp`.
+  Preserve a stable `key` on each returned component when rendering keyed lists. Local
+  `useState()`-style hooks are not supported yet: they require reconciler-owned instances.
 - Initial constraints-based layout supports text, `Row`, `Column`, `Box`, padding, gap and fixed dimensions.
 - Reactive `State<T>` automatically tracks dependencies in render callbacks; unchanged state does not trigger redraw.
 - MUI-inspired components in `<terion/components/>`: `Typography`, `Box`, `Row`, `Column` and interactive `Button`.
