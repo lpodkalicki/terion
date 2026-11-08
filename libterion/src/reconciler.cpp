@@ -64,6 +64,10 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->select_options_ = props.select_options;
     node->radio_options_ = props.radio_options;
     node->tab_options_ = props.tab_options;
+    node->table_columns_ = props.table_columns;
+    node->table_rows_ = props.table_rows;
+    node->table_scroll_ = std::clamp(node->table_scroll_,0,
+        std::max(0,static_cast<int>(node->table_rows_.size())-1));
     node->tab_panel_active_ = props.tab_panel_active;
     node->checked_ = props.checked;
     node->dialog_open_ = props.dialog_open;

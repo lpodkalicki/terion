@@ -135,6 +135,12 @@ void Application::syncFocusTargets()
             focus_.add(id,[&node](const Event& event) { return node.handleTabsKey(event); },scope);
             component_focus_ids_.push_back(id);
         }
+        else if (node.type() == Component::Type::Table && !node.disabled())
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleTableKey(event); },scope);
+            component_focus_ids_.push_back(id);
+        }
         for (const auto& child : node.children()) self(self,*child,scope);
     };
     if (auto* root = reconciler_.root()) visit(visit,*root,{});
@@ -225,6 +231,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
         (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
         (hit->type() == Component::Type::TextField && hit->editable()) ||
         (hit->type() == Component::Type::Tabs && !hit->disabled()) ||
+        (hit->type() == Component::Type::Table && !hit->disabled()) ||
         hit->interactiveControl())) hit = nullptr;
     const std::string target = hit ? std::to_string(hit->id()) : std::string{};
 
@@ -258,13 +265,15 @@ bool Application::handleMouse(const MouseEvent& mouse)
         (mouse.button == MouseButton::Left || mouse.button == MouseButton::None))
     {
         const bool activate = hit && (hit->type() == Component::Type::Button ||
-            hit->type() == Component::Type::Tabs || hit->interactiveControl()) &&
+            hit->type() == Component::Type::Tabs || hit->type() == Component::Type::Table ||
+            hit->interactiveControl()) &&
             !pressed_button_id_.empty() && pressed_button_id_ == target;
         pressed_button_id_.clear();
         if (activate)
         {
             if (hit->interactiveControl()) return hit->handleChoiceClick(mouse.position);
             if (hit->type() == Component::Type::Tabs) return hit->handleTabsClick(mouse.position);
+            if (hit->type() == Component::Type::Table) return hit->handleTableClick(mouse.position);
             if (hit->onClick()) hit->onClick()();
             return true;
         }

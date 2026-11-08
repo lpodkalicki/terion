@@ -60,6 +60,8 @@ public:
     bool handleTabsKey(const Event& event);
     bool handleTabsClick(Point position);
     bool updateTabsHover(Point position);
+    bool handleTableKey(const Event& event);
+    bool handleTableClick(Point position);
     [[nodiscard]] bool tabPanelActive() const noexcept
     {
         return type_ != Component::Type::TabPanel || tab_panel_active_;
@@ -140,6 +142,9 @@ private:
     std::vector<SelectOption> select_options_;
     std::vector<RadioOption> radio_options_;
     std::vector<TabOption> tab_options_;
+    std::vector<TableColumn> table_columns_;
+    std::vector<TableRow> table_rows_;
+    int table_scroll_ = 0;
     int hovered_tab_ = -1;
     bool tab_panel_active_ = true;
     bool checked_ = false;

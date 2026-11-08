@@ -71,6 +71,19 @@ struct TabOption
     bool disabled = false;
 }; /* End of struct TabOption */
 
+struct TableColumn
+{
+    std::string title;
+    int width = 0;
+}; /* End of struct TableColumn */
+
+struct TableRow
+{
+    std::string key;
+    std::vector<std::string> cells;
+    bool disabled = false;
+}; /* End of struct TableRow */
+
 class Component
 {
 public:
@@ -92,6 +105,7 @@ public:
         DropdownMenu,
         Tabs,
         TabPanel,
+        Table,
         Dialog,
         FocusScope,
         Divider,
@@ -128,6 +142,8 @@ public:
         std::vector<SelectOption> select_options = {};
         std::vector<RadioOption> radio_options = {};
         std::vector<TabOption> tab_options = {};
+        std::vector<TableColumn> table_columns = {};
+        std::vector<TableRow> table_rows = {};
         bool tab_panel_active = true;
         bool checked = false;
         bool dialog_open = false;

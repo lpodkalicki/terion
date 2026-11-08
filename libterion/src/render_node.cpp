@@ -194,6 +194,19 @@ Size RenderNode::measure(const Constraints& constraints) const
         for (const auto& option : tab_options_) width = addBounded(width,textWidth(option.label)+4);
         content = {.width = width,.height = 3};
     }
+    else if (type_ == Component::Type::Table)
+    {
+        int width = 1;
+        for (std::size_t i = 0; i < table_columns_.size(); ++i)
+        {
+            int column_width = textWidth(table_columns_[i].title);
+            for (const auto& row : table_rows_)
+                if (i < row.cells.size()) column_width = std::max(column_width,textWidth(row.cells[i]));
+            width = addBounded(width,std::max(1,table_columns_[i].width > 0 ?
+                table_columns_[i].width : column_width+2)+1);
+        }
+        content = {.width = width,.height = addBounded(static_cast<int>(table_rows_.size()),2)};
+    }
     else if (type_ == Component::Type::TextField || type_ == Component::Type::Select)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
@@ -302,7 +315,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     if (type_ == Component::Type::Text || type_ == Component::Type::Dialog || type_ == Component::Type::Button ||
         type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
-        type_ == Component::Type::Tabs ||
+        type_ == Component::Type::Tabs || type_ == Component::Type::Table ||
         type_ == Component::Type::TextField || type_ == Component::Type::Select ||
         type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress) return;
@@ -639,6 +652,48 @@ bool RenderNode::updateTabsHover(const Point position)
     }
     if (index == hovered_tab_) return false;
     hovered_tab_ = index;
+    return true;
+}
+
+bool RenderNode::handleTableKey(const Event& event)
+{
+    if (type_ != Component::Type::Table || disabled_ || table_rows_.empty()) return false;
+    int selected = -1;
+    for (std::size_t i = 0; i < table_rows_.size(); ++i)
+        if (table_rows_[i].key == text_) { selected = static_cast<int>(i); break; }
+    int next = selected;
+    const int count = static_cast<int>(table_rows_.size());
+    if (event.key == Key::Up || event.key == Key::Down || event.key == Key::PageUp ||
+        event.key == Key::PageDown)
+    {
+        const int step = event.key == Key::PageUp || event.key == Key::PageDown ?
+            std::max(1,bounds_.height-2) : 1;
+        next = std::clamp(selected+(event.key == Key::Up || event.key == Key::PageUp ? -step : step),0,count-1);
+        if (selected < 0) next = event.key == Key::Up || event.key == Key::PageUp ? count-1 : 0;
+    }
+    else if (event.key == Key::Home) next = 0;
+    else if (event.key == Key::End) next = count-1;
+    else return false;
+    const int direction = next >= selected ? 1 : -1;
+    while (next >= 0 && next < count && table_rows_[next].disabled) next += direction;
+    if (next < 0 || next >= count) return true;
+    const int visible = std::max(1,bounds_.height-2);
+    table_scroll_ = std::clamp(table_scroll_,0,std::max(0,count-visible));
+    if (next < table_scroll_) table_scroll_ = next;
+    if (next >= table_scroll_+visible) table_scroll_ = next-visible+1;
+    if (next != selected && on_change_) on_change_(table_rows_[next].key);
+    return true;
+}
+
+bool RenderNode::handleTableClick(const Point position)
+{
+    if (type_ != Component::Type::Table || disabled_ || position.x < bounds_.x ||
+        position.x >= bounds_.x+bounds_.width || position.y < bounds_.y+2 ||
+        position.y >= bounds_.y+bounds_.height) return false;
+    const int index = table_scroll_+position.y-bounds_.y-2;
+    if (index < 0 || index >= static_cast<int>(table_rows_.size())) return false;
+    if (!table_rows_[index].disabled && on_change_ && table_rows_[index].key != text_)
+        on_change_(table_rows_[index].key);
     return true;
 }
 
@@ -1193,6 +1248,56 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             TextStyle segment_style = style;
             if (theme) segment_style.foreground = i < filled ? theme->palette.primary : theme->palette.muted;
             painter.put(bounds_.x+i,bounds_.y,i < filled ? "█" : "░",segment_style);
+        }
+        return;
+    }
+    if (type_ == Component::Type::Table)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const Color base = effective_background.value_or(palette.background);
+        painter.fillBackground(bounds_,base);
+        Painter::ClipScope clip(painter,bounds_);
+        std::vector<int> widths;
+        widths.reserve(table_columns_.size());
+        for (std::size_t i = 0; i < table_columns_.size(); ++i)
+        {
+            int width = textWidth(table_columns_[i].title);
+            for (const auto& row : table_rows_)
+                if (i < row.cells.size()) width = std::max(width,textWidth(row.cells[i]));
+            widths.push_back(std::max(1,table_columns_[i].width > 0 ? table_columns_[i].width : width+2));
+        }
+        const TextStyle heading {.foreground = palette.primary,.background = palette.surface,.bold = true};
+        painter.fillBackground({.x = bounds_.x,.y = bounds_.y,.width = bounds_.width,.height = 1},palette.surface);
+        int x = bounds_.x+1;
+        for (std::size_t i = 0; i < widths.size(); ++i)
+        {
+            painter.text(x,bounds_.y,clipText(table_columns_[i].title,std::max(0,widths[i]-1)),heading);
+            x += widths[i]+1;
+        }
+        if (bounds_.height > 1)
+            painter.horizontalLine(bounds_.x,bounds_.y+1,bounds_.width,
+                {.foreground = palette.muted,.background = base});
+        const int visible = std::max(0,bounds_.height-2);
+        const int scroll = std::clamp(table_scroll_,0,
+            std::max(0,static_cast<int>(table_rows_.size())-visible));
+        for (int r = 0; r < visible && scroll+r < static_cast<int>(table_rows_.size()); ++r)
+        {
+            const auto& row = table_rows_[scroll+r];
+            const int y = bounds_.y+2+r;
+            const bool selected = row.key == text_;
+            const Color bg = selected ? blendColor(base,palette.primary,22) :
+                r % 2 ? blendColor(base,palette.surface,35) : base;
+            painter.fillBackground({.x = bounds_.x,.y = y,.width = bounds_.width,.height = 1},bg);
+            const TextStyle style {.foreground = row.disabled ? palette.muted :
+                selected ? palette.primary : palette.foreground,.background = bg,.bold = selected};
+            int column_x = bounds_.x+1;
+            for (std::size_t i = 0; i < widths.size(); ++i)
+            {
+                if (i < row.cells.size()) painter.text(column_x,y,
+                    clipText(row.cells[i],std::max(0,widths[i]-1)),style);
+                column_x += widths[i]+1;
+            }
         }
         return;
     }
