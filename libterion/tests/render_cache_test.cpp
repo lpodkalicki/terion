@@ -58,3 +58,17 @@ TEST(RenderCache, PreservesFocusRenderingAfterChange)
     app.renderOnce();
     EXPECT_EQ(app.renderStats().base_paints,2u);
 }
+
+TEST(RenderCache, RecordsFullFrameTimings)
+{
+    Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 32,.height = 8}));
+    app.render([] { return Typography({.text = "Ready"}); });
+    app.renderOnce();
+    const auto first = app.lastFrameTimings();
+    EXPECT_GE(first.total,first.build+first.reconcile+first.layout+first.terminal);
+    EXPECT_GE(first.total,first.paint);
+    app.renderOnce();
+    const auto second = app.lastFrameTimings();
+    EXPECT_GE(second.total,second.build+second.reconcile+second.layout+second.terminal);
+    EXPECT_EQ(app.renderStats().cache_hits,1u);
+}

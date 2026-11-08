@@ -65,12 +65,21 @@ bool Application::removeShortcut(const std::uint64_t id)
 
 void Application::renderOnce()
 {
+    using Clock = std::chrono::steady_clock;
+    const auto frame_start = Clock::now();
+    FrameTimings timings{};
     dirty_->store(false);
     ScreenBuffer buffer(backend_->size());
     DependencyTracker::Scope tracking(tracker_);
     if (component_)
     {
-        reconciler_.update(component_());
+        const auto build_start = Clock::now();
+        auto tree = component_();
+        const auto build_end = Clock::now();
+        timings.build = build_end-build_start;
+        reconciler_.update(tree);
+        const auto reconcile_end = Clock::now();
+        timings.reconcile = reconcile_end-build_end;
         if (auto* root = reconciler_.root())
         {
             if (root->layoutDirty() || last_component_layout_size_ != buffer.size())
@@ -81,7 +90,9 @@ void Application::renderOnce()
         }
         overlays_.collect(reconciler_.root());
         if (auto* dialog = overlays_.activeDialog()) dialog->layoutDialogChildren(buffer.size());
+        timings.layout = Clock::now()-reconcile_end;
     }
+    const auto paint_start = Clock::now();
     syncFocusTargets();
     const bool unicode = backend_->capabilities().unicode;
     const bool reuse_base = component_ && reconciler_.root() && base_frame_cache_ &&
@@ -120,7 +131,13 @@ void Application::renderOnce()
     }
     if (!overlays_.modalOpen())
         toasts_.paint(painter,buffer.size(),theme_,overlays_.toastOccupiedHeight(buffer.size()));
+    timings.paint = Clock::now()-paint_start;
+    const auto terminal_start = Clock::now();
     renderer_.render(buffer,*backend_);
+    const auto frame_end = Clock::now();
+    timings.terminal = frame_end-terminal_start;
+    timings.total = frame_end-frame_start;
+    frame_timings_ = timings;
 }
 
 void Application::syncFocusTargets()

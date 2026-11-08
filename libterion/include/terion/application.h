@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <vector>
 #include <terion/component.h>
@@ -73,6 +74,16 @@ public:
         std::uint64_t cache_hits = 0;
     }; /* End of struct RenderStats */
     [[nodiscard]] RenderStats renderStats() const noexcept { return render_stats_; }
+    struct FrameTimings
+    {
+        std::chrono::nanoseconds build{};
+        std::chrono::nanoseconds reconcile{};
+        std::chrono::nanoseconds layout{};
+        std::chrono::nanoseconds paint{};
+        std::chrono::nanoseconds terminal{};
+        std::chrono::nanoseconds total{};
+    }; /* End of struct FrameTimings */
+    [[nodiscard]] FrameTimings lastFrameTimings() const noexcept { return frame_timings_; }
 
     void quit() noexcept
     {
@@ -126,6 +137,7 @@ private:
     std::string cached_hover_id_;
     bool cached_unicode_ = true;
     RenderStats render_stats_{};
+    FrameTimings frame_timings_{};
     bool running_ = false;
 }; /* End of class Application */
 
