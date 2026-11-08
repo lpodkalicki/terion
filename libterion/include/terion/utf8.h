@@ -54,6 +54,9 @@ inline int codePointWidth(char32_t c)
     if (!c || c < 32 || (c >= 0x7F && c < 0xA0)) return 0;
     if ((c >= 0x300 && c <= 0x36F) || (c >= 0xFE00 && c <= 0xFE0F)) return 0;
     const auto within = [c](const char32_t lo, const char32_t hi) { return c >= lo && c <= hi; };
+    // Emoji presented as double-width glyphs in common terminals, including Terminal.app.
+    // These symbols sit outside the broad supplementary emoji ranges below.
+    if (c == 0x2705 || c == 0x2B1C || c == 0x2B1B || c == 0x26AA || c == 0x26AB) return 2;
     return (within(0x1100,0x115F) || within(0x2329,0x232A) ||
         within(0x2E80,0xA4CF) || within(0xAC00,0xD7A3) ||
         within(0xF900,0xFAFF) || within(0xFE10,0xFE6F) ||

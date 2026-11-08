@@ -38,6 +38,21 @@ TEST(UnicodeRenderer, HandlesGraphemesAndWideCharacters)
     EXPECT_TRUE(!isValidUtf8("\xFF"));
 }
 
+TEST(UnicodeRenderer, EmojiCheckboxSymbolsOccupyTwoTerminalColumns)
+{
+    EXPECT_EQ(codePointWidth(U'✅'),2);
+    EXPECT_EQ(codePointWidth(U'⬜'),2);
+    EXPECT_EQ(codePointWidth(U'⚪'),2);
+    ScreenBuffer screen({.width = 10,.height = 2});
+    Painter painter(screen);
+    painter.text(0,0,"⬜ / ✅");
+    EXPECT_EQ(screen.at(0,0).width,2);
+    EXPECT_EQ(screen.at(1,0).width,0);
+    EXPECT_EQ(screen.at(3,0).grapheme,"/");
+    EXPECT_EQ(screen.at(5,0).grapheme,"✅");
+    EXPECT_EQ(screen.at(6,0).width,0);
+}
+
 TEST(UnicodeRenderer, HeadlessBackendReportsResize)
 {
     HeadlessTerminalBackend terminal({12,3});

@@ -49,3 +49,17 @@ TEST(Checkbox, VariantsHaveDistinctMarkersAndAsciiFallback)
     EXPECT_NE(marker(CheckboxVariant::Unicode,true),marker(CheckboxVariant::Emoji,true));
     EXPECT_EQ(marker(CheckboxVariant::Emoji,false),"[");
 }
+
+TEST(Checkbox, EmojiMarkerAndLabelUseCorrectCellPositions)
+{
+    Reconciler tree;
+    tree.update(Checkbox({.label = "Emoji",.checked = true,.variant = CheckboxVariant::Emoji}));
+    tree.root()->layout({.maximum = {.width = 20,.height = 1}});
+    ScreenBuffer buffer({.width = 20,.height = 1});
+    Painter painter(buffer);
+    tree.root()->paint(painter);
+    EXPECT_EQ(buffer.at(0,0).grapheme,"✅");
+    EXPECT_EQ(buffer.at(0,0).width,2);
+    EXPECT_EQ(buffer.at(1,0).width,0);
+    EXPECT_EQ(buffer.at(4,0).grapheme,"E");
+}
