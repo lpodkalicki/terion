@@ -48,3 +48,46 @@ TEST(Table, PaintsHeaderAndClipsRowsToViewport)
     EXPECT_EQ(screen.at(1,2).grapheme,"A");
     EXPECT_EQ(screen.at(1,3).grapheme," ");
 }
+
+TEST(Table, HeaderClickSortsRowsAndTogglesDirection)
+{
+    std::string selected;
+    Reconciler tree;
+    tree.update(Table({.columns = {{"Name",12}},.rows = {
+        {"b",{"Bravo"}},{"a",{"Alpha"}},{"c",{"Charlie"}}},
+        .value = "b",.onChange = [&](std::string key) { selected = std::move(key); }}));
+    tree.root()->layout({.maximum = {.width = 25,.height = 8}});
+    EXPECT_TRUE(tree.root()->handleTableClick({.x = 2,.y = 0}));
+    EXPECT_EQ(tree.root()->tableSortColumn(),0);
+    EXPECT_TRUE(tree.root()->tableSortAscending());
+    EXPECT_EQ(tree.root()->tableOrder()[0],1U);
+    EXPECT_TRUE(tree.root()->handleTableClick({.x = 2,.y = 0}));
+    EXPECT_FALSE(tree.root()->tableSortAscending());
+    EXPECT_EQ(tree.root()->tableOrder()[0],2U);
+    EXPECT_TRUE(tree.root()->handleTableClick({.x = 2,.y = 2}));
+    EXPECT_EQ(selected,"c");
+}
+
+TEST(Table, ScrollbarDragAndWheelShareScrollOffset)
+{
+    Reconciler tree;
+    std::vector<TableRow> rows;
+    for (int i = 0; i < 30; ++i)
+        rows.push_back({.key = std::to_string(i),.cells = {"Row "+std::to_string(i)}});
+    tree.update(Table({.columns = {{"Name",12}},.rows = std::move(rows),
+        .layout = {.height = 8}}));
+    tree.root()->layout({.maximum = {.width = 20,.height = 8}});
+    auto* table = tree.root();
+    const Rect track = table->scrollbarTrack();
+    ASSERT_EQ(track.height,6);
+    EXPECT_EQ(track.x,table->bounds().x+table->bounds().width-1);
+    EXPECT_TRUE(table->scrollBy(8));
+    EXPECT_GT(table->scrollbarThumb().y,track.y);
+    int grab = 0;
+    EXPECT_TRUE(table->scrollbarPress({.x = track.x,.y = track.y+track.height-1},grab));
+    EXPECT_TRUE(table->scrollbarDrag(track.y+track.height-1,grab));
+    EXPECT_EQ(table->scrollbarThumb().y+table->scrollbarThumb().height,
+        track.y+track.height);
+    EXPECT_TRUE(table->scrollBy(-1000));
+    EXPECT_EQ(table->scrollbarThumb().y,track.y);
+}

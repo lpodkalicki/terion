@@ -18,7 +18,7 @@ int main()
                 "10.0.0."+std::to_string(i)}});
     app.render([&] {
         return Paper({.children = {
-            Typography({.text = "Table — arrows, PgUp/PgDn, Home/End, mouse",
+            Typography({.text = "Table — click header to sort, drag scrollbar, wheel, arrows, PgUp/PgDn",
                 .variant = TypographyVariant::H2}),
             Table({.columns = {{"Name",20},{"Status",12},{"Address",18}},
                 .rows = rows,.value = selected.get(),.key = "nodes",

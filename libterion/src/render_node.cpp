@@ -655,12 +655,31 @@ bool RenderNode::updateTabsHover(const Point position)
     return true;
 }
 
+std::vector<std::size_t> RenderNode::tableOrder() const
+{
+    std::vector<std::size_t> order(table_rows_.size());
+    for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
+    if (table_sort_column_ >= 0)
+    {
+        const auto column = static_cast<std::size_t>(table_sort_column_);
+        std::stable_sort(order.begin(),order.end(),[&](const std::size_t a, const std::size_t b) {
+            const auto& left = table_rows_[a].cells;
+            const auto& right = table_rows_[b].cells;
+            const std::string_view lhs = column < left.size() ? std::string_view(left[column]) : std::string_view{};
+            const std::string_view rhs = column < right.size() ? std::string_view(right[column]) : std::string_view{};
+            return table_sort_ascending_ ? lhs < rhs : rhs < lhs;
+        });
+    }
+    return order;
+}
+
 bool RenderNode::handleTableKey(const Event& event)
 {
     if (type_ != Component::Type::Table || disabled_ || table_rows_.empty()) return false;
+    const auto order = tableOrder();
     int selected = -1;
-    for (std::size_t i = 0; i < table_rows_.size(); ++i)
-        if (table_rows_[i].key == text_) { selected = static_cast<int>(i); break; }
+    for (std::size_t i = 0; i < order.size(); ++i)
+        if (table_rows_[order[i]].key == text_) { selected = static_cast<int>(i); break; }
     int next = selected;
     const int count = static_cast<int>(table_rows_.size());
     if (event.key == Key::Up || event.key == Key::Down || event.key == Key::PageUp ||
@@ -675,25 +694,47 @@ bool RenderNode::handleTableKey(const Event& event)
     else if (event.key == Key::End) next = count-1;
     else return false;
     const int direction = next >= selected ? 1 : -1;
-    while (next >= 0 && next < count && table_rows_[next].disabled) next += direction;
+    while (next >= 0 && next < count && table_rows_[order[next]].disabled) next += direction;
     if (next < 0 || next >= count) return true;
     const int visible = std::max(1,bounds_.height-2);
     table_scroll_ = std::clamp(table_scroll_,0,std::max(0,count-visible));
     if (next < table_scroll_) table_scroll_ = next;
     if (next >= table_scroll_+visible) table_scroll_ = next-visible+1;
-    if (next != selected && on_change_) on_change_(table_rows_[next].key);
+    if (next != selected && on_change_) on_change_(table_rows_[order[next]].key);
     return true;
 }
 
 bool RenderNode::handleTableClick(const Point position)
 {
     if (type_ != Component::Type::Table || disabled_ || position.x < bounds_.x ||
-        position.x >= bounds_.x+bounds_.width || position.y < bounds_.y+2 ||
+        position.x >= bounds_.x+bounds_.width || position.y < bounds_.y ||
         position.y >= bounds_.y+bounds_.height) return false;
+    if (position.y == bounds_.y)
+    {
+        int x = bounds_.x+1;
+        for (std::size_t i = 0; i < table_columns_.size(); ++i)
+        {
+            int width = textWidth(table_columns_[i].title);
+            for (const auto& row : table_rows_)
+                if (i < row.cells.size()) width = std::max(width,textWidth(row.cells[i]));
+            width = std::max(1,table_columns_[i].width > 0 ? table_columns_[i].width : width+2);
+            if (position.x >= x && position.x < x+width)
+            {
+                if (table_sort_column_ == static_cast<int>(i)) table_sort_ascending_ = !table_sort_ascending_;
+                else { table_sort_column_ = static_cast<int>(i); table_sort_ascending_ = true; }
+                table_scroll_ = 0;
+                return true;
+            }
+            x += width+1;
+        }
+        return false;
+    }
+    if (position.y < bounds_.y+2 || position.x == scrollbarTrack().x) return false;
+    const auto order = tableOrder();
     const int index = table_scroll_+position.y-bounds_.y-2;
-    if (index < 0 || index >= static_cast<int>(table_rows_.size())) return false;
-    if (!table_rows_[index].disabled && on_change_ && table_rows_[index].key != text_)
-        on_change_(table_rows_[index].key);
+    if (index < 0 || index >= static_cast<int>(order.size())) return false;
+    const auto& row = table_rows_[order[index]];
+    if (!row.disabled && on_change_ && row.key != text_) on_change_(row.key);
     return true;
 }
 
@@ -712,11 +753,19 @@ RenderNode* RenderNode::scrollTarget(const Point position) noexcept
         position.x >= bounds_.x + bounds_.width || position.y >= bounds_.y + bounds_.height) return nullptr;
     for (auto it = children_.rbegin(); it != children_.rend(); ++it)
         if (auto* target = (*it)->scrollTarget(position)) return target;
-    return type_ == Component::Type::ScrollView && on_scroll_ ? this : nullptr;
+    return (type_ == Component::Type::ScrollView && on_scroll_) ||
+        (type_ == Component::Type::Table && !disabled_) ? this : nullptr;
 }
 
 bool RenderNode::scrollBy(const int delta)
 {
+    if (type_ == Component::Type::Table && !disabled_)
+    {
+        const int maximum = std::max(0,static_cast<int>(table_rows_.size())-std::max(0,bounds_.height-2));
+        table_scroll_ = static_cast<int>(std::clamp(static_cast<long long>(table_scroll_)+delta,
+            0LL,static_cast<long long>(maximum)));
+        return true;
+    }
     if (type_ != Component::Type::ScrollView || !on_scroll_) return false;
     const auto target = std::clamp(static_cast<long long>(scroll_offset_) + delta,
         0LL,static_cast<long long>(max_scroll_offset_));
@@ -1163,6 +1212,13 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
 
 Rect RenderNode::scrollbarTrack() const noexcept
 {
+    if (type_ == Component::Type::Table)
+    {
+        const int height = std::max(0,bounds_.height-2);
+        if (bounds_.width <= 0 || height <= 0 ||
+            static_cast<int>(table_rows_.size()) <= height) return {};
+        return {.x = bounds_.x+bounds_.width-1,.y = bounds_.y+2,.width = 1,.height = height};
+    }
     if (type_ != Component::Type::ScrollView || !scrollbar_visible_ || max_scroll_offset_ <= 0 ||
         viewport_height_ <= 0 || bounds_.width <= 0) return {};
     const int inset = std::max(0,style_.padding) + (border_ ? 1 : 0);
@@ -1174,6 +1230,14 @@ Rect RenderNode::scrollbarThumb() const noexcept
 {
     const Rect track = scrollbarTrack();
     if (track.height <= 0) return {};
+    if (type_ == Component::Type::Table)
+    {
+        const int count = static_cast<int>(table_rows_.size());
+        const int length = std::max(1,track.height*track.height/count);
+        const int maximum = count-track.height;
+        const int top = std::clamp(table_scroll_,0,maximum)*(track.height-length)/maximum;
+        return {.x = track.x,.y = track.y+top,.width = 1,.height = length};
+    }
     const int thumb_height = std::max(1,static_cast<int>(static_cast<long long>(track.height) *
         track.height / (max_scroll_offset_ + static_cast<long long>(track.height))));
     const int top = static_cast<int>(static_cast<long long>(std::clamp(scroll_offset_,0,max_scroll_offset_)) *
@@ -1183,22 +1247,25 @@ Rect RenderNode::scrollbarThumb() const noexcept
 
 bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
 {
-    if (!on_scroll_) return false;
+    if (type_ != Component::Type::Table && !on_scroll_) return false;
     const Rect track = scrollbarTrack();
     const Rect thumb = scrollbarThumb();
     if (track.height <= 0 || thumb.height <= 0) return false;
     const int travel = track.height - thumb.height;
     const int top = std::clamp(y - track.y - grab_offset,0,travel);
-    const int target = travel > 0 ? static_cast<int>((static_cast<long long>(top) * max_scroll_offset_ +
+    const int maximum = type_ == Component::Type::Table ?
+        static_cast<int>(table_rows_.size())-track.height : max_scroll_offset_;
+    const int target = travel > 0 ? static_cast<int>((static_cast<long long>(top) * maximum +
         travel / 2) / travel) : 0;
-    if (target != std::clamp(scroll_offset_,0,max_scroll_offset_)) on_scroll_(target);
+    if (type_ == Component::Type::Table) table_scroll_ = target;
+    else if (target != std::clamp(scroll_offset_,0,max_scroll_offset_)) on_scroll_(target);
     return true;
 }
 
 bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
 {
     const Rect track = scrollbarTrack();
-    if (!on_scroll_ || position.x != track.x || position.y < track.y ||
+    if ((type_ != Component::Type::Table && !on_scroll_) || position.x != track.x || position.y < track.y ||
         position.y >= track.y + track.height) return false;
     const Rect thumb = scrollbarThumb();
     if (position.y >= thumb.y && position.y < thumb.y + thumb.height)
@@ -1272,7 +1339,10 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         int x = bounds_.x+1;
         for (std::size_t i = 0; i < widths.size(); ++i)
         {
-            painter.text(x,bounds_.y,clipText(table_columns_[i].title,std::max(0,widths[i]-1)),heading);
+            const std::string indicator = widths[i] >= 4 && table_sort_column_ == static_cast<int>(i) ?
+                (table_sort_ascending_ ? " ▲" : " ▼") : "";
+            painter.text(x,bounds_.y,clipText(table_columns_[i].title,
+                std::max(0,widths[i]-1-textWidth(indicator)))+indicator,heading);
             x += widths[i]+1;
         }
         if (bounds_.height > 1)
@@ -1281,9 +1351,10 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const int visible = std::max(0,bounds_.height-2);
         const int scroll = std::clamp(table_scroll_,0,
             std::max(0,static_cast<int>(table_rows_.size())-visible));
+        const auto order = tableOrder();
         for (int r = 0; r < visible && scroll+r < static_cast<int>(table_rows_.size()); ++r)
         {
-            const auto& row = table_rows_[scroll+r];
+            const auto& row = table_rows_[order[scroll+r]];
             const int y = bounds_.y+2+r;
             const bool selected = row.key == text_;
             const Color bg = selected ? blendColor(base,palette.primary,22) :
@@ -1298,6 +1369,15 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                     clipText(row.cells[i],std::max(0,widths[i]-1)),style);
                 column_x += widths[i]+1;
             }
+        }
+        const Rect track = scrollbarTrack();
+        if (track.height > 0)
+        {
+            painter.verticalLine(track.x,track.y,track.height,
+                {.foreground = palette.muted,.background = palette.surface});
+            const Rect thumb = scrollbarThumb();
+            for (int y = thumb.y; y < thumb.y+thumb.height; ++y)
+                painter.put(thumb.x,y,"█",{.foreground = palette.primary,.background = palette.surface});
         }
         return;
     }

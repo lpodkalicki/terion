@@ -62,6 +62,9 @@ public:
     bool updateTabsHover(Point position);
     bool handleTableKey(const Event& event);
     bool handleTableClick(Point position);
+    [[nodiscard]] std::vector<std::size_t> tableOrder() const;
+    [[nodiscard]] int tableSortColumn() const noexcept { return table_sort_column_; }
+    [[nodiscard]] bool tableSortAscending() const noexcept { return table_sort_ascending_; }
     [[nodiscard]] bool tabPanelActive() const noexcept
     {
         return type_ != Component::Type::TabPanel || tab_panel_active_;
@@ -145,6 +148,8 @@ private:
     std::vector<TableColumn> table_columns_;
     std::vector<TableRow> table_rows_;
     int table_scroll_ = 0;
+    int table_sort_column_ = -1;
+    bool table_sort_ascending_ = true;
     int hovered_tab_ = -1;
     bool tab_panel_active_ = true;
     bool checked_ = false;
