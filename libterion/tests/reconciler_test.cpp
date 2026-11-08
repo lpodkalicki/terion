@@ -115,6 +115,32 @@ TEST(Reconciler, ReportsCreatedReusedAndRemovedRoots)
     EXPECT_EQ(tree.stats().removed,1u);
 }
 
+TEST(Reconciler, TracksLayoutDirtyForStableTextAndStyleChanges)
+{
+    Reconciler tree;
+    tree.update(Component::column({Component::text("Ready","status")},"root"));
+    ASSERT_TRUE(tree.root()->layoutDirty());
+    tree.update(Component::column({Component::text("Ready","status")},"root"));
+    EXPECT_FALSE(tree.root()->layoutDirty());
+    EXPECT_FALSE(tree.root()->children()[0]->layoutDirty());
+    tree.update(Component::column({Component::text("Updated","status")},"root"));
+    EXPECT_TRUE(tree.root()->layoutDirty());
+    EXPECT_TRUE(tree.root()->children()[0]->layoutDirty());
+    tree.update(Component::column({Component::text("Updated","status")},"root",
+        {.padding = 2}));
+    EXPECT_TRUE(tree.root()->layoutDirty());
+}
+
+TEST(Reconciler, ReorderingKeyedChildrenInvalidatesLayout)
+{
+    Reconciler tree;
+    tree.update(Component::row({Component::text("A","a"),Component::text("B","b")}));
+    tree.update(Component::row({Component::text("A","a"),Component::text("B","b")}));
+    EXPECT_FALSE(tree.root()->layoutDirty());
+    tree.update(Component::row({Component::text("B","b"),Component::text("A","a")}));
+    EXPECT_TRUE(tree.root()->layoutDirty());
+}
+
 TEST(Reconciler, MeasuresAndPositionsNestedLayouts)
 {
     Reconciler reconciler;

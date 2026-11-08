@@ -140,6 +140,7 @@ public:
         bool unicode = true) const;
     [[nodiscard]] int height() const noexcept;
     [[nodiscard]] bool hasIndeterminateProgress() const noexcept;
+    [[nodiscard]] bool layoutDirty() const noexcept { return layout_dirty_; }
 
 private:
     friend class Reconciler;
@@ -151,6 +152,7 @@ private:
     std::uint64_t id_;
     Component::Type type_;
     std::string key_;
+    bool layout_dirty_ = true;
     std::string text_;
     LayoutStyle style_;
     TextStyle text_style_;

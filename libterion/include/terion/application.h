@@ -112,6 +112,7 @@ private:
     int scrollbar_grab_offset_ = 0;
     MousePointerShape pointer_shape_ = MousePointerShape::Default;
     bool pointer_shape_initialized_ = false;
+    Size last_component_layout_size_{.width = -1,.height = -1};
     bool running_ = false;
 }; /* End of class Application */
 

@@ -49,16 +49,31 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
 {
     const auto& props = component.props();
     ++stats_.visited;
+    bool created = false;
     if (!node || node->type_ != props.type || node->key_ != props.key)
     {
         if (node) ++stats_.removed;
         ++stats_.created;
         node.reset(new RenderNode(next_id_++,props.type,props.key));
         node->cursor_byte_ = props.text.size();
+        created = true;
     }
     else ++stats_.reused;
 
     const bool message_changed = node->text_ != props.text;
+    // Only the simple leaf and container types have a complete sizing dependency list.
+    // For interactive widgets, conservatively recompute layout until their properties
+    // expose a reliable geometry comparison.
+    const bool predictable_layout = props.type == Component::Type::Text ||
+        props.type == Component::Type::Column || props.type == Component::Type::Row ||
+        props.type == Component::Type::Box || props.type == Component::Type::Grid ||
+        props.type == Component::Type::Divider || props.type == Component::Type::Progress ||
+        props.type == Component::Type::Slider;
+    bool layout_dirty = created || !predictable_layout || message_changed ||
+        node->style_ != props.layout || node->border_ != props.border ||
+        node->columns_ != std::max(1,props.columns) ||
+        node->progress_show_percentage_ != props.progress_show_percentage ||
+        node->slider_show_value_ != props.slider_show_value;
     node->text_ = props.text;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
@@ -144,6 +159,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         (static_cast<unsigned char>(node->text_[node->cursor_byte_]) & 0xC0) == 0x80)
         --node->cursor_byte_;
     auto previous = std::move(node->children_);
+    if (previous.size() != props.children.size()) layout_dirty = true;
     std::unordered_map<std::string,std::size_t> keyed;
     keyed.reserve(previous.size());
     for (std::size_t i = 0; i < previous.size(); ++i)
@@ -159,14 +175,21 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         if (!child.props().key.empty())
         {
             const auto found = keyed.find(child.props().key);
-            if (found != keyed.end()) matched = std::move(previous[found->second]);
+            if (found != keyed.end())
+            {
+                if (found->second != i) layout_dirty = true;
+                matched = std::move(previous[found->second]);
+            }
         }
         else if (i < previous.size() && previous[i] && previous[i]->key_.empty())
             matched = std::move(previous[i]);
+        if (!matched) layout_dirty = true;
         reconcile(matched,child);
+        if (matched->layout_dirty_) layout_dirty = true;
         next.push_back(std::move(matched));
     }
     for (const auto& unused : previous)
         if (unused) ++stats_.removed;
     node->children_ = std::move(next);
+    node->layout_dirty_ = layout_dirty;
 }

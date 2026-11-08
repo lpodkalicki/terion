@@ -75,7 +75,11 @@ void Application::renderOnce()
         reconciler_.update(component_());
         if (auto* root = reconciler_.root())
         {
-            root->layout(Constraints{.maximum = buffer.size()});
+            if (root->layoutDirty() || last_component_layout_size_ != buffer.size())
+            {
+                root->layout(Constraints{.maximum = buffer.size()});
+                last_component_layout_size_ = buffer.size();
+            }
         }
         overlays_.collect(reconciler_.root());
         if (auto* dialog = overlays_.activeDialog()) dialog->layoutDialogChildren(buffer.size());
