@@ -49,9 +49,12 @@ public:
     [[nodiscard]] bool selectOpen() const noexcept { return type_ == Component::Type::Select && select_open_; }
     [[nodiscard]] Rect selectPopupRect(Size screen) const noexcept;
     [[nodiscard]] bool selectContains(Point point, Size screen) const noexcept;
-    bool handleSelectKey(const Event& event);
+    bool handleSelectKey(const Event& event, Size screen = {.width = 80,.height = 24});
     bool handleSelectMouse(const MouseEvent& mouse, Size screen);
-    void closeSelect() noexcept { select_open_ = false; }
+    [[nodiscard]] bool selectDragging() const noexcept { return select_open_ && select_dragging_; }
+    [[nodiscard]] Rect selectScrollbarTrack(Size screen) const noexcept;
+    [[nodiscard]] Rect selectScrollbarThumb(Size screen) const noexcept;
+    void closeSelect() noexcept { select_open_ = false; select_dragging_ = false; }
     void paintOverlay(Painter& painter, Size screen, const Theme& theme) const;
     void paintOverlays(Painter& painter, Size screen, const Theme& theme) const;
 
@@ -97,6 +100,8 @@ private:
     bool select_open_ = false;
     int select_highlight_ = 0;
     int select_scroll_ = 0;
+    bool select_dragging_ = false;
+    int select_grab_offset_ = 0;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
 }; /* End of class RenderNode */

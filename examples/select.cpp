@@ -10,6 +10,7 @@ int main()
 {
     Application app(std::make_unique<AnsiTerminalBackend>());
     State<std::string> selected("pl");
+    State<std::string> city("lublin");
     app.render([&] {
         return Column({.children = {
             Typography({.text = "Terion Select — Enter/Space, arrows, mouse, wheel, Esc"}),
@@ -24,7 +25,23 @@ int main()
                 {.label = "Unavailable",.value = "disabled",.disabled = true}
             },.value = selected.get(),.placeholder = "Select language",.key = "language",
                 .layout = {.width = 28},.onChange = [&](std::string value) { selected.set(std::move(value)); }}),
-            Typography({.text = "Selected value: " + selected.get()})
+            Select({.options = {
+                {.label = "Warszawa",.value = "warsaw"},
+                {.label = "Kraków",.value = "krakow"},
+                {.label = "Gdańsk",.value = "gdansk"},
+                {.label = "Wrocław",.value = "wroclaw"},
+                {.label = "Poznań",.value = "poznan"},
+                {.label = "Łódź",.value = "lodz"},
+                {.label = "Katowice",.value = "katowice"},
+                {.label = "Lublin",.value = "lublin"},
+                {.label = "Rzeszów",.value = "rzeszow"},
+                {.label = "Szczecin",.value = "szczecin"},
+                {.label = "Białystok",.value = "bialystok"},
+                {.label = "Olsztyn",.value = "olsztyn"}
+            },.value = city.get(),.placeholder = "Select city",.key = "city",
+                .layout = {.width = 28},.onChange = [&](std::string value) { city.set(std::move(value)); }}),
+            Typography({.text = "Language: " + selected.get() + " | City: " + city.get()}),
+            Typography({.text = "Open each Select to verify OverlayManager closes the other."})
         },.layout = {.padding = 2,.gap = 1}});
     });
     return app.run();

@@ -83,7 +83,7 @@ void Application::syncFocusTargets()
         else if (node.type() == Component::Type::Select && !node.disabled())
         {
             const auto id = std::to_string(node.id());
-            focus_.add(id,[&node](const Event& event) { return node.handleSelectKey(event); });
+            focus_.add(id,[this,&node](const Event& event) { return node.handleSelectKey(event,backend_->size()); });
             component_focus_ids_.push_back(id);
         }
         for (const auto& child : node.children()) self(self,*child);

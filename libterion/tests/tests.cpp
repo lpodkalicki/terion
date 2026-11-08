@@ -13,6 +13,40 @@ using namespace terion;
 
 int main()
 {
+    std::vector<SelectOption> long_options;
+    for (int i = 0; i < 12; ++i)
+        long_options.push_back({.label = std::to_string(i),.value = std::to_string(i)});
+    Reconciler long_select;
+    long_select.update(Select({.options = long_options,.value = "7",.layout = {.width = 15},
+        .onChange = [](std::string) {}}));
+    const Size menu_screen {.width = 24,.height = 8};
+    long_select.root()->layout(Constraints{.maximum = menu_screen});
+    assert(long_select.root()->handleSelectKey(Event{.key = Key::Enter},menu_screen));
+    const Rect long_popup = long_select.root()->selectPopupRect(menu_screen);
+    assert(long_popup.y == 3 && long_popup.height == 5);
+    assert(long_select.root()->selectScrollbarTrack(menu_screen).height == 5);
+    ScreenBuffer long_buffer(menu_screen);
+    Painter long_painter(long_buffer);
+    long_select.root()->paintOverlay(long_painter,menu_screen,Theme::dark());
+    assert(long_buffer.at(long_popup.x+1,long_popup.y).grapheme == "5");
+    const Rect long_thumb = long_select.root()->selectScrollbarThumb(menu_screen);
+    const int scrollbar_x = long_select.root()->selectScrollbarTrack(menu_screen).x;
+    assert(long_select.root()->handleSelectMouse(MouseEvent{.position = {.x = scrollbar_x,.y = long_thumb.y},
+        .button = MouseButton::Left,.action = MouseAction::Press},menu_screen));
+    assert(long_select.root()->selectDragging());
+    assert(long_select.root()->handleSelectMouse(MouseEvent{.position = {.x = scrollbar_x,.y = 100},
+        .button = MouseButton::Left,.action = MouseAction::Move},menu_screen));
+    assert(long_select.root()->handleSelectMouse(MouseEvent{.position = {.x = scrollbar_x,.y = 100},
+        .button = MouseButton::Left,.action = MouseAction::Release},menu_screen));
+    assert(!long_select.root()->selectDragging());
+    long_buffer.clear();
+    long_select.root()->paintOverlay(long_painter,menu_screen,Theme::dark());
+    assert(long_buffer.at(long_popup.x+1,long_popup.y).grapheme == "7");
+    long_select.root()->closeSelect();
+    long_select.root()->layout(Constraints{.maximum = {.width = 24,.height = 9}},{.x = 0,.y = 6});
+    assert(long_select.root()->handleSelectKey(Event{.key = Key::Enter},{.width = 24,.height = 9}));
+    assert(long_select.root()->selectPopupRect({.width = 24,.height = 9}).y == 0);
+
     State<std::string> chosen("a");
     Application select_app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 30,.height = 12}));
     select_app.render([&] {

@@ -37,7 +37,7 @@ RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size scre
     for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
     {
         auto* portal = it->owner;
-        if (portal->selectOpen() && portal->selectContains(mouse.position,screen) &&
+        if (portal->selectOpen() && (portal->selectContains(mouse.position,screen) || portal->selectDragging()) &&
             portal->handleSelectMouse(mouse,screen)) return portal;
     }
     return nullptr;

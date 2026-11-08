@@ -471,12 +471,30 @@ bool RenderNode::handleScrollKey(const Event& event)
 Rect RenderNode::selectPopupRect(const Size screen) const noexcept
 {
     if (!selectOpen() || select_options_.empty()) return {};
-    const int height = std::min({6,static_cast<int>(select_options_.size()),screen.height});
-    const int width = std::min(bounds_.width,screen.width);
+    const int below = std::max(0,screen.height - std::max(0,bounds_.y+bounds_.height));
+    const int above = std::clamp(bounds_.y,0,screen.height);
+    const int height = std::min({6,static_cast<int>(select_options_.size()),std::max(below,above)});
+    const int width = std::min(bounds_.width,std::max(0,screen.width));
     if (height <= 0 || width <= 0) return {};
-    const int below = screen.height - (bounds_.y + bounds_.height);
-    const int y = below >= height ? bounds_.y + bounds_.height : std::max(0,bounds_.y-height);
+    const int y = below >= height ? bounds_.y+bounds_.height : bounds_.y-height;
     return {.x = std::clamp(bounds_.x,0,screen.width-width),.y = y,.width = width,.height = height};
+}
+
+Rect RenderNode::selectScrollbarTrack(const Size screen) const noexcept
+{
+    const Rect popup = selectPopupRect(screen);
+    if (popup.width < 3 || popup.height <= 0 || static_cast<int>(select_options_.size()) <= popup.height) return {};
+    return {.x = popup.x+popup.width-1,.y = popup.y,.width = 1,.height = popup.height};
+}
+
+Rect RenderNode::selectScrollbarThumb(const Size screen) const noexcept
+{
+    const Rect track = selectScrollbarTrack(screen);
+    if (track.height <= 0) return {};
+    const int thumb_height = std::max(1,track.height*track.height / static_cast<int>(select_options_.size()));
+    const int max_scroll = static_cast<int>(select_options_.size())-track.height;
+    const int top = std::clamp(select_scroll_,0,max_scroll)*(track.height-thumb_height)/max_scroll;
+    return {.x = track.x,.y = track.y+top,.width = 1,.height = thumb_height};
 }
 
 bool RenderNode::selectContains(const Point point, const Size screen) const noexcept
@@ -486,7 +504,7 @@ bool RenderNode::selectContains(const Point point, const Size screen) const noex
         point.y >= popup.y && point.y < popup.y + popup.height;
 }
 
-bool RenderNode::handleSelectKey(const Event& event)
+bool RenderNode::handleSelectKey(const Event& event, const Size screen)
 {
     if (type_ != Component::Type::Select || disabled_) return false;
     if (!select_open_)
@@ -497,10 +515,13 @@ bool RenderNode::handleSelectKey(const Event& event)
         select_open_ = true;
         for (std::size_t i = 0; i < select_options_.size(); ++i)
             if (select_options_[i].value == text_) { select_highlight_ = static_cast<int>(i); break; }
+        const int viewport = std::max(1,selectPopupRect(screen).height);
+        select_scroll_ = std::clamp(select_highlight_-viewport/2,0,
+            std::max(0,static_cast<int>(select_options_.size())-viewport));
     }
     else
     {
-        if (event.key == Key::Escape) { select_open_ = false; return true; }
+        if (event.key == Key::Escape) { closeSelect(); return true; }
         if (event.key == Key::Up || event.key == Key::Down || event.key == Key::Home ||
             event.key == Key::End || event.key == Key::PageUp || event.key == Key::PageDown)
         {
@@ -510,31 +531,65 @@ bool RenderNode::handleSelectKey(const Event& event)
             if (event.key == Key::Down) ++next;
             if (event.key == Key::Home) next = 0;
             if (event.key == Key::End) next = count-1;
-            if (event.key == Key::PageUp) next -= 6;
-            if (event.key == Key::PageDown) next += 6;
+            if (event.key == Key::PageUp) next -= std::max(1,selectPopupRect(screen).height);
+            if (event.key == Key::PageDown) next += std::max(1,selectPopupRect(screen).height);
             select_highlight_ = std::clamp(next,0,count-1);
         }
         else if (event.key == Key::Enter || (event.key == Key::Character && event.character == U' '))
         {
             if (!select_options_[select_highlight_].disabled && on_change_)
                 on_change_(select_options_[select_highlight_].value);
-            select_open_ = false;
+            closeSelect();
             return true;
         }
         else return false;
     }
-    select_scroll_ = std::clamp(select_scroll_,0,std::max(0,static_cast<int>(select_options_.size())-6));
+    const int viewport = std::max(1,selectPopupRect(screen).height);
+    select_scroll_ = std::clamp(select_scroll_,0,std::max(0,static_cast<int>(select_options_.size())-viewport));
     if (select_highlight_ < select_scroll_) select_scroll_ = select_highlight_;
-    if (select_highlight_ >= select_scroll_+6) select_scroll_ = select_highlight_-5;
+    if (select_highlight_ >= select_scroll_+viewport) select_scroll_ = select_highlight_-viewport+1;
     return true;
 }
 
 bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
 {
     if (type_ != Component::Type::Select || disabled_) return false;
+    if (select_dragging_)
+    {
+        if (mouse.action == MouseAction::Release) { select_dragging_ = false; return true; }
+        if (mouse.action == MouseAction::Move)
+        {
+            const Rect track = selectScrollbarTrack(screen);
+            const Rect thumb = selectScrollbarThumb(screen);
+            const int travel = track.height-thumb.height;
+            if (travel > 0)
+            {
+                const int top = std::clamp(mouse.position.y-track.y-select_grab_offset_,0,travel);
+                const int max_scroll = static_cast<int>(select_options_.size())-track.height;
+                select_scroll_ = (top*max_scroll + travel/2)/travel;
+            }
+            return true;
+        }
+    }
     if (selectContains(mouse.position,screen) && select_open_)
     {
         const Rect popup = selectPopupRect(screen);
+        const Rect track = selectScrollbarTrack(screen);
+        if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
+            track.width > 0 && mouse.position.x == track.x)
+        {
+            const Rect thumb = selectScrollbarThumb(screen);
+            select_grab_offset_ = mouse.position.y >= thumb.y && mouse.position.y < thumb.y+thumb.height ?
+                mouse.position.y-thumb.y : thumb.height/2;
+            select_dragging_ = true;
+            const int travel = track.height-thumb.height;
+            if (travel > 0)
+            {
+                const int top = std::clamp(mouse.position.y-track.y-select_grab_offset_,0,travel);
+                select_scroll_ = (top*(static_cast<int>(select_options_.size())-track.height)+travel/2)/travel;
+            }
+            return true;
+        }
         if (mouse.action == MouseAction::Scroll)
         {
             select_scroll_ = std::clamp(select_scroll_-mouse.scrollY,0,
@@ -553,7 +608,7 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
             if (index < static_cast<int>(select_options_.size()) && !select_options_[index].disabled)
             {
                 if (on_change_) on_change_(select_options_[index].value);
-                select_open_ = false;
+                closeSelect();
             }
         }
         return true;
@@ -563,10 +618,19 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
         if (mouse.position.x >= bounds_.x && mouse.position.x < bounds_.x+bounds_.width &&
             mouse.position.y >= bounds_.y && mouse.position.y < bounds_.y+bounds_.height)
         {
-            select_open_ = !select_open_;
+            if (select_open_) closeSelect();
+            else
+            {
+                select_open_ = true;
+                for (std::size_t i = 0; i < select_options_.size(); ++i)
+                    if (select_options_[i].value == text_) { select_highlight_ = static_cast<int>(i); break; }
+                const int viewport = std::max(1,selectPopupRect(screen).height);
+                select_scroll_ = std::clamp(select_highlight_-viewport/2,0,
+                    std::max(0,static_cast<int>(select_options_.size())-viewport));
+            }
             return true;
         }
-        select_open_ = false;
+        closeSelect();
     }
     return false;
 }
@@ -582,6 +646,8 @@ void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& 
     const Rect popup = selectPopupRect(screen);
     if (popup.width <= 0 || popup.height <= 0) return;
     const Palette palette = theme.palette;
+    const Rect track = selectScrollbarTrack(screen);
+    const Rect thumb = selectScrollbarThumb(screen);
     painter.fill(popup,Cell{.grapheme = " ",.style = {.background = palette.surface}});
     for (int i = 0; i < popup.height; ++i)
     {
@@ -593,7 +659,15 @@ void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& 
             Cell{.grapheme = " ",.style = {.background = background}});
         const TextStyle style {.foreground = select_options_[index].disabled ? palette.muted :
             highlighted ? palette.on_primary : palette.foreground,.background = background};
-        painter.text(popup.x+1,popup.y+i,clipText(select_options_[index].label,std::max(0,popup.width-2)),style);
+        painter.text(popup.x+1,popup.y+i,clipText(select_options_[index].label,
+            std::max(0,popup.width-2-(track.width > 0 ? 1 : 0))),style);
+        if (track.width > 0)
+        {
+            const bool on_thumb = popup.y+i >= thumb.y && popup.y+i < thumb.y+thumb.height;
+            const TextStyle bar_style {.foreground = on_thumb ? palette.primary : palette.muted,
+                .background = palette.surface};
+            painter.put(track.x,popup.y+i,on_thumb ? "█" : "│",bar_style);
+        }
     }
 }
 
