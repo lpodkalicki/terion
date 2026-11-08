@@ -34,6 +34,7 @@ public:
     void text(int x, int y, std::string_view text, TextStyle style = {}) const;
     void fill(Rect rect, Cell cell = {}) const;
     void fillBackground(Rect rect, Color color) const;
+    void dim(Rect rect, Color background, int percent = 65) const;
     void styleAt(int x, int y, TextStyle style) const;
     void horizontalLine(int x, int y, int length, TextStyle style = {}) const;
     void verticalLine(int x, int y, int length, TextStyle style = {}) const;

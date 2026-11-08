@@ -154,6 +154,10 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         content = {.width = constraints.maximum.width,.height = 1};
     }
+    else if (type_ == Component::Type::Dialog)
+    {
+        content = {};
+    }
     else if (type_ == Component::Type::Progress)
     {
         content = {.width = 20,.height = 1};
@@ -230,22 +234,25 @@ Size RenderNode::measure(const Constraints& constraints) const
         const int inset = addBounded(padding,padding);
         const Size max_content {.width = std::max(0,constraints.maximum.width - std::min(inset,constraints.maximum.width)),
             .height = std::max(0,constraints.maximum.height - std::min(inset,constraints.maximum.height))};
+        int visible_children = 0;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
             const auto& child = children_[i];
+            if (child->type_ == Component::Type::Dialog) continue;
             const auto child_size = child->measure(Constraints{.maximum = max_content});
             if (type_ == Component::Type::Row)
             {
-                if (i > 0) content.width = addBounded(content.width,gap);
+                if (visible_children > 0) content.width = addBounded(content.width,gap);
                 content.width = addBounded(content.width,child_size.width);
                 content.height = std::max(content.height,child_size.height);
             }
             else
             {
-                if (i > 0) content.height = addBounded(content.height,gap);
+                if (visible_children > 0) content.height = addBounded(content.height,gap);
                 content.height = addBounded(content.height,child_size.height);
                 content.width = std::max(content.width,child_size.width);
             }
+            ++visible_children;
         }
         content.width = addBounded(content.width,inset);
         content.height = addBounded(content.height,inset);
@@ -264,7 +271,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
 {
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
-    if (type_ == Component::Type::Text || type_ == Component::Type::Button ||
+    if (type_ == Component::Type::Text || type_ == Component::Type::Dialog || type_ == Component::Type::Button ||
         type_ == Component::Type::TextField || type_ == Component::Type::Select || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress) return;
 
@@ -348,7 +355,10 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         const bool horizontal = type_ == Component::Type::Row;
         const int main_extent = horizontal ? inner_width : inner_height;
         const int cross_extent = horizontal ? inner_height : inner_width;
-        const int gaps = children_.empty() ? 0 : static_cast<int>(children_.size() - 1);
+        int visible_children = 0;
+        for (const auto& child : children_)
+            if (child->type_ != Component::Type::Dialog) ++visible_children;
+        const int gaps = std::max(0,visible_children-1);
         const int gap_space = static_cast<int>(std::min(static_cast<long long>(main_extent),
             static_cast<long long>(gaps) * gap));
         std::vector<int> sizes(children_.size(),0);
@@ -356,6 +366,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         long long total_flex = 0;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
+            if (children_[i]->type_ == Component::Type::Dialog) continue;
             const int weight = std::max(0,children_[i]->style_.flex);
             if (weight > 0)
                 total_flex += weight;
@@ -373,6 +384,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         int remaining_space = available;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
+            if (children_[i]->type_ == Component::Type::Dialog) continue;
             const int weight = std::max(0,children_[i]->style_.flex);
             if (weight > 0)
             {
@@ -390,8 +402,14 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         if (style_.justifyContent == JustifyContent::End) cursor += extra;
         const int between = style_.justifyContent == JustifyContent::SpaceBetween && gaps > 0 ? extra / gaps : 0;
         int remainder = style_.justifyContent == JustifyContent::SpaceBetween && gaps > 0 ? extra % gaps : 0;
+        int placed_children = 0;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
+            if (children_[i]->type_ == Component::Type::Dialog)
+            {
+                children_[i]->layout(Constraints{.maximum = {}},{.x = origin.x,.y = origin.y});
+                continue;
+            }
             const int cross_natural = horizontal ?
                 children_[i]->measure(Constraints{.maximum = {.width = sizes[i],.height = cross_extent}}).height :
                 children_[i]->measure(Constraints{.maximum = {.width = cross_extent,.height = sizes[i]}}).width;
@@ -403,9 +421,11 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
                 Size{.width = cross_size,.height = sizes[i]};
             children_[i]->layout(Constraints{.minimum = slot,.maximum = slot},
                 horizontal ? Point{.x = cursor,.y = cross_position} : Point{.x = cross_position,.y = cursor});
-            cursor += sizes[i] + gap;
-            if (i + 1 < children_.size())
+            cursor += sizes[i];
+            ++placed_children;
+            if (placed_children < visible_children)
             {
+                cursor += gap;
                 cursor += between;
                 if (remainder > 0) { ++cursor; --remainder; }
             }
@@ -414,14 +434,26 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     }
     int x = origin.x + padding;
     int y = origin.y + padding;
+    int placed_children = 0;
     for (const auto& child : children_)
     {
+        if (child->type_ == Component::Type::Dialog)
+        {
+            child->layout(Constraints{.maximum = {}},{.x = origin.x,.y = origin.y});
+            continue;
+        }
         const bool horizontal = type_ == Component::Type::Row;
+        if (placed_children > 0)
+        {
+            if (horizontal) x += gap;
+            else y += gap;
+        }
         const Size available {.width = horizontal ? std::max(0,inner_width - (x - origin.x - padding)) : inner_width,
             .height = horizontal ? inner_height : std::max(0,inner_height - (y - origin.y - padding))};
         child->layout(Constraints{.maximum = available},{.x = x,.y = y});
-        if (horizontal) x += child->bounds_.width + gap;
-        else y += child->bounds_.height + gap;
+        if (horizontal) x += child->bounds_.width;
+        else y += child->bounds_.height;
+        ++placed_children;
     }
 }
 
@@ -671,6 +703,102 @@ void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& 
     }
 }
 
+Rect RenderNode::dialogRect(const Size screen) const noexcept
+{
+    if (!dialogOpen() || screen.width <= 0 || screen.height <= 0) return {};
+    const int width = std::min(screen.width,std::max(20,dialog_width_));
+    const int height = std::min(screen.height,9);
+    return {.x = (screen.width-width)/2,.y = (screen.height-height)/2,
+        .width = width,.height = height};
+}
+
+bool RenderNode::handleDialogKey(const Event& event)
+{
+    if (!dialogOpen()) return false;
+    if (event.key == Key::Escape)
+    {
+        if (dialog_on_close_) dialog_on_close_();
+    }
+    else if (event.key == Key::Tab || event.key == Key::Left || event.key == Key::Right)
+        dialog_confirm_focused_ = !dialog_confirm_focused_;
+    else if (event.key == Key::Enter || (event.key == Key::Character && event.character == U' '))
+    {
+        const auto& action = dialog_confirm_focused_ ? on_click_ : dialog_on_close_;
+        if (action) action();
+    }
+    return true;
+}
+
+bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
+{
+    if (!dialogOpen()) return false;
+    const Rect rect = dialogRect(screen);
+    const bool inside = mouse.position.x >= rect.x && mouse.position.x < rect.x+rect.width &&
+        mouse.position.y >= rect.y && mouse.position.y < rect.y+rect.height;
+    if (mouse.action != MouseAction::Press || mouse.button != MouseButton::Left) return true;
+    if (!inside)
+    {
+        if (dialog_close_on_backdrop_ && dialog_on_close_) dialog_on_close_();
+        return true;
+    }
+    if (rect.height >= 5 && mouse.position.y == rect.y+rect.height-2)
+    {
+        const int confirm_x = rect.x+std::max(1,rect.width-static_cast<int>(dialog_confirm_text_.size())-3);
+        const int cancel_x = rect.x+2;
+        if (mouse.position.x >= confirm_x &&
+            mouse.position.x < confirm_x+static_cast<int>(dialog_confirm_text_.size()))
+        {
+            dialog_confirm_focused_ = true;
+            if (on_click_) on_click_();
+        }
+        else if (mouse.position.x >= cancel_x &&
+            mouse.position.x < cancel_x+static_cast<int>(dialog_cancel_text_.size()))
+        {
+            dialog_confirm_focused_ = false;
+            if (dialog_on_close_) dialog_on_close_();
+        }
+    }
+    return true;
+}
+
+void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& theme) const
+{
+    const Rect rect = dialogRect(screen);
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const Palette palette = theme.palette;
+    painter.dim({.width = screen.width,.height = screen.height},palette.background,75);
+    const TextStyle style {.foreground = palette.foreground,.background = palette.surface};
+    painter.fill(rect,Cell{.grapheme = " ",.style = style});
+    if (rect.width >= 2 && rect.height >= 2) painter.border(rect,BorderStyle::Rounded,style);
+    if (rect.height >= 3)
+    {
+        TextStyle title_style = style;
+        title_style.foreground = palette.primary;
+        title_style.bold = true;
+        painter.text(rect.x+2,rect.y+1,clipText(dialog_title_,std::max(0,rect.width-4)),title_style);
+    }
+    if (rect.height >= 5)
+    {
+        painter.text(rect.x+2,rect.y+3,clipText(text_,std::max(0,rect.width-4)),style);
+        const int row = rect.y+rect.height-2;
+        const int confirm_x = rect.x+std::max(1,rect.width-static_cast<int>(dialog_confirm_text_.size())-3);
+        TextStyle cancel_style = style;
+        TextStyle confirm_style = style;
+        if (dialog_confirm_focused_)
+        {
+            confirm_style.background = palette.primary;
+            confirm_style.foreground = palette.on_primary;
+        }
+        else
+        {
+            cancel_style.background = palette.primary;
+            cancel_style.foreground = palette.on_primary;
+        }
+        painter.text(rect.x+2,row,clipText(dialog_cancel_text_,std::max(0,confirm_x-rect.x-4)),cancel_style);
+        painter.text(confirm_x,row,clipText(dialog_confirm_text_,std::max(0,rect.x+rect.width-confirm_x-1)),confirm_style);
+    }
+}
+
 Rect RenderNode::scrollbarTrack() const noexcept
 {
     if (type_ != Component::Type::ScrollView || !scrollbar_visible_ || max_scroll_offset_ <= 0 ||
@@ -724,6 +852,7 @@ bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
 void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     const std::string_view hovered_id, const std::optional<Color> background, const Theme* theme) const
 {
+    if (type_ == Component::Type::Dialog) return;
     std::optional<Painter::ClipScope> clipping;
     if (style_.clip || type_ == Component::Type::ScrollView) clipping.emplace(painter,bounds_);
     std::optional<Color> effective_background = background;

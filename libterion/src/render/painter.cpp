@@ -122,6 +122,31 @@ void Painter::fillBackground(const Rect rect, const Color color) const
         }
 }
 
+void Painter::dim(const Rect rect, const Color background, const int percent) const
+{
+    const int opacity = std::clamp(percent,0,100);
+    const auto blend = [&](const Color color) {
+        const auto channel = [&](const std::uint8_t a, const std::uint8_t b) {
+            return static_cast<std::uint8_t>((static_cast<int>(a)*(100-opacity)+
+                static_cast<int>(b)*opacity)/100);
+        };
+        return Color::rgb(channel(color.red,background.red),channel(color.green,background.green),
+            channel(color.blue,background.blue));
+    };
+    const int left = std::max(0,rect.x);
+    const int top = std::max(0,rect.y);
+    const int right = std::min(buffer_.size().width,rect.x+rect.width);
+    const int bottom = std::min(buffer_.size().height,rect.y+rect.height);
+    for (int y = top; y < bottom; ++y)
+        for (int x = left; x < right; ++x)
+        {
+            if (!visible(x,y)) continue;
+            auto& style = buffer_.at(x,y).style;
+            style.foreground = blend(style.foreground);
+            style.background = blend(style.background);
+        }
+}
+
 void Painter::styleAt(int x, const int y, const TextStyle style) const
 {
     if (!visible(x,y)) return;

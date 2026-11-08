@@ -63,6 +63,7 @@ public:
         Button,
         TextField,
         Select,
+        Dialog,
         Divider,
         Progress
     }; /* End of enum Type */
@@ -91,6 +92,13 @@ public:
         std::function<void(int)> on_scroll = {};
         bool scrollbar_visible = true;
         std::vector<SelectOption> select_options = {};
+        bool dialog_open = false;
+        std::string dialog_title = {};
+        std::string dialog_confirm_text = "Confirm";
+        std::string dialog_cancel_text = "Cancel";
+        int dialog_width = 48;
+        bool dialog_close_on_backdrop = true;
+        std::function<void()> dialog_on_close = {};
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

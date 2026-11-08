@@ -57,6 +57,11 @@ public:
     void closeSelect() noexcept { select_open_ = false; select_dragging_ = false; }
     void paintOverlay(Painter& painter, Size screen, const Theme& theme) const;
     void paintOverlays(Painter& painter, Size screen, const Theme& theme) const;
+    [[nodiscard]] bool dialogOpen() const noexcept { return type_ == Component::Type::Dialog && dialog_open_; }
+    [[nodiscard]] Rect dialogRect(Size screen) const noexcept;
+    bool handleDialogKey(const Event& event);
+    bool handleDialogMouse(const MouseEvent& mouse, Size screen);
+    void paintDialog(Painter& painter, Size screen, const Theme& theme) const;
 
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
@@ -102,6 +107,14 @@ private:
     int select_scroll_ = 0;
     bool select_dragging_ = false;
     int select_grab_offset_ = 0;
+    bool dialog_open_ = false;
+    bool dialog_close_on_backdrop_ = true;
+    bool dialog_confirm_focused_ = false;
+    int dialog_width_ = 48;
+    std::string dialog_title_;
+    std::string dialog_confirm_text_;
+    std::string dialog_cancel_text_;
+    std::function<void()> dialog_on_close_;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
 }; /* End of class RenderNode */

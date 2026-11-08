@@ -58,6 +58,13 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->placeholder_ = props.placeholder;
     node->disabled_ = props.disabled;
     node->select_options_ = props.select_options;
+    node->dialog_open_ = props.dialog_open;
+    node->dialog_title_ = props.dialog_title;
+    node->dialog_confirm_text_ = props.dialog_confirm_text;
+    node->dialog_cancel_text_ = props.dialog_cancel_text;
+    node->dialog_width_ = props.dialog_width;
+    node->dialog_close_on_backdrop_ = props.dialog_close_on_backdrop;
+    node->dialog_on_close_ = props.dialog_on_close;
     if (node->select_options_.empty() || node->disabled_) node->select_open_ = false;
     if (!node->select_options_.empty())
         node->select_highlight_ = std::clamp(node->select_highlight_,0,static_cast<int>(node->select_options_.size())-1);

@@ -13,6 +13,7 @@ void OverlayManager::collect(RenderNode* root)
     if (!root) return;
     const auto visit = [&](const auto& self, RenderNode& node) -> void {
         if (node.type() == Component::Type::Select) addPortal(node);
+        if (node.type() == Component::Type::Dialog) addPortal(node,100);
         for (const auto& child : node.children()) self(self,*child);
     };
     visit(visit,*root);
@@ -29,7 +30,24 @@ void OverlayManager::addPortal(RenderNode& owner, const int z_index)
 void OverlayManager::paint(Painter& painter, const Size screen, const Theme& theme) const
 {
     for (const auto& portal : portals_)
+    {
         if (portal.owner->selectOpen()) portal.owner->paintOverlay(painter,screen,theme);
+        if (portal.owner->dialogOpen()) portal.owner->paintDialog(painter,screen,theme);
+    }
+}
+
+bool OverlayManager::modalOpen() const noexcept
+{
+    for (const auto& portal : portals_)
+        if (portal.owner->dialogOpen()) return true;
+    return false;
+}
+
+bool OverlayManager::handleKey(const Event& event)
+{
+    for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
+        if (it->owner->dialogOpen()) return it->owner->handleDialogKey(event);
+    return false;
 }
 
 RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size screen)
@@ -37,6 +55,11 @@ RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size scre
     for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
     {
         auto* portal = it->owner;
+        if (portal->dialogOpen())
+        {
+            portal->handleDialogMouse(mouse,screen);
+            return portal;
+        }
         if (portal->selectOpen() && (portal->selectContains(mouse.position,screen) || portal->selectDragging()) &&
             portal->handleSelectMouse(mouse,screen)) return portal;
     }

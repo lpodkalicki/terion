@@ -96,6 +96,11 @@ void Application::syncFocusTargets()
 
 bool Application::handleMouse(const MouseEvent& mouse)
 {
+    if (overlays_.modalOpen())
+    {
+        (void)overlays_.handleMouse(mouse,backend_->size());
+        return true;
+    }
     updateHover(mouse);
     updateMousePointer(mouse);
     if (component_ && reconciler_.root())
@@ -272,6 +277,7 @@ bool Application::dispatchEvent(const Event& event)
 {
     if (event.key == Key::Resize) renderer_.invalidate();
     invalidate();
+    if (event.key != Key::Resize && event.key != Key::Mouse && overlays_.handleKey(event)) return true;
     if (event.key == Key::Mouse && handleMouse(event.mouse)) return true;
     if (focus_.dispatch(event))
     {
