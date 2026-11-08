@@ -74,6 +74,16 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         node->columns_ != std::max(1,props.columns) ||
         node->progress_show_percentage_ != props.progress_show_percentage ||
         node->slider_show_value_ != props.slider_show_value;
+    // Paint depends on visible properties as well as geometry. Callbacks and
+    // event handlers do not affect pixels; interactive widgets remain dirty
+    // until their visual state has a complete comparison strategy.
+    bool paint_dirty = layout_dirty || node->text_style_ != props.text_style ||
+        node->background_ != props.background || node->surface_tone_ != props.surface_tone ||
+        node->value_ != props.value || node->disabled_ != props.disabled ||
+        node->progress_variant_ != props.progress_variant ||
+        node->progress_indeterminate_ != props.progress_indeterminate ||
+        node->slider_min_ != props.slider_min || node->slider_max_ != props.slider_max ||
+        node->slider_step_ != props.slider_step;
     node->text_ = props.text;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
@@ -159,7 +169,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         (static_cast<unsigned char>(node->text_[node->cursor_byte_]) & 0xC0) == 0x80)
         --node->cursor_byte_;
     auto previous = std::move(node->children_);
-    if (previous.size() != props.children.size()) layout_dirty = true;
+    if (previous.size() != props.children.size()) layout_dirty = paint_dirty = true;
     std::unordered_map<std::string,std::size_t> keyed;
     keyed.reserve(previous.size());
     for (std::size_t i = 0; i < previous.size(); ++i)
@@ -177,19 +187,23 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
             const auto found = keyed.find(child.props().key);
             if (found != keyed.end())
             {
-                if (found->second != i) layout_dirty = true;
+                if (found->second != i) layout_dirty = paint_dirty = true;
                 matched = std::move(previous[found->second]);
             }
         }
         else if (i < previous.size() && previous[i] && previous[i]->key_.empty())
             matched = std::move(previous[i]);
-        if (!matched) layout_dirty = true;
+        if (!matched) layout_dirty = paint_dirty = true;
         reconcile(matched,child);
         if (matched->layout_dirty_) layout_dirty = true;
+        if (matched->paint_dirty_) paint_dirty = true;
         next.push_back(std::move(matched));
     }
     for (const auto& unused : previous)
         if (unused) ++stats_.removed;
     node->children_ = std::move(next);
     node->layout_dirty_ = layout_dirty;
+    node->paint_dirty_ = paint_dirty || layout_dirty;
+    if (node->layout_dirty_) ++stats_.layout_dirty;
+    if (node->paint_dirty_) ++stats_.paint_dirty;
 }

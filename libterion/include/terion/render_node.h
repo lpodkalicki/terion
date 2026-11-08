@@ -141,6 +141,7 @@ public:
     [[nodiscard]] int height() const noexcept;
     [[nodiscard]] bool hasIndeterminateProgress() const noexcept;
     [[nodiscard]] bool layoutDirty() const noexcept { return layout_dirty_; }
+    [[nodiscard]] bool paintDirty() const noexcept { return paint_dirty_; }
 
 private:
     friend class Reconciler;
@@ -153,6 +154,7 @@ private:
     Component::Type type_;
     std::string key_;
     bool layout_dirty_ = true;
+    bool paint_dirty_ = true;
     std::string text_;
     LayoutStyle style_;
     TextStyle text_style_;

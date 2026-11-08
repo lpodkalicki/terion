@@ -141,6 +141,41 @@ TEST(Reconciler, ReorderingKeyedChildrenInvalidatesLayout)
     EXPECT_TRUE(tree.root()->layoutDirty());
 }
 
+TEST(Reconciler, DistinguishesPaintChangesFromLayoutChanges)
+{
+    Reconciler tree;
+    tree.update(Component::column({Typography({.text = "Status",.key = "status"})}));
+    tree.update(Component::column({Typography({.text = "Status",.key = "status"})}));
+    ASSERT_FALSE(tree.root()->layoutDirty());
+    ASSERT_FALSE(tree.root()->paintDirty());
+    EXPECT_EQ(tree.stats().layout_dirty,0u);
+    EXPECT_EQ(tree.stats().paint_dirty,0u);
+
+    tree.update(Component::column({Typography({.text = "Status",.key = "status",
+        .style = {.foreground = Color::rgb(255,0,0)}})}));
+    EXPECT_FALSE(tree.root()->layoutDirty());
+    EXPECT_TRUE(tree.root()->paintDirty());
+    EXPECT_FALSE(tree.root()->children()[0]->layoutDirty());
+    EXPECT_TRUE(tree.root()->children()[0]->paintDirty());
+    EXPECT_EQ(tree.stats().layout_dirty,0u);
+    EXPECT_EQ(tree.stats().paint_dirty,2u);
+
+    tree.update(Component::column({Typography({.text = "Longer status",.key = "status"})}));
+    EXPECT_TRUE(tree.root()->layoutDirty());
+    EXPECT_TRUE(tree.root()->paintDirty());
+}
+
+TEST(Reconciler, ValueChangeOnlyInvalidatesProgressPaint)
+{
+    Reconciler tree;
+    tree.update(Component::column({Progress({.value = 0.2,.key = "progress"})}));
+    tree.update(Component::column({Progress({.value = 0.5,.key = "progress"})}));
+    EXPECT_FALSE(tree.root()->layoutDirty());
+    EXPECT_TRUE(tree.root()->paintDirty());
+    EXPECT_FALSE(tree.root()->children()[0]->layoutDirty());
+    EXPECT_TRUE(tree.root()->children()[0]->paintDirty());
+}
+
 TEST(Reconciler, MeasuresAndPositionsNestedLayouts)
 {
     Reconciler reconciler;

@@ -20,6 +20,8 @@ public:
         std::size_t created = 0;
         std::size_t reused = 0;
         std::size_t removed = 0;
+        std::size_t layout_dirty = 0;
+        std::size_t paint_dirty = 0;
     }; /* End of struct Stats */
 
     void update(const Component& component);

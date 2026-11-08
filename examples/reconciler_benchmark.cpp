@@ -47,7 +47,8 @@ void benchmark(const int count)
         const double milliseconds = std::chrono::duration<double,std::milli>(total).count()/iterations;
         std::cout << std::setw(6) << count << "  " << std::setw(9) << label << "  "
             << std::fixed << std::setprecision(3) << std::setw(9) << milliseconds
-            << " ms  created=" << stats.created << " reused=" << stats.reused << '\n';
+            << " ms  created=" << stats.created << " reused=" << stats.reused
+            << " layoutDirty=" << stats.layout_dirty << " paintDirty=" << stats.paint_dirty << '\n';
     };
 
     measure("stable",false);
