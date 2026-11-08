@@ -62,6 +62,16 @@ public:
     bool updateTabsHover(Point position);
     bool handleTableKey(const Event& event);
     bool handleTableClick(Point position);
+    bool handleTreeKey(const Event& event);
+    bool handleTreeClick(Point position);
+    struct TreeVisibleItem
+    {
+        const TreeItem* item;
+        std::string parent;
+        int depth;
+        bool expanded;
+    }; /* End of struct TreeVisibleItem */
+    [[nodiscard]] std::vector<TreeVisibleItem> treeVisibleItems() const;
     [[nodiscard]] std::vector<std::size_t> tableOrder() const;
     [[nodiscard]] int tableSortColumn() const noexcept { return table_sort_column_; }
     [[nodiscard]] bool tableSortAscending() const noexcept { return table_sort_ascending_; }
@@ -152,6 +162,10 @@ private:
     int table_scroll_ = 0;
     int table_sort_column_ = -1;
     bool table_sort_ascending_ = true;
+    std::vector<TreeItem> tree_items_;
+    std::vector<std::string> tree_expanded_;
+    std::function<void(std::string,bool)> tree_on_toggle_;
+    int tree_scroll_ = 0;
     int hovered_tab_ = -1;
     bool tab_panel_active_ = true;
     bool checked_ = false;

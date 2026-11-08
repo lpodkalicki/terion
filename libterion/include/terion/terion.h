@@ -23,6 +23,7 @@
 #include <terion/components/tabs.h>
 #include <terion/components/tab_panel.h>
 #include <terion/components/table.h>
+#include <terion/components/tree_view.h>
 #include <terion/components/dialog.h>
 #include <terion/components/focus_scope.h>
 #include <terion/components/divider.h>

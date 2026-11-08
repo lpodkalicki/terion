@@ -68,6 +68,11 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->table_rows_ = props.table_rows;
     node->table_filter_ = props.table_filter;
     node->table_format_cell_ = props.table_format_cell;
+    node->tree_items_ = props.tree_items;
+    node->tree_expanded_ = props.tree_expanded;
+    node->tree_on_toggle_ = props.tree_on_toggle;
+    node->tree_scroll_ = std::clamp(node->tree_scroll_,0,
+        std::max(0,static_cast<int>(node->treeVisibleItems().size())-1));
     node->table_scroll_ = std::clamp(node->table_scroll_,0,
         std::max(0,static_cast<int>(node->tableOrder().size())-1));
     node->tab_panel_active_ = props.tab_panel_active;

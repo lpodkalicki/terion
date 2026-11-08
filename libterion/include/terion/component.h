@@ -100,6 +100,15 @@ struct TableCellFormat
     bool bold = false;
 }; /* End of struct TableCellFormat */
 
+struct TreeItem
+{
+    std::string key;
+    std::string label;
+    std::vector<TreeItem> children = {};
+    bool disabled = false;
+    std::string icon = {};
+}; /* End of struct TreeItem */
+
 class Component
 {
 public:
@@ -122,6 +131,7 @@ public:
         Tabs,
         TabPanel,
         Table,
+        TreeView,
         Dialog,
         FocusScope,
         Divider,
@@ -162,6 +172,9 @@ public:
         std::vector<TableRow> table_rows = {};
         std::function<bool(const TableRow&)> table_filter = {};
         std::function<TableCellFormat(const TableRow&,std::size_t)> table_format_cell = {};
+        std::vector<TreeItem> tree_items = {};
+        std::vector<std::string> tree_expanded = {};
+        std::function<void(std::string,bool)> tree_on_toggle = {};
         bool tab_panel_active = true;
         bool checked = false;
         bool dialog_open = false;

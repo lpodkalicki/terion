@@ -212,6 +212,15 @@ Size RenderNode::measure(const Constraints& constraints) const
         }
         content = {.width = width,.height = addBounded(static_cast<int>(tableOrder().size()),2)};
     }
+    else if (type_ == Component::Type::TreeView)
+    {
+        const auto visible = treeVisibleItems();
+        int width = 0;
+        for (const auto& entry : visible)
+            width = std::max(width,entry.depth*2+4+textWidth(entry.item->icon)+
+                textWidth(entry.item->label));
+        content = {.width = width,.height = static_cast<int>(visible.size())};
+    }
     else if (type_ == Component::Type::TextField || type_ == Component::Type::Select)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
@@ -321,6 +330,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
         type_ == Component::Type::Tabs || type_ == Component::Type::Table ||
+        type_ == Component::Type::TreeView ||
         type_ == Component::Type::TextField || type_ == Component::Type::Select ||
         type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress) return;
@@ -660,6 +670,97 @@ bool RenderNode::updateTabsHover(const Point position)
     return true;
 }
 
+std::vector<RenderNode::TreeVisibleItem> RenderNode::treeVisibleItems() const
+{
+    std::vector<TreeVisibleItem> result;
+    const auto visit = [&](const auto& self, const std::vector<TreeItem>& items,
+        const std::string& parent, const int depth) -> void {
+        for (const auto& item : items)
+        {
+            const bool expanded = std::find(tree_expanded_.begin(),tree_expanded_.end(),item.key) !=
+                tree_expanded_.end();
+            result.push_back({.item = &item,.parent = parent,.depth = depth,.expanded = expanded});
+            if (expanded) self(self,item.children,item.key,depth+1);
+        }
+    };
+    visit(visit,tree_items_,{},0);
+    return result;
+}
+
+bool RenderNode::handleTreeKey(const Event& event)
+{
+    if (type_ != Component::Type::TreeView || disabled_) return false;
+    const auto visible = treeVisibleItems();
+    if (visible.empty()) return false;
+    const int count = static_cast<int>(visible.size());
+    int selected = -1;
+    for (int i = 0; i < count; ++i)
+        if (visible[i].item->key == text_) { selected = i; break; }
+    int next = selected;
+    if (event.key == Key::Right || event.key == Key::Enter ||
+        (event.key == Key::Character && event.character == U' '))
+    {
+        if (selected < 0) next = 0;
+        else if (!visible[selected].item->children.empty() && !visible[selected].item->disabled)
+        {
+            if (!visible[selected].expanded && tree_on_toggle_)
+                tree_on_toggle_(visible[selected].item->key,true);
+            else if (event.key == Key::Right && selected+1 < count) next = selected+1;
+        }
+        else if (event.key == Key::Right) return true;
+    }
+    else if (event.key == Key::Left)
+    {
+        if (selected >= 0 && visible[selected].expanded &&
+            !visible[selected].item->children.empty() && tree_on_toggle_)
+            tree_on_toggle_(visible[selected].item->key,false);
+        else if (selected >= 0 && !visible[selected].parent.empty())
+            for (int i = 0; i < count; ++i)
+                if (visible[i].item->key == visible[selected].parent) { next = i; break; }
+    }
+    else if (event.key == Key::Up || event.key == Key::Down ||
+        event.key == Key::PageUp || event.key == Key::PageDown)
+    {
+        const int step = event.key == Key::PageUp || event.key == Key::PageDown ?
+            std::max(1,bounds_.height-1) : 1;
+        const int direction = event.key == Key::Up || event.key == Key::PageUp ? -1 : 1;
+        next = selected < 0 ? (direction < 0 ? count-1 : 0) :
+            std::clamp(selected+direction*step,0,count-1);
+    }
+    else if (event.key == Key::Home) next = 0;
+    else if (event.key == Key::End) next = count-1;
+    else return false;
+    const int direction = next >= selected ? 1 : -1;
+    while (next >= 0 && next < count && visible[next].item->disabled) next += direction;
+    if (next >= 0 && next < count)
+    {
+        const int height = std::max(1,bounds_.height);
+        tree_scroll_ = std::clamp(tree_scroll_,0,std::max(0,count-height));
+        if (next < tree_scroll_) tree_scroll_ = next;
+        if (next >= tree_scroll_+height) tree_scroll_ = next-height+1;
+        if (next != selected && on_change_) on_change_(visible[next].item->key);
+    }
+    return true;
+}
+
+bool RenderNode::handleTreeClick(const Point position)
+{
+    if (type_ != Component::Type::TreeView || disabled_ || position.x < bounds_.x ||
+        position.x >= bounds_.x+bounds_.width || position.y < bounds_.y ||
+        position.y >= bounds_.y+bounds_.height) return false;
+    const auto visible = treeVisibleItems();
+    const int scroll = std::clamp(tree_scroll_,0,
+        std::max(0,static_cast<int>(visible.size())-bounds_.height));
+    const int index = scroll+position.y-bounds_.y;
+    if (index < 0 || index >= static_cast<int>(visible.size())) return false;
+    const auto& entry = visible[index];
+    if (entry.item->disabled) return true;
+    if (!entry.item->children.empty() && position.x <= bounds_.x+entry.depth*2+2 && tree_on_toggle_)
+        tree_on_toggle_(entry.item->key,!entry.expanded);
+    else if (entry.item->key != text_ && on_change_) on_change_(entry.item->key);
+    return true;
+}
+
 std::vector<std::size_t> RenderNode::tableOrder() const
 {
     std::vector<std::size_t> order;
@@ -764,11 +865,19 @@ RenderNode* RenderNode::scrollTarget(const Point position) noexcept
     for (auto it = children_.rbegin(); it != children_.rend(); ++it)
         if (auto* target = (*it)->scrollTarget(position)) return target;
     return (type_ == Component::Type::ScrollView && on_scroll_) ||
-        (type_ == Component::Type::Table && !disabled_) ? this : nullptr;
+        ((type_ == Component::Type::Table || type_ == Component::Type::TreeView) && !disabled_) ?
+        this : nullptr;
 }
 
 bool RenderNode::scrollBy(const int delta)
 {
+    if (type_ == Component::Type::TreeView && !disabled_)
+    {
+        const int maximum = std::max(0,static_cast<int>(treeVisibleItems().size())-bounds_.height);
+        tree_scroll_ = static_cast<int>(std::clamp(static_cast<long long>(tree_scroll_)+delta,
+            0LL,static_cast<long long>(maximum)));
+        return true;
+    }
     if (type_ == Component::Type::Table && !disabled_)
     {
         const int maximum = std::max(0,static_cast<int>(tableOrder().size())-std::max(0,bounds_.height-2));
@@ -1222,6 +1331,12 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
 
 Rect RenderNode::scrollbarTrack() const
 {
+    if (type_ == Component::Type::TreeView)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0 ||
+            static_cast<int>(treeVisibleItems().size()) <= bounds_.height) return {};
+        return {.x = bounds_.x+bounds_.width-1,.y = bounds_.y,.width = 1,.height = bounds_.height};
+    }
     if (type_ == Component::Type::Table)
     {
         const int height = std::max(0,bounds_.height-2);
@@ -1240,12 +1355,14 @@ Rect RenderNode::scrollbarThumb() const
 {
     const Rect track = scrollbarTrack();
     if (track.height <= 0) return {};
-    if (type_ == Component::Type::Table)
+    if (type_ == Component::Type::Table || type_ == Component::Type::TreeView)
     {
-        const int count = static_cast<int>(tableOrder().size());
+        const int count = type_ == Component::Type::Table ?
+            static_cast<int>(tableOrder().size()) : static_cast<int>(treeVisibleItems().size());
         const int length = std::max(1,track.height*track.height/count);
         const int maximum = count-track.height;
-        const int top = std::clamp(table_scroll_,0,maximum)*(track.height-length)/maximum;
+        const int offset = type_ == Component::Type::Table ? table_scroll_ : tree_scroll_;
+        const int top = std::clamp(offset,0,maximum)*(track.height-length)/maximum;
         return {.x = track.x,.y = track.y+top,.width = 1,.height = length};
     }
     const int thumb_height = std::max(1,static_cast<int>(static_cast<long long>(track.height) *
@@ -1257,17 +1374,20 @@ Rect RenderNode::scrollbarThumb() const
 
 bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
 {
-    if (type_ != Component::Type::Table && !on_scroll_) return false;
+    if (type_ != Component::Type::Table && type_ != Component::Type::TreeView && !on_scroll_) return false;
     const Rect track = scrollbarTrack();
     const Rect thumb = scrollbarThumb();
     if (track.height <= 0 || thumb.height <= 0) return false;
     const int travel = track.height - thumb.height;
     const int top = std::clamp(y - track.y - grab_offset,0,travel);
     const int maximum = type_ == Component::Type::Table ?
-        static_cast<int>(tableOrder().size())-track.height : max_scroll_offset_;
+        static_cast<int>(tableOrder().size())-track.height :
+        type_ == Component::Type::TreeView ? static_cast<int>(treeVisibleItems().size())-track.height :
+        max_scroll_offset_;
     const int target = travel > 0 ? static_cast<int>((static_cast<long long>(top) * maximum +
         travel / 2) / travel) : 0;
     if (type_ == Component::Type::Table) table_scroll_ = target;
+    else if (type_ == Component::Type::TreeView) tree_scroll_ = target;
     else if (target != std::clamp(scroll_offset_,0,max_scroll_offset_)) on_scroll_(target);
     return true;
 }
@@ -1275,7 +1395,8 @@ bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
 bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
 {
     const Rect track = scrollbarTrack();
-    if ((type_ != Component::Type::Table && !on_scroll_) || position.x != track.x || position.y < track.y ||
+    if ((type_ != Component::Type::Table && type_ != Component::Type::TreeView && !on_scroll_) ||
+        position.x != track.x || position.y < track.y ||
         position.y >= track.y + track.height) return false;
     const Rect thumb = scrollbarThumb();
     if (position.y >= thumb.y && position.y < thumb.y + thumb.height)
@@ -1325,6 +1446,47 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             TextStyle segment_style = style;
             if (theme) segment_style.foreground = i < filled ? theme->palette.primary : theme->palette.muted;
             painter.put(bounds_.x+i,bounds_.y,i < filled ? "█" : "░",segment_style);
+        }
+        return;
+    }
+    if (type_ == Component::Type::TreeView)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const Color base = effective_background.value_or(palette.background);
+        painter.fillBackground(bounds_,base);
+        Painter::ClipScope clip(painter,bounds_);
+        const auto items = treeVisibleItems();
+        const int scroll = std::clamp(tree_scroll_,0,
+            std::max(0,static_cast<int>(items.size())-bounds_.height));
+        const int available_width = bounds_.width-(scrollbarTrack().height > 0 ? 1 : 0);
+        for (int i = 0; i < bounds_.height && scroll+i < static_cast<int>(items.size()); ++i)
+        {
+            const auto& entry = items[scroll+i];
+            const int y = bounds_.y+i;
+            const bool selected = entry.item->key == text_;
+            const Color bg = selected ? blendColor(base,palette.primary,20) : base;
+            painter.fillBackground({.x = bounds_.x,.y = y,.width = available_width,.height = 1},bg);
+            const TextStyle style {.foreground = entry.item->disabled ? palette.muted :
+                selected ? palette.primary : palette.foreground,.background = bg,.bold = selected};
+            const int x = bounds_.x+entry.depth*2;
+            if (!entry.item->children.empty())
+                painter.text(x,y,entry.expanded ? (unicode ? "▼" : "v") :
+                    (unicode ? "▶" : ">"),style);
+            else painter.text(x,y,unicode ? "·" : "-",style);
+            const std::string prefix = !unicode || entry.item->icon.empty() ? "" : entry.item->icon+" ";
+            painter.text(x+2,y,clipText(prefix+entry.item->label,
+                std::max(0,bounds_.x+available_width-x-2)),style);
+        }
+        const Rect track = scrollbarTrack();
+        if (track.height > 0)
+        {
+            painter.verticalLine(track.x,track.y,track.height,
+                {.foreground = palette.muted,.background = palette.surface});
+            const Rect thumb = scrollbarThumb();
+            for (int y = thumb.y; y < thumb.y+thumb.height; ++y)
+                painter.put(thumb.x,y,unicode ? "█" : "#",
+                    {.foreground = palette.primary,.background = palette.surface});
         }
         return;
     }

@@ -141,6 +141,12 @@ void Application::syncFocusTargets()
             focus_.add(id,[&node](const Event& event) { return node.handleTableKey(event); },scope);
             component_focus_ids_.push_back(id);
         }
+        else if (node.type() == Component::Type::TreeView && !node.disabled())
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleTreeKey(event); },scope);
+            component_focus_ids_.push_back(id);
+        }
         for (const auto& child : node.children()) self(self,*child,scope);
     };
     if (auto* root = reconciler_.root()) visit(visit,*root,{});
@@ -231,7 +237,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
         (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
         (hit->type() == Component::Type::TextField && hit->editable()) ||
         (hit->type() == Component::Type::Tabs && !hit->disabled()) ||
-        (hit->type() == Component::Type::Table && !hit->disabled()) ||
+        ((hit->type() == Component::Type::Table || hit->type() == Component::Type::TreeView) &&
+            !hit->disabled()) ||
         hit->interactiveControl())) hit = nullptr;
     const std::string target = hit ? std::to_string(hit->id()) : std::string{};
 
@@ -266,6 +273,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
     {
         const bool activate = hit && (hit->type() == Component::Type::Button ||
             hit->type() == Component::Type::Tabs || hit->type() == Component::Type::Table ||
+            hit->type() == Component::Type::TreeView ||
             hit->interactiveControl()) &&
             !pressed_button_id_.empty() && pressed_button_id_ == target;
         pressed_button_id_.clear();
@@ -274,6 +282,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
             if (hit->interactiveControl()) return hit->handleChoiceClick(mouse.position);
             if (hit->type() == Component::Type::Tabs) return hit->handleTabsClick(mouse.position);
             if (hit->type() == Component::Type::Table) return hit->handleTableClick(mouse.position);
+            if (hit->type() == Component::Type::TreeView) return hit->handleTreeClick(mouse.position);
             if (hit->onClick()) hit->onClick()();
             return true;
         }
