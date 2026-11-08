@@ -7,6 +7,7 @@
 
 #include <terion/application.h>
 #include <terion/component.h>
+#include <terion/hooks.h>
 #include <terion/event.h>
 #include <terion/components/box.h>
 #include <terion/components/row.h>

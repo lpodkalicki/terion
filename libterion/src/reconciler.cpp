@@ -3,6 +3,7 @@
  */
 
 #include <terion/reconciler.h>
+#include <terion/hooks.h>
 #include <stdexcept>
 #include <algorithm>
 #include <unordered_set>
@@ -40,9 +41,54 @@ void validateKeys(const Component& component)
 
 void Reconciler::update(const Component& component)
 {
-    validateKeys(component);
+    ++generation_;
+    auto expanded = expand(component,"root");
+    validateKeys(expanded);
     stats_ = {};
-    reconcile(root_,component);
+    reconcile(root_,expanded);
+    std::erase_if(hooks_,[this](const auto& entry) { return entry.second.generation != generation_; });
+}
+
+Component Reconciler::expand(const Component& component, const std::string& path)
+{
+    const auto& props = component.props();
+    if (props.type == Component::Type::Function)
+    {
+        if (!props.render_function || !props.function_identity)
+            throw std::invalid_argument("invalid function component");
+        auto& record = hooks_[path];
+        if (record.identity != props.function_identity)
+        {
+            record.slots.clear();
+            record.identity = props.function_identity;
+        }
+        record.generation = generation_;
+        detail::HookContext context{record.slots};
+        Component result = [&] {
+            detail::HookScope scope(context);
+            return props.render_function();
+        }();
+        if (context.position != record.slots.size())
+            throw std::logic_error("useState() hook count changed between renders");
+        // The instance's key controls identity, not the implementation's root key.
+        auto actual = result.props();
+        actual.key = props.key;
+        return expand(Component(std::move(actual)),path);
+    }
+
+    auto actual = props;
+    actual.children.clear();
+    actual.children.reserve(props.children.size());
+    for (std::size_t i = 0; i < props.children.size(); ++i)
+    {
+        const auto& child = props.children[i];
+        const auto& key = child.props().key;
+        const auto child_path = path + "/t" + std::to_string(static_cast<int>(props.type)) +
+            (key.empty() ? "/i" + std::to_string(i) :
+            "/k" + std::to_string(key.size()) + ":" + key);
+        actual.children.push_back(expand(child,child_path));
+    }
+    return Component(std::move(actual));
 }
 
 void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& component)

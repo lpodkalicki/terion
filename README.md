@@ -22,7 +22,11 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - User-defined, stateless components are ordinary C++ functions returning `Component`; use a
   `Props` struct for inputs and pass `children`/callbacks as needed. See `examples/composition.cpp`.
   Preserve a stable `key` on each returned component when rendering keyed lists. Local
-  `useState()`-style hooks are not supported yet: they require reconciler-owned instances.
+  stateful components use the same function definitions, but are instantiated with
+  `ComponentOf<Counter>("stable-key")` so the reconciler invokes them in a hook context.
+  `useState(initial)` returns a value and setter; the setter accepts either a new value or
+  an updater function. Slots are retained across keyed reorders and discarded on unmount.
+  Hooks must be called unconditionally in the same order. See `examples/hooks.cpp`.
 - Initial constraints-based layout supports text, `Row`, `Column`, `Box`, padding, gap and fixed dimensions.
 - Reactive `State<T>` automatically tracks dependencies in render callbacks; unchanged state does not trigger redraw.
 - MUI-inspired components in `<terion/components/>`: `Typography`, `Box`, `Row`, `Column` and interactive `Button`.

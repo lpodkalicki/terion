@@ -153,7 +153,8 @@ public:
         FocusScope,
         Divider,
         Progress,
-        Slider
+        Slider,
+        Function
     }; /* End of enum Type */
 
     struct Props
@@ -162,6 +163,8 @@ public:
         std::string key = {};
         std::string text = {};
         std::vector<Component> children = {};
+        std::function<Component()> render_function = {};
+        const void* function_identity = nullptr;
         LayoutStyle layout = {};
         TextStyle text_style = {};
         std::function<void()> on_click = {};
