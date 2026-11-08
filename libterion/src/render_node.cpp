@@ -325,6 +325,25 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
 {
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
+    if (type_ == Component::Type::TreeView)
+    {
+        const auto visible = treeVisibleItems();
+        const int maximum = std::max(0,static_cast<int>(visible.size())-size.height);
+        tree_scroll_ = std::clamp(tree_scroll_,0,maximum);
+        if (tree_pending_reveal_)
+        {
+            for (std::size_t i = 0; i < visible.size(); ++i)
+            {
+                if (visible[i].item->key != text_) continue;
+                const int index = static_cast<int>(i);
+                if (index < tree_scroll_) tree_scroll_ = index;
+                if (index >= tree_scroll_+size.height)
+                    tree_scroll_ = std::max(0,index-size.height+1);
+                break;
+            }
+            tree_pending_reveal_ = false;
+        }
+    }
     if (type_ == Component::Type::TabPanel && !tab_panel_active_) return;
     if (type_ == Component::Type::Text || type_ == Component::Type::Dialog || type_ == Component::Type::Button ||
         type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
@@ -674,16 +693,24 @@ std::vector<RenderNode::TreeVisibleItem> RenderNode::treeVisibleItems() const
 {
     std::vector<TreeVisibleItem> result;
     const auto visit = [&](const auto& self, const std::vector<TreeItem>& items,
-        const std::string& parent, const int depth) -> void {
-        for (const auto& item : items)
+        const std::string& parent, const int depth, const std::vector<bool>& guides) -> void {
+        for (std::size_t i = 0; i < items.size(); ++i)
         {
+            const auto& item = items[i];
             const bool expanded = std::find(tree_expanded_.begin(),tree_expanded_.end(),item.key) !=
                 tree_expanded_.end();
-            result.push_back({.item = &item,.parent = parent,.depth = depth,.expanded = expanded});
-            if (expanded) self(self,item.children,item.key,depth+1);
+            const bool has_next = i+1 < items.size();
+            result.push_back({.item = &item,.parent = parent,.depth = depth,
+                .expanded = expanded,.has_next = has_next,.ancestor_has_next = guides});
+            if (expanded)
+            {
+                auto child_guides = guides;
+                child_guides.push_back(has_next);
+                self(self,item.children,item.key,depth+1,child_guides);
+            }
         }
     };
-    visit(visit,tree_items_,{},0);
+    visit(visit,tree_items_,{},0,{});
     return result;
 }
 
@@ -697,6 +724,7 @@ bool RenderNode::handleTreeKey(const Event& event)
     for (int i = 0; i < count; ++i)
         if (visible[i].item->key == text_) { selected = i; break; }
     int next = selected;
+    int direction = 1;
     if (event.key == Key::Right || event.key == Key::Enter ||
         (event.key == Key::Character && event.character == U' '))
     {
@@ -711,6 +739,7 @@ bool RenderNode::handleTreeKey(const Event& event)
     }
     else if (event.key == Key::Left)
     {
+        direction = -1;
         if (selected >= 0 && visible[selected].expanded &&
             !visible[selected].item->children.empty() && tree_on_toggle_)
             tree_on_toggle_(visible[selected].item->key,false);
@@ -723,14 +752,13 @@ bool RenderNode::handleTreeKey(const Event& event)
     {
         const int step = event.key == Key::PageUp || event.key == Key::PageDown ?
             std::max(1,bounds_.height-1) : 1;
-        const int direction = event.key == Key::Up || event.key == Key::PageUp ? -1 : 1;
+        direction = event.key == Key::Up || event.key == Key::PageUp ? -1 : 1;
         next = selected < 0 ? (direction < 0 ? count-1 : 0) :
             std::clamp(selected+direction*step,0,count-1);
     }
-    else if (event.key == Key::Home) next = 0;
-    else if (event.key == Key::End) next = count-1;
+    else if (event.key == Key::Home) { next = 0; direction = 1; }
+    else if (event.key == Key::End) { next = count-1; direction = -1; }
     else return false;
-    const int direction = next >= selected ? 1 : -1;
     while (next >= 0 && next < count && visible[next].item->disabled) next += direction;
     if (next >= 0 && next < count)
     {
@@ -756,7 +784,19 @@ bool RenderNode::handleTreeClick(const Point position)
     const auto& entry = visible[index];
     if (entry.item->disabled) return true;
     if (!entry.item->children.empty() && position.x <= bounds_.x+entry.depth*2+2 && tree_on_toggle_)
+    {
+        if (entry.expanded && on_change_)
+        {
+            for (int i = index+1; i < static_cast<int>(visible.size()) &&
+                visible[i].depth > entry.depth; ++i)
+                if (visible[i].item->key == text_)
+                {
+                    on_change_(entry.item->key);
+                    break;
+                }
+        }
         tree_on_toggle_(entry.item->key,!entry.expanded);
+    }
     else if (entry.item->key != text_ && on_change_) on_change_(entry.item->key);
     return true;
 }
@@ -1470,6 +1510,13 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             const TextStyle style {.foreground = entry.item->disabled ? palette.muted :
                 selected ? palette.primary : palette.foreground,.background = bg,.bold = selected};
             const int x = bounds_.x+entry.depth*2;
+            const TextStyle guide_style {.foreground = palette.muted,.background = bg};
+            for (int depth = 0; depth < entry.depth-1; ++depth)
+                if (entry.ancestor_has_next[static_cast<std::size_t>(depth)])
+                    painter.text(bounds_.x+depth*2+1,y,unicode ? "│" : "|",guide_style);
+            if (entry.depth > 0)
+                painter.text(x-1,y,entry.has_next ? (unicode ? "├" : "+") :
+                    (unicode ? "└" : "\\"),guide_style);
             if (!entry.item->children.empty())
                 painter.text(x,y,entry.expanded ? (unicode ? "▼" : "v") :
                     (unicode ? "▶" : ">"),style);

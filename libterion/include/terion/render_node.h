@@ -70,6 +70,8 @@ public:
         std::string parent;
         int depth;
         bool expanded;
+        bool has_next = false;
+        std::vector<bool> ancestor_has_next;
     }; /* End of struct TreeVisibleItem */
     [[nodiscard]] std::vector<TreeVisibleItem> treeVisibleItems() const;
     [[nodiscard]] std::vector<std::size_t> tableOrder() const;
@@ -166,6 +168,8 @@ private:
     std::vector<std::string> tree_expanded_;
     std::function<void(std::string,bool)> tree_on_toggle_;
     int tree_scroll_ = 0;
+    std::string tree_last_selected_;
+    bool tree_pending_reveal_ = false;
     int hovered_tab_ = -1;
     bool tab_panel_active_ = true;
     bool checked_ = false;

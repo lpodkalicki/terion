@@ -13,6 +13,19 @@ namespace {
 
 void validateKeys(const Component& component)
 {
+    if (component.props().type == Component::Type::TreeView)
+    {
+        std::unordered_set<std::string> tree_keys;
+        const auto check = [&](const auto& self, const std::vector<TreeItem>& items) -> void {
+            for (const auto& item : items)
+            {
+                if (item.key.empty() || !tree_keys.insert(item.key).second)
+                    throw std::invalid_argument("TreeView items require unique, nonempty keys");
+                self(self,item.children);
+            }
+        };
+        check(check,component.props().tree_items);
+    }
     std::unordered_set<std::string> keys;
     for (const auto& child : component.props().children)
     {
@@ -71,6 +84,11 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->tree_items_ = props.tree_items;
     node->tree_expanded_ = props.tree_expanded;
     node->tree_on_toggle_ = props.tree_on_toggle;
+    if (node->tree_last_selected_ != props.text)
+    {
+        node->tree_last_selected_ = props.text;
+        node->tree_pending_reveal_ = !props.text.empty();
+    }
     node->tree_scroll_ = std::clamp(node->tree_scroll_,0,
         std::max(0,static_cast<int>(node->treeVisibleItems().size())-1));
     node->table_scroll_ = std::clamp(node->table_scroll_,0,

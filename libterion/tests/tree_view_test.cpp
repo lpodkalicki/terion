@@ -86,3 +86,83 @@ TEST(TreeView, ScrollbarClipsAndScrollsLongTrees)
     EXPECT_TRUE(view->scrollbarPress({.x = track.x,.y = track.y+4},grab));
     EXPECT_EQ(view->scrollbarThumb().y+view->scrollbarThumb().height,track.y+track.height);
 }
+
+TEST(TreeView, KeyboardSkipsDisabledItemsAtBothEdges)
+{
+    std::string selected;
+    Reconciler tree;
+    tree.update(TreeView({.items = {
+        {"first","First",{},true},{"middle","Middle"},{"last","Last",{},true}},
+        .value = "middle",.onChange = [&](std::string value) { selected = std::move(value); }}));
+    tree.root()->layout({.maximum = {.width = 30,.height = 5}});
+    EXPECT_TRUE(tree.root()->handleTreeKey({.key = Key::Home}));
+    EXPECT_TRUE(selected.empty());
+    EXPECT_TRUE(tree.root()->handleTreeKey({.key = Key::End}));
+    EXPECT_TRUE(selected.empty());
+    tree.update(TreeView({.items = {
+        {"first","First",{},true},{"middle","Middle"},{"last","Last",{},true}},
+        .onChange = [&](std::string value) { selected = std::move(value); }}));
+    tree.root()->layout({.maximum = {.width = 30,.height = 5}});
+    EXPECT_TRUE(tree.root()->handleTreeKey({.key = Key::Home}));
+    EXPECT_EQ(selected,"middle");
+}
+
+TEST(TreeView, RevealsExternallySelectedItemWithoutResettingManualScroll)
+{
+    Reconciler tree;
+    std::vector<TreeItem> items;
+    for (int i = 0; i < 20; ++i)
+        items.push_back({.key = std::to_string(i),.label = "Node " + std::to_string(i)});
+    const auto build = [&](std::string value) {
+        tree.update(TreeView({.items = items,.value = std::move(value),
+            .layout = {.width = 20,.height = 5}}));
+        tree.root()->layout({.maximum = {.width = 20,.height = 5}});
+    };
+    build("0");
+    build("19");
+    EXPECT_EQ(tree.root()->scrollbarThumb().y+tree.root()->scrollbarThumb().height,5);
+    EXPECT_TRUE(tree.root()->scrollBy(-5));
+    const auto manual_position = tree.root()->scrollbarThumb().y;
+    build("19");
+    EXPECT_EQ(tree.root()->scrollbarThumb().y,manual_position);
+}
+
+TEST(TreeView, RejectsDuplicateOrEmptyItemKeys)
+{
+    Reconciler tree;
+    const TreeView duplicate({.items = {{"x","One"},{"x","Two"}}});
+    const TreeView empty({.items = {{"","Unnamed"}}});
+    const TreeView nested({.items = {{"x","Root",{{"x","Child"}}}}});
+    EXPECT_THROW(tree.update(duplicate),std::invalid_argument);
+    EXPECT_THROW(tree.update(empty),std::invalid_argument);
+    EXPECT_THROW(tree.update(nested),std::invalid_argument);
+}
+
+TEST(TreeView, PaintsHierarchyGuides)
+{
+    Reconciler tree;
+    tree.update(TreeView({.items = {
+        {"root-a","A",{{"child","Child"}}},{"root-b","B"}},
+        .expanded = {"root-a"},.layout = {.width = 24,.height = 3}}));
+    tree.root()->layout({.maximum = {.width = 24,.height = 3}});
+    ScreenBuffer screen({.width = 24,.height = 3});
+    Painter painter(screen);
+    tree.root()->paint(painter);
+    EXPECT_EQ(screen.at(1,1).grapheme,"└");
+    EXPECT_EQ(screen.at(2,1).grapheme,"·");
+}
+
+TEST(TreeView, CollapsingBranchMovesSelectionFromHiddenDescendantToParent)
+{
+    std::string selection;
+    bool opened = true;
+    Reconciler tree;
+    tree.update(TreeView({.items = {{"root","Root",{{"child","Child"}}}},
+        .expanded = {"root"},.value = "child",
+        .onChange = [&](std::string value) { selection = std::move(value); },
+        .onToggle = [&](std::string,bool value) { opened = value; }}));
+    tree.root()->layout({.maximum = {.width = 25,.height = 4}});
+    EXPECT_TRUE(tree.root()->handleTreeClick({.x = 0,.y = 0}));
+    EXPECT_FALSE(opened);
+    EXPECT_EQ(selection,"root");
+}
