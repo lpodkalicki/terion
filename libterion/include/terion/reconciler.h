@@ -29,7 +29,8 @@ public:
     }; /* End of struct Stats */
 
     void update(const Component& component);
-    void clear() noexcept { root_.reset(); hooks_.clear(); }
+    void commitEffects();
+    void clear() noexcept { root_.reset(); hooks_.clear(); retired_hooks_.clear(); }
     [[nodiscard]] RenderNode* root() noexcept { return root_.get(); }
     [[nodiscard]] const RenderNode* root() const noexcept { return root_.get(); }
     [[nodiscard]] const Stats& stats() const noexcept { return stats_; }
@@ -49,6 +50,7 @@ private:
     std::uint64_t next_id_ = 1;
     Stats stats_{};
     std::unordered_map<std::string,HookRecord> hooks_;
+    std::vector<HookRecord> retired_hooks_;
     std::size_t generation_ = 0;
 }; /* End of class Reconciler */
 

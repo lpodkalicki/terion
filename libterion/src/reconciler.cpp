@@ -46,7 +46,27 @@ void Reconciler::update(const Component& component)
     validateKeys(expanded);
     stats_ = {};
     reconcile(root_,expanded);
-    std::erase_if(hooks_,[this](const auto& entry) { return entry.second.generation != generation_; });
+    for (auto it = hooks_.begin(); it != hooks_.end();)
+    {
+        if (it->second.generation == generation_) { ++it; continue; }
+        retired_hooks_.push_back(std::move(it->second));
+        it = hooks_.erase(it);
+    }
+}
+
+void Reconciler::commitEffects()
+{
+    // Unmounted instances clean up before any new effects start.
+    retired_hooks_.clear();
+    for (auto& [path,record] : hooks_)
+    {
+        (void)path;
+        for (auto& slot : record.slots)
+        {
+            auto* effect = std::any_cast<std::shared_ptr<detail::EffectBase>>(&slot);
+            if (effect && *effect) (*effect)->commit();
+        }
+    }
 }
 
 Component Reconciler::expand(const Component& component, const std::string& path)

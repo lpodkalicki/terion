@@ -138,6 +138,7 @@ void Application::renderOnce()
     timings.terminal = frame_end-terminal_start;
     timings.total = frame_end-frame_start;
     frame_timings_ = timings;
+    if (component_) reconciler_.commitEffects();
 }
 
 void Application::syncFocusTargets()

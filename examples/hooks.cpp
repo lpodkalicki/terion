@@ -12,8 +12,14 @@ using namespace terion;
 Component Counter()
 {
     auto [count,setCount] = useState(0);
-    return Button({.text = "Count: " + std::to_string(count),
-        .onClick = [setCount] { setCount([](int previous) { return previous + 1; }); }});
+    auto renders = useRef(0);
+    ++*renders;
+    const auto title = useMemo([count] { return "Count: " + std::to_string(count); },count);
+    auto increment = useCallback([setCount] {
+        setCount([](int previous) { return previous + 1; });
+    });
+    return Button({.text = title + " (renders: " + std::to_string(*renders) + ")",
+        .onClick = std::move(increment)});
 }
 
 int main()

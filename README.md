@@ -27,6 +27,12 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   `useState(initial)` returns a value and setter; the setter accepts either a new value or
   an updater function. Slots are retained across keyed reorders and discarded on unmount.
   Hooks must be called unconditionally in the same order. See `examples/hooks.cpp`.
+- `useRef(initial)` returns a stable shared pointer (mutating it does not request a redraw).
+  `useMemo(factory, deps...)` and `useCallback(callback, deps...)` cache their results
+  while dependencies compare equal. `useEffect(effect, deps...)` runs after the frame;
+  a returned cleanup callback runs before a changed effect and on unmount. With no
+  dependencies, the effect runs on every frame; pass `std::tuple{}` as a stable
+  dependency to run it only on mount. `useContext` is not implemented yet.
 - Initial constraints-based layout supports text, `Row`, `Column`, `Box`, padding, gap and fixed dimensions.
 - Reactive `State<T>` automatically tracks dependencies in render callbacks; unchanged state does not trigger redraw.
 - MUI-inspired components in `<terion/components/>`: `Typography`, `Box`, `Row`, `Column` and interactive `Button`.
