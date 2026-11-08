@@ -41,17 +41,22 @@ void validateKeys(const Component& component)
 void Reconciler::update(const Component& component)
 {
     validateKeys(component);
+    stats_ = {};
     reconcile(root_,component);
 }
 
 void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& component)
 {
     const auto& props = component.props();
+    ++stats_.visited;
     if (!node || node->type_ != props.type || node->key_ != props.key)
     {
+        if (node) ++stats_.removed;
+        ++stats_.created;
         node.reset(new RenderNode(next_id_++,props.type,props.key));
         node->cursor_byte_ = props.text.size();
     }
+    else ++stats_.reused;
 
     const bool message_changed = node->text_ != props.text;
     node->text_ = props.text;
@@ -161,5 +166,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         reconcile(matched,child);
         next.push_back(std::move(matched));
     }
+    for (const auto& unused : previous)
+        if (unused) ++stats_.removed;
     node->children_ = std::move(next);
 }

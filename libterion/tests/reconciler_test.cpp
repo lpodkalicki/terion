@@ -97,6 +97,24 @@ TEST(Reconciler, RejectedDuplicateKeysKeepExistingTree)
     EXPECT_EQ(tree.root()->children()[0]->id(),first);
 }
 
+TEST(Reconciler, ReportsCreatedReusedAndRemovedRoots)
+{
+    Reconciler tree;
+    tree.update(Component::column({Component::text("A","a"),Component::text("B","b")}));
+    EXPECT_EQ(tree.stats().visited,3u);
+    EXPECT_EQ(tree.stats().created,3u);
+    EXPECT_EQ(tree.stats().reused,0u);
+    tree.update(Component::column({Component::text("B","b"),Component::text("C","c")}));
+    EXPECT_EQ(tree.stats().visited,3u);
+    EXPECT_EQ(tree.stats().created,1u);
+    EXPECT_EQ(tree.stats().reused,2u);
+    EXPECT_EQ(tree.stats().removed,1u);
+    tree.update(Component::column({Component::text("B","b")}));
+    EXPECT_EQ(tree.stats().created,0u);
+    EXPECT_EQ(tree.stats().reused,2u);
+    EXPECT_EQ(tree.stats().removed,1u);
+}
+
 TEST(Reconciler, MeasuresAndPositionsNestedLayouts)
 {
     Reconciler reconciler;
