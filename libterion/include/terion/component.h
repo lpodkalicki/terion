@@ -152,7 +152,8 @@ public:
         Dialog,
         FocusScope,
         Divider,
-        Progress
+        Progress,
+        Slider
     }; /* End of enum Type */
 
     struct Props
@@ -214,6 +215,11 @@ public:
         ProgressVariant progress_variant = ProgressVariant::Blocks;
         bool progress_indeterminate = false;
         bool progress_show_percentage = false;
+        double slider_min = 0.0;
+        double slider_max = 100.0;
+        double slider_step = 1.0;
+        bool slider_show_value = false;
+        std::function<void(double)> slider_on_change = {};
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

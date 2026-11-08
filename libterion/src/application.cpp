@@ -174,6 +174,12 @@ void Application::syncFocusTargets()
             focus_.add(id,[&node](const Event& event) { return node.handleChoiceKey(event); },scope);
             component_focus_ids_.push_back(id);
         }
+        else if (node.sliderInteractive())
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleSliderKey(event); },scope);
+            component_focus_ids_.push_back(id);
+        }
         else if (node.type() == Component::Type::Tabs && !node.disabled())
         {
             const auto id = std::to_string(node.id());
@@ -290,6 +296,21 @@ bool Application::handleMouse(const MouseEvent& mouse)
             split_drag_id_ = 0;
         }
     }
+    if (slider_drag_id_ != 0)
+    {
+        if (mouse.action == MouseAction::Release)
+        {
+            slider_drag_id_ = 0;
+            return true;
+        }
+        if (mouse.action == MouseAction::Move)
+        {
+            if (component_ && reconciler_.root())
+                if (auto* target = reconciler_.root()->findById(slider_drag_id_))
+                    return target->handleSliderMouse(mouse.position);
+            slider_drag_id_ = 0;
+        }
+    }
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
         component_ && reconciler_.root())
     {
@@ -333,7 +354,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
         (hit->type() == Component::Type::Tabs && !hit->disabled()) ||
         ((hit->type() == Component::Type::Table || hit->type() == Component::Type::TreeView) &&
             !hit->disabled()) ||
-        hit->interactiveControl())) hit = nullptr;
+        hit->interactiveControl() || hit->sliderInteractive())) hit = nullptr;
     const std::string target = hit ? std::to_string(hit->id()) : std::string{};
 
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
@@ -359,6 +380,12 @@ bool Application::handleMouse(const MouseEvent& mouse)
         {
             hit->setCursorFromX(mouse.position.x);
             pressed_button_id_.clear();
+        }
+        if (hit && hit->sliderInteractive())
+        {
+            slider_drag_id_ = hit->id();
+            pressed_button_id_.clear();
+            return hit->handleSliderMouse(mouse.position);
         }
         return hit != nullptr;
     }
@@ -410,7 +437,8 @@ void Application::updateHover(const MouseEvent& mouse)
                     hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
                     (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
                     (hit->type() == Component::Type::TextField && hit->editable()) ||
-                    hit->interactiveControl() || (hit->type() == Component::Type::Tabs && !hit->disabled()))
+                    hit->interactiveControl() || hit->sliderInteractive() ||
+                    (hit->type() == Component::Type::Tabs && !hit->disabled()))
                     hovered = std::to_string(hit->id());
             }
         }
@@ -448,7 +476,7 @@ void Application::updateMousePointer(const MouseEvent& mouse)
                 else if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
                     ((hit->type() == Component::Type::Select ||
                         hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
-                    hit->interactiveControl() ||
+                    hit->interactiveControl() || hit->sliderInteractive() ||
                     (hit->type() == Component::Type::Tabs && !hit->disabled()))
                     shape = MousePointerShape::Pointer;
             }

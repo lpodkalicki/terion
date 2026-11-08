@@ -32,6 +32,7 @@
 #include <terion/components/focus_scope.h>
 #include <terion/components/divider.h>
 #include <terion/components/progress.h>
+#include <terion/components/slider.h>
 #include <terion/components/grid.h>
 #include <terion/components/stack.h>
 #include <terion/components/paper.h>

@@ -60,6 +60,12 @@ public:
     }
     bool handleChoiceKey(const Event& event);
     bool handleChoiceClick(Point position);
+    bool handleSliderKey(const Event& event);
+    bool handleSliderMouse(Point position);
+    [[nodiscard]] bool sliderInteractive() const noexcept
+    {
+        return type_ == Component::Type::Slider && !disabled_ && static_cast<bool>(slider_on_change_);
+    }
     bool handleTabsKey(const Event& event);
     bool handleTabsClick(Point position);
     bool updateTabsHover(Point position);
@@ -158,6 +164,11 @@ private:
     ProgressVariant progress_variant_ = ProgressVariant::Blocks;
     bool progress_indeterminate_ = false;
     bool progress_show_percentage_ = false;
+    double slider_min_ = 0.0;
+    double slider_max_ = 100.0;
+    double slider_step_ = 1.0;
+    bool slider_show_value_ = false;
+    std::function<void(double)> slider_on_change_;
     int columns_ = 1;
     SurfaceTone surface_tone_ = SurfaceTone::None;
     std::function<void()> on_click_;

@@ -186,7 +186,7 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         content = {};
     }
-    else if (type_ == Component::Type::Progress)
+    else if (type_ == Component::Type::Progress || type_ == Component::Type::Slider)
     {
         content = {.width = 20,.height = 1};
     }
@@ -410,7 +410,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         type_ == Component::Type::TreeView ||
         type_ == Component::Type::TextField || type_ == Component::Type::Select ||
         type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
-        type_ == Component::Type::Progress) return;
+        type_ == Component::Type::Progress || type_ == Component::Type::Slider) return;
 
     const int padding = std::max(0,style_.padding) + (border_ ? 1 : 0);
     const int gap = std::max(0,style_.gap);
@@ -665,6 +665,41 @@ bool RenderNode::handleChoiceClick(const Point position)
     }
     else if (on_toggle_ && (type_ != Component::Type::Radio || !checked_))
         on_toggle_(!checked_);
+    return true;
+}
+
+bool RenderNode::handleSliderKey(const Event& event)
+{
+    if (!sliderInteractive()) return false;
+    if (!std::isfinite(slider_min_) || !std::isfinite(slider_max_) || slider_max_ <= slider_min_) return false;
+    const double step = std::isfinite(slider_step_) && slider_step_ > 0.0 ? slider_step_ : 1.0;
+    const double current = std::isfinite(value_) ? std::clamp(value_,slider_min_,slider_max_) : slider_min_;
+    double next = current;
+    if (event.key == Key::Left || event.key == Key::Down) next = current-step;
+    else if (event.key == Key::Right || event.key == Key::Up) next = current+step;
+    else if (event.key == Key::PageDown) next = current-10*step;
+    else if (event.key == Key::PageUp) next = current+10*step;
+    else if (event.key == Key::Home) next = slider_min_;
+    else if (event.key == Key::End) next = slider_max_;
+    else return false;
+    next = std::clamp(next,slider_min_,slider_max_);
+    if (next != current) slider_on_change_(next);
+    return true;
+}
+
+bool RenderNode::handleSliderMouse(const Point position)
+{
+    if (!sliderInteractive()) return false;
+    if (!std::isfinite(slider_min_) || !std::isfinite(slider_max_) || slider_max_ <= slider_min_) return false;
+    const int width = bounds_.width-(slider_show_value_ && bounds_.width >= 12 ? 8 : 0);
+    const double fraction = width <= 1 ? 0.0 :
+        static_cast<double>(std::clamp(position.x-bounds_.x,0,width-1))/(width-1);
+    const double raw = slider_min_+fraction*(slider_max_-slider_min_);
+    const double step = std::isfinite(slider_step_) && slider_step_ > 0.0 ? slider_step_ : 1.0;
+    const double next = std::clamp(slider_min_+std::round((raw-slider_min_)/step)*step,
+        slider_min_,slider_max_);
+    const double current = std::isfinite(value_) ? std::clamp(value_,slider_min_,slider_max_) : slider_min_;
+    if (next != current) slider_on_change_(next);
     return true;
 }
 
@@ -1736,6 +1771,33 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         if (suffix_width > 0)
             painter.text(bounds_.x+bar_width,bounds_.y,
                 " " + std::to_string(static_cast<int>(std::lround(value*100.0))) + "%",style);
+        return;
+    }
+    if (type_ == Component::Type::Slider)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const bool valid = std::isfinite(slider_min_) && std::isfinite(slider_max_) &&
+            slider_max_ > slider_min_;
+        const double value = std::isfinite(value_) ? value_ : slider_min_;
+        const double fraction = valid ?
+            std::clamp((value-slider_min_)/(slider_max_-slider_min_),0.0,1.0) : 0.0;
+        const int label_width = slider_show_value_ && bounds_.width >= 12 ? 8 : 0;
+        const int width = bounds_.width-label_width;
+        const int thumb = width <= 1 ? 0 : static_cast<int>(std::lround(fraction*(width-1)));
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        for (int i = 0; i < width; ++i)
+        {
+            const bool active = i <= thumb;
+            const Color foreground = disabled_ ? palette.muted : active ? palette.primary : palette.muted;
+            const TextStyle segment{.foreground = foreground,.background = style.background};
+            painter.put(bounds_.x+i,bounds_.y,i == thumb ? (unicode ? "●" : "O") :
+                active ? (unicode ? "━" : "=") : (unicode ? "─" : "-"),segment);
+        }
+        if (label_width)
+        {
+            const std::string label = std::to_string(static_cast<int>(std::lround(value)));
+            painter.text(bounds_.x+width+1,bounds_.y,label,style);
+        }
         return;
     }
     if (type_ == Component::Type::TreeView)

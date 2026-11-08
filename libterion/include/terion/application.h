@@ -108,6 +108,7 @@ private:
     std::string pressed_button_id_;
     std::uint64_t scrollbar_drag_id_ = 0;
     std::uint64_t split_drag_id_ = 0;
+    std::uint64_t slider_drag_id_ = 0;
     int scrollbar_grab_offset_ = 0;
     MousePointerShape pointer_shape_ = MousePointerShape::Default;
     bool pointer_shape_initialized_ = false;
