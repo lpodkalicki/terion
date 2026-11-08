@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(ScrollView, Behavior)
+TEST(ScrollView, NestedClipScopesRestorePreviousClip)
 {
     ScreenBuffer clipped_buffer({.width = 10,.height = 4});
     Painter scoped_painter(clipped_buffer);
@@ -31,6 +31,10 @@ TEST(ScrollView, Behavior)
     scoped_painter.put(8,1,"Z");
     EXPECT_EQ(clipped_buffer.at(8,1).grapheme,"Z");
 
+}
+
+TEST(ScrollView, RendersScrollbarAndHandlesKeyboardNavigation)
+{
     int reported_scroll = -1;
     Reconciler scrolling;
     scrolling.update(ScrollView({.children = {
@@ -73,6 +77,10 @@ TEST(ScrollView, Behavior)
     EXPECT_EQ(reported_scroll,0);
     EXPECT_TRUE(scrolling.root()->handleScrollKey(Event{.key = Key::End}));
     EXPECT_EQ(reported_scroll,3);
+}
+
+TEST(ScrollView, HandlesWheelAndScrollbarMouseDragging)
+{
     State<int> wheel_offset{0};
     Application wheel_app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 8,.height = 3}));
     wheel_app.render([&] {

@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(TerminalCapabilities, Behavior)
+TEST(TerminalCapabilities, DetectsSupportedPointerProtocols)
 {
     EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("Apple_Terminal").mousePointerShape);
     EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("vscode").mousePointerShape);
@@ -16,6 +16,10 @@ TEST(TerminalCapabilities, Behavior)
     EXPECT_TRUE(AnsiTerminalBackend::detectCapabilities("kitty").mousePointerShape);
     EXPECT_TRUE(AnsiTerminalBackend::detectCapabilities("Apple_Terminal", "1").mousePointerShape);
     EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("kitty", "0").mousePointerShape);
+}
+
+TEST(TerminalCapabilities, EmitsPointerShapeChangesForInteractiveComponents)
+{
     auto pointer_backend = std::make_unique<HeadlessTerminalBackend>(Size{.width = 30,.height = 7});
     auto* pointer_output = pointer_backend.get();
     Application pointer_app(std::move(pointer_backend));

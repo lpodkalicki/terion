@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Reconciler, Behavior)
+TEST(Reconciler, PreservesStableKeysAndRejectsDuplicates)
 {
     Reconciler reconciler;
     reconciler.update(Component::column({
@@ -41,6 +41,11 @@ TEST(Reconciler, Behavior)
     }
     EXPECT_TRUE(duplicate_rejected);
 
+}
+
+TEST(Reconciler, MeasuresAndPositionsNestedLayouts)
+{
+    Reconciler reconciler;
     reconciler.update(Component::column({
         Component::row({Component::text("A"),Component::text("BC")},"row",LayoutStyle{.gap = 2}),
         Component::box({Component::text("X")},LayoutStyle{.width = 8,.padding = 1},"box")
@@ -57,8 +62,13 @@ TEST(Reconciler, Behavior)
     layout_root->paint(layout_painter);
     EXPECT_EQ(layout_buffer.at(3,0).grapheme,"B");
     EXPECT_EQ(layout_buffer.at(1,3).grapheme,"X");
+}
+
+TEST(Reconciler, ClipsWideUnicodeCharactersAtBounds)
+{
+    Reconciler reconciler;
     reconciler.update(Component::row({Component::text("界X"),Component::text("Z")}));
-    layout_root = reconciler.root();
+    auto* layout_root = reconciler.root();
     layout_root->layout(Constraints{.maximum = {.width = 2,.height = 1}});
     EXPECT_EQ(layout_root->bounds().width,2);
     EXPECT_EQ(layout_root->children()[0]->bounds().width,2);

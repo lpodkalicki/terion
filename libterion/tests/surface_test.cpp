@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Surface, Behavior)
+TEST(Surface, RendersPaperAndCardVariants)
 {
     const Theme paper_theme = Theme::light();
     Reconciler surfaces;

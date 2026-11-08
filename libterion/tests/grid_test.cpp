@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Grid, Behavior)
+TEST(Grid, PlacesChildrenIntoColumnsAndRows)
 {
     Reconciler grid;
     grid.update(Grid({.children = {
@@ -26,6 +26,10 @@ TEST(Grid, Behavior)
     EXPECT_EQ(grid_buffer.at(6,0).grapheme,"B");
     EXPECT_EQ(grid_buffer.at(0,4).grapheme,"E");
 
+}
+
+TEST(Grid, HorizontalStackPlacesChildrenSideBySide)
+{
     Reconciler stack;
     stack.update(Stack({.children = {Typography({.text = "A"}),Typography({.text = "B"})},
         .direction = StackDirection::Horizontal}));

@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Layout, Behavior)
+TEST(Layout, DistributesFlexAndJustifiesChildren)
 {
     Reconciler flexible;
     flexible.update(Column({.children = {

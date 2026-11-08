@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Button, Behavior)
+TEST(Button, RendersContainedOutlinedAndDisabledVariants)
 {
     Reconciler graphic_buttons;
     graphic_buttons.update(Row({.children = {

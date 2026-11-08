@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Focus, Behavior)
+TEST(Focus, CyclesThroughRegisteredHandlers)
 {
     FocusManager focus;
     int first_calls = 0;

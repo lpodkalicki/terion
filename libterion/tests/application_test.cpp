@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Application, Behavior)
+TEST(Application, RendersAndRetainsKeyedComponents)
 {
     auto backend = std::make_unique<HeadlessTerminalBackend>(Size{20,5});
     auto* observed = backend.get();
@@ -32,6 +32,13 @@ TEST(Application, Behavior)
     app.renderOnce();
     EXPECT_EQ(app.reconciler().root()->children()[0]->id(),label_id);
     EXPECT_NE(observed->output().find("N"),std::string::npos);
+}
+
+TEST(Application, StateInvalidatesOnlyObservedDependencies)
+{
+    auto backend = std::make_unique<HeadlessTerminalBackend>(Size{20,5});
+    auto* observed = backend.get();
+    Application app(std::move(backend));
     State<int> counter{0};
     observed->clearOutput();
     app.render([&] { return Component::text(std::to_string(counter.get()),"counter"); });
@@ -66,6 +73,12 @@ TEST(Application, Behavior)
     EXPECT_TRUE(!app.needsRender());
     show.set(true);
     EXPECT_TRUE(app.needsRender());
+}
+
+TEST(Application, DispatchesFocusAndMouseActionsToButtons)
+{
+    auto backend = std::make_unique<HeadlessTerminalBackend>(Size{20,5});
+    Application app(std::move(backend));
     int clicks = 0;
     app.render([&] {
         return Column({.children = {
@@ -108,6 +121,13 @@ TEST(Application, Behavior)
     Painter hover_painter(hover_buffer);
     app.reconciler().root()->paint(hover_painter,{},first_button_id);
     EXPECT_EQ(hover_buffer.at(0,1).grapheme,"▏");
+}
+
+TEST(Application, EditsUtf8TextAndMovesFocus)
+{
+    auto backend = std::make_unique<HeadlessTerminalBackend>(Size{20,5});
+    Application app(std::move(backend));
+    int clicks = 0;
     State<std::string> input{std::string{}};
     app.render([&] {
         return Column({.children = {
@@ -144,7 +164,14 @@ TEST(Application, Behavior)
     app.renderOnce();
     EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Tab}));
     EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Enter}));
-    EXPECT_EQ(clicks,13);
+    EXPECT_EQ(clicks,1);
+}
+
+TEST(Application, DispatchesCustomEventsAndStopsHeadlessLoop)
+{
+    auto backend = std::make_unique<HeadlessTerminalBackend>(Size{20,5});
+    auto* observed = backend.get();
+    Application app(std::move(backend));
     app.render([](Painter&, Size) {});
     app.renderOnce();
     bool received = false;

@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Select, Behavior)
+TEST(Select, SupportsScrollbarDraggingAndPopupPlacement)
 {
     std::vector<SelectOption> long_options;
     for (int i = 0; i < 12; ++i)
@@ -42,7 +42,10 @@ TEST(Select, Behavior)
     long_select.root()->layout(Constraints{.maximum = {.width = 24,.height = 9}},{.x = 0,.y = 6});
     EXPECT_TRUE(long_select.root()->handleSelectKey(Event{.key = Key::Enter},{.width = 24,.height = 9}));
     EXPECT_EQ(long_select.root()->selectPopupRect({.width = 24,.height = 9}).y,0);
+}
 
+TEST(Select, HandlesKeyboardMouseAndOverlayDismissal)
+{
     State<std::string> chosen("a");
     Application select_app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 30,.height = 12}));
     select_app.render([&] {

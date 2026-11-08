@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(InputDecoder, Behavior)
+TEST(InputDecoder, DecodesEscapeKeysAndUnicodeInput)
 {
     InputDecoder decoder;
     decoder.feed("\033");
@@ -38,6 +38,11 @@ TEST(InputDecoder, Behavior)
     decoder.feed("\033[99~");
     EXPECT_EQ(decoder.nextEvent()->key,Key::Unknown);
     EXPECT_TRUE(!decoder.nextEvent());
+}
+
+TEST(InputDecoder, DecodesMousePressReleaseAndWheel)
+{
+    InputDecoder decoder;
     decoder.feed("\033[<0;2;");
     EXPECT_TRUE(!decoder.nextEvent());
     decoder.feed("3M");

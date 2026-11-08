@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(TextField, Behavior)
+TEST(TextField, RendersCursorAndEditsUtf8Text)
 {
     Reconciler fields;
     fields.update(Column({.children = {

@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Theme, Behavior)
+TEST(Theme, AppliesPaletteAndSpacingToComponents)
 {
     const Theme light = Theme::light();
     EXPECT_EQ(light.spacing(3),3);

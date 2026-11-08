@@ -7,7 +7,7 @@
 
 using namespace terion;
 
-TEST(Render, Behavior)
+TEST(Render, CanvasDrawsBrailleShapes)
 {
     render::Canvas canvas(4,8);
     canvas.point(0,0);
@@ -26,6 +26,10 @@ TEST(Render, Behavior)
     canvas.paint(canvas_painter);
     EXPECT_NE(canvas_buffer.at(0,0).grapheme,"⠀");
 
+}
+
+TEST(Render, PainterDrawsBordersAndBackground)
+{
     ScreenBuffer drawing({.width = 12,.height = 6});
     Painter drawing_painter(drawing);
     drawing_painter.border({.x = 1,.y = 1,.width = 8,.height = 4},BorderStyle::Rounded);
@@ -37,6 +41,10 @@ TEST(Render, Behavior)
     EXPECT_EQ(drawing.at(4,2).grapheme,"─");
     drawing_painter.fillBackground({.x = 2,.y = 2,.width = 3,.height = 1},Color::rgb(3,5,7));
     EXPECT_EQ(drawing.at(3,2).style.background,Color::rgb(3,5,7));
+}
+
+TEST(Render, ComponentsDrawStyledBordersAndProgress)
+{
     Reconciler styled;
     styled.update(Box({.children = {
         Typography({.text = "Hello"}),
