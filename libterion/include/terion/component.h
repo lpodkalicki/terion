@@ -82,6 +82,7 @@ public:
         RadioGroup,
         TextField,
         Select,
+        DropdownMenu,
         Dialog,
         FocusScope,
         Divider,

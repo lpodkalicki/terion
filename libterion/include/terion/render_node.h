@@ -60,7 +60,10 @@ public:
     [[nodiscard]] bool editable() const noexcept { return static_cast<bool>(on_change_) && !disabled_; }
     bool handleTextInput(const Event& event);
     void setCursorFromX(int x);
-    [[nodiscard]] bool selectOpen() const noexcept { return type_ == Component::Type::Select && select_open_; }
+    [[nodiscard]] bool selectOpen() const noexcept
+    {
+        return (type_ == Component::Type::Select || type_ == Component::Type::DropdownMenu) && select_open_;
+    }
     [[nodiscard]] Rect selectPopupRect(Size screen) const noexcept;
     [[nodiscard]] bool selectContains(Point point, Size screen) const noexcept;
     bool handleSelectKey(const Event& event, Size screen = {.width = 80,.height = 24});

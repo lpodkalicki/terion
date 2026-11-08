@@ -174,6 +174,13 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         content = {.width = addBounded(textWidth(text_),type_ == Component::Type::Switch ? 7 : 5),.height = 1};
     }
+    else if (type_ == Component::Type::DropdownMenu)
+    {
+        const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
+        content = {.width = addBounded(textWidth(text_),padding*2+2+
+            (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
+            .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
+    }
     else if (type_ == Component::Type::RadioGroup)
     {
         int width = 0;
@@ -285,7 +292,8 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     if (type_ == Component::Type::Text || type_ == Component::Type::Dialog || type_ == Component::Type::Button ||
         type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
-        type_ == Component::Type::TextField || type_ == Component::Type::Select || type_ == Component::Type::Divider ||
+        type_ == Component::Type::TextField || type_ == Component::Type::Select ||
+        type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress) return;
 
     const int padding = std::max(0,style_.padding) + (border_ ? 1 : 0);
@@ -574,7 +582,10 @@ Rect RenderNode::selectPopupRect(const Size screen) const noexcept
     const int below = std::max(0,screen.height - std::max(0,bounds_.y+bounds_.height));
     const int above = std::clamp(bounds_.y,0,screen.height);
     const int height = std::min({6,static_cast<int>(select_options_.size()),std::max(below,above)});
-    const int width = std::min(bounds_.width,std::max(0,screen.width));
+    int width = bounds_.width;
+    if (type_ == Component::Type::DropdownMenu)
+        for (const auto& option : select_options_) width = std::max(width,textWidth(option.label)+3);
+    width = std::min(width,std::max(0,screen.width));
     if (height <= 0 || width <= 0) return {};
     const int y = below >= height ? bounds_.y+bounds_.height : bounds_.y-height;
     return {.x = std::clamp(bounds_.x,0,screen.width-width),.y = y,.width = width,.height = height};
@@ -606,15 +617,20 @@ bool RenderNode::selectContains(const Point point, const Size screen) const noex
 
 bool RenderNode::handleSelectKey(const Event& event, const Size screen)
 {
-    if (type_ != Component::Type::Select || disabled_) return false;
+    if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu) || disabled_) return false;
     if (!select_open_)
     {
         if (event.key != Key::Enter && event.key != Key::Down &&
             !(event.key == Key::Character && event.character == U' ')) return false;
         if (select_options_.empty()) return true;
         select_open_ = true;
+        select_highlight_ = 0;
         for (std::size_t i = 0; i < select_options_.size(); ++i)
-            if (select_options_[i].value == text_) { select_highlight_ = static_cast<int>(i); break; }
+            if (type_ == Component::Type::Select && select_options_[i].value == text_)
+            { select_highlight_ = static_cast<int>(i); break; }
+        if (type_ == Component::Type::DropdownMenu)
+            for (std::size_t i = 0; i < select_options_.size(); ++i)
+                if (!select_options_[i].disabled) { select_highlight_ = static_cast<int>(i); break; }
         const int viewport = std::max(1,selectPopupRect(screen).height);
         select_scroll_ = std::clamp(select_highlight_-viewport/2,0,
             std::max(0,static_cast<int>(select_options_.size())-viewport));
@@ -634,6 +650,13 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
             if (event.key == Key::PageUp) next -= std::max(1,selectPopupRect(screen).height);
             if (event.key == Key::PageDown) next += std::max(1,selectPopupRect(screen).height);
             select_highlight_ = std::clamp(next,0,count-1);
+            if (type_ == Component::Type::DropdownMenu && select_options_[select_highlight_].disabled)
+            {
+                const int direction = event.key == Key::Up || event.key == Key::PageUp ||
+                    event.key == Key::End ? -1 : 1;
+                for (int i = select_highlight_; i >= 0 && i < count; i += direction)
+                    if (!select_options_[i].disabled) { select_highlight_ = i; break; }
+            }
         }
         else if (event.key == Key::Enter || (event.key == Key::Character && event.character == U' '))
         {
@@ -653,7 +676,7 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
 
 bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
 {
-    if (type_ != Component::Type::Select || disabled_) return false;
+    if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu) || disabled_) return false;
     if (select_dragging_)
     {
         if (mouse.action == MouseAction::Release) { select_dragging_ = false; return true; }
@@ -722,8 +745,13 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
             else
             {
                 select_open_ = true;
+                select_highlight_ = 0;
                 for (std::size_t i = 0; i < select_options_.size(); ++i)
-                    if (select_options_[i].value == text_) { select_highlight_ = static_cast<int>(i); break; }
+                    if (type_ == Component::Type::Select && select_options_[i].value == text_)
+                    { select_highlight_ = static_cast<int>(i); break; }
+                if (type_ == Component::Type::DropdownMenu)
+                    for (std::size_t i = 0; i < select_options_.size(); ++i)
+                        if (!select_options_[i].disabled) { select_highlight_ = static_cast<int>(i); break; }
                 const int viewport = std::max(1,selectPopupRect(screen).height);
                 select_scroll_ = std::clamp(select_highlight_-viewport/2,0,
                     std::max(0,static_cast<int>(select_options_.size())-viewport));
@@ -1152,6 +1180,48 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         else draw(bounds_.y,checked_,disabled_,type_ == Component::Type::Radio,text_);
         return;
     }
+    if (type_ == Component::Type::DropdownMenu)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const bool focused = focused_id == std::to_string(id_) || select_open_;
+        const bool hovered = hovered_id == std::to_string(id_);
+        const bool outlined = button_variant_ == ButtonVariant::Outlined;
+        const bool contained = button_variant_ == ButtonVariant::Contained;
+        const bool compact = bounds_.height < 3;
+        Color bg = contained ? palette.primary : effective_background.value_or(palette.background);
+        Color fg = contained ? palette.on_primary : palette.foreground;
+        if (disabled_)
+        {
+            bg = palette.surface;
+            fg = palette.muted;
+        }
+        else if (focused || hovered)
+            bg = blendColor(bg,contained ? palette.on_primary : palette.primary,hovered ? 16 : 24);
+        painter.fillBackground(bounds_,bg);
+        TextStyle style {.foreground = fg,.background = bg,.bold = focused && !disabled_};
+        if (outlined)
+        {
+            TextStyle outline = style;
+            outline.foreground = disabled_ ? palette.muted : focused ? palette.primary : palette.muted;
+            if (compact)
+            {
+                painter.put(bounds_.x,bounds_.y,"▏",outline);
+                if (bounds_.width > 1) painter.put(bounds_.x+bounds_.width-1,bounds_.y,"▕",outline);
+            }
+            else painter.border(bounds_,focused ? BorderStyle::Heavy : BorderStyle::Rounded,outline);
+        }
+        const int inset = outlined ? 2 : 1;
+        const int y = bounds_.y+bounds_.height/2;
+        const int available = std::max(0,bounds_.width-inset*2-2);
+        const std::string label = clipText(text_,available);
+        painter.text(bounds_.x+inset,y,label,style);
+        const int arrow_x = std::min(bounds_.x+bounds_.width-inset-1,
+            bounds_.x+inset+textWidth(label)+1);
+        if (arrow_x >= bounds_.x && arrow_x < bounds_.x+bounds_.width)
+            painter.put(arrow_x,y,select_open_ ? "▴" : "▾",style);
+        return;
+    }
     if (type_ == Component::Type::Select)
     {
         if (bounds_.width <= 0 || bounds_.height <= 0) return;
@@ -1172,9 +1242,10 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             painter.put(bounds_.x,bounds_.y,"▏",outline);
             if (bounds_.width > 1) painter.put(bounds_.x+bounds_.width-1,bounds_.y,"▕",outline);
         }
-        std::string label = placeholder_;
-        for (const auto& option : select_options_)
-            if (option.value == text_) { label = option.label; break; }
+        std::string label = type_ == Component::Type::DropdownMenu ? text_ : placeholder_;
+        if (type_ == Component::Type::Select)
+            for (const auto& option : select_options_)
+                if (option.value == text_) { label = option.label; break; }
         TextStyle label_style = style;
         if (label == placeholder_ && text_.empty()) label_style.foreground = palette.muted;
         painter.text(bounds_.x+2,bounds_.y+bounds_.height/2,clipText(label,std::max(0,bounds_.width-6)),label_style);
