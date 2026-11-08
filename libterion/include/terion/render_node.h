@@ -39,8 +39,8 @@ public:
     [[nodiscard]] RenderNode* scrollTarget(Point position) noexcept;
     bool scrollBy(int delta);
     bool handleScrollKey(const Event& event);
-    [[nodiscard]] Rect scrollbarTrack() const noexcept;
-    [[nodiscard]] Rect scrollbarThumb() const noexcept;
+    [[nodiscard]] Rect scrollbarTrack() const;
+    [[nodiscard]] Rect scrollbarThumb() const;
     bool scrollbarPress(Point position, int& grab_offset);
     bool scrollbarDrag(int y, int grab_offset);
     [[nodiscard]] bool scrollable() const noexcept { return static_cast<bool>(on_scroll_); }
@@ -147,6 +147,8 @@ private:
     std::vector<TabOption> tab_options_;
     std::vector<TableColumn> table_columns_;
     std::vector<TableRow> table_rows_;
+    std::function<bool(const TableRow&)> table_filter_;
+    std::function<TableCellFormat(const TableRow&,std::size_t)> table_format_cell_;
     int table_scroll_ = 0;
     int table_sort_column_ = -1;
     bool table_sort_ascending_ = true;

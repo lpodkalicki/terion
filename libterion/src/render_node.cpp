@@ -201,11 +201,16 @@ Size RenderNode::measure(const Constraints& constraints) const
         {
             int column_width = textWidth(table_columns_[i].title);
             for (const auto& row : table_rows_)
-                if (i < row.cells.size()) column_width = std::max(column_width,textWidth(row.cells[i]));
+            {
+                if (table_filter_ && !table_filter_(row)) continue;
+                const auto cell = table_format_cell_ ? table_format_cell_(row,i) :
+                    TableCellFormat{.text = i < row.cells.size() ? row.cells[i] : std::string{}};
+                column_width = std::max(column_width,textWidth(cell.text));
+            }
             width = addBounded(width,std::max(1,table_columns_[i].width > 0 ?
                 table_columns_[i].width : column_width+2)+1);
         }
-        content = {.width = width,.height = addBounded(static_cast<int>(table_rows_.size()),2)};
+        content = {.width = width,.height = addBounded(static_cast<int>(tableOrder().size()),2)};
     }
     else if (type_ == Component::Type::TextField || type_ == Component::Type::Select)
     {
@@ -657,8 +662,10 @@ bool RenderNode::updateTabsHover(const Point position)
 
 std::vector<std::size_t> RenderNode::tableOrder() const
 {
-    std::vector<std::size_t> order(table_rows_.size());
-    for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
+    std::vector<std::size_t> order;
+    order.reserve(table_rows_.size());
+    for (std::size_t i = 0; i < table_rows_.size(); ++i)
+        if (!table_filter_ || table_filter_(table_rows_[i])) order.push_back(i);
     if (table_sort_column_ >= 0)
     {
         const auto column = static_cast<std::size_t>(table_sort_column_);
@@ -675,13 +682,14 @@ std::vector<std::size_t> RenderNode::tableOrder() const
 
 bool RenderNode::handleTableKey(const Event& event)
 {
-    if (type_ != Component::Type::Table || disabled_ || table_rows_.empty()) return false;
+    if (type_ != Component::Type::Table || disabled_) return false;
     const auto order = tableOrder();
+    if (order.empty()) return false;
     int selected = -1;
     for (std::size_t i = 0; i < order.size(); ++i)
         if (table_rows_[order[i]].key == text_) { selected = static_cast<int>(i); break; }
     int next = selected;
-    const int count = static_cast<int>(table_rows_.size());
+    const int count = static_cast<int>(order.size());
     if (event.key == Key::Up || event.key == Key::Down || event.key == Key::PageUp ||
         event.key == Key::PageDown)
     {
@@ -731,7 +739,9 @@ bool RenderNode::handleTableClick(const Point position)
     }
     if (position.y < bounds_.y+2 || position.x == scrollbarTrack().x) return false;
     const auto order = tableOrder();
-    const int index = table_scroll_+position.y-bounds_.y-2;
+    const int visible = std::max(0,bounds_.height-2);
+    const int scroll = std::clamp(table_scroll_,0,std::max(0,static_cast<int>(order.size())-visible));
+    const int index = scroll+position.y-bounds_.y-2;
     if (index < 0 || index >= static_cast<int>(order.size())) return false;
     const auto& row = table_rows_[order[index]];
     if (!row.disabled && on_change_ && row.key != text_) on_change_(row.key);
@@ -761,7 +771,7 @@ bool RenderNode::scrollBy(const int delta)
 {
     if (type_ == Component::Type::Table && !disabled_)
     {
-        const int maximum = std::max(0,static_cast<int>(table_rows_.size())-std::max(0,bounds_.height-2));
+        const int maximum = std::max(0,static_cast<int>(tableOrder().size())-std::max(0,bounds_.height-2));
         table_scroll_ = static_cast<int>(std::clamp(static_cast<long long>(table_scroll_)+delta,
             0LL,static_cast<long long>(maximum)));
         return true;
@@ -1210,13 +1220,13 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
     }
 }
 
-Rect RenderNode::scrollbarTrack() const noexcept
+Rect RenderNode::scrollbarTrack() const
 {
     if (type_ == Component::Type::Table)
     {
         const int height = std::max(0,bounds_.height-2);
         if (bounds_.width <= 0 || height <= 0 ||
-            static_cast<int>(table_rows_.size()) <= height) return {};
+            static_cast<int>(tableOrder().size()) <= height) return {};
         return {.x = bounds_.x+bounds_.width-1,.y = bounds_.y+2,.width = 1,.height = height};
     }
     if (type_ != Component::Type::ScrollView || !scrollbar_visible_ || max_scroll_offset_ <= 0 ||
@@ -1226,13 +1236,13 @@ Rect RenderNode::scrollbarTrack() const noexcept
         .y = bounds_.y + inset,.width = 1,.height = viewport_height_};
 }
 
-Rect RenderNode::scrollbarThumb() const noexcept
+Rect RenderNode::scrollbarThumb() const
 {
     const Rect track = scrollbarTrack();
     if (track.height <= 0) return {};
     if (type_ == Component::Type::Table)
     {
-        const int count = static_cast<int>(table_rows_.size());
+        const int count = static_cast<int>(tableOrder().size());
         const int length = std::max(1,track.height*track.height/count);
         const int maximum = count-track.height;
         const int top = std::clamp(table_scroll_,0,maximum)*(track.height-length)/maximum;
@@ -1254,7 +1264,7 @@ bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
     const int travel = track.height - thumb.height;
     const int top = std::clamp(y - track.y - grab_offset,0,travel);
     const int maximum = type_ == Component::Type::Table ?
-        static_cast<int>(table_rows_.size())-track.height : max_scroll_offset_;
+        static_cast<int>(tableOrder().size())-track.height : max_scroll_offset_;
     const int target = travel > 0 ? static_cast<int>((static_cast<long long>(top) * maximum +
         travel / 2) / travel) : 0;
     if (type_ == Component::Type::Table) table_scroll_ = target;
@@ -1331,9 +1341,20 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         {
             int width = textWidth(table_columns_[i].title);
             for (const auto& row : table_rows_)
-                if (i < row.cells.size()) width = std::max(width,textWidth(row.cells[i]));
+            {
+                if (table_filter_ && !table_filter_(row)) continue;
+                const auto cell = table_format_cell_ ? table_format_cell_(row,i) :
+                    TableCellFormat{.text = i < row.cells.size() ? row.cells[i] : std::string{}};
+                width = std::max(width,textWidth(cell.text));
+            }
             widths.push_back(std::max(1,table_columns_[i].width > 0 ? table_columns_[i].width : width+2));
         }
+        const auto alignedX = [&](const int x, const int width, const int content_width,
+            const TableAlignment alignment) {
+            const int space = std::max(0,width-content_width);
+            return x+(alignment == TableAlignment::Right ? space :
+                alignment == TableAlignment::Center ? space/2 : 0);
+        };
         const TextStyle heading {.foreground = palette.primary,.background = palette.surface,.bold = true};
         painter.fillBackground({.x = bounds_.x,.y = bounds_.y,.width = bounds_.width,.height = 1},palette.surface);
         int x = bounds_.x+1;
@@ -1341,18 +1362,20 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         {
             const std::string indicator = widths[i] >= 4 && table_sort_column_ == static_cast<int>(i) ?
                 (table_sort_ascending_ ? " ▲" : " ▼") : "";
-            painter.text(x,bounds_.y,clipText(table_columns_[i].title,
-                std::max(0,widths[i]-1-textWidth(indicator)))+indicator,heading);
+            const std::string label = clipText(table_columns_[i].title,
+                std::max(0,widths[i]-1-textWidth(indicator)))+indicator;
+            painter.text(alignedX(x,widths[i]-1,textWidth(label),table_columns_[i].alignment),
+                bounds_.y,label,heading);
             x += widths[i]+1;
         }
         if (bounds_.height > 1)
             painter.horizontalLine(bounds_.x,bounds_.y+1,bounds_.width,
                 {.foreground = palette.muted,.background = base});
         const int visible = std::max(0,bounds_.height-2);
-        const int scroll = std::clamp(table_scroll_,0,
-            std::max(0,static_cast<int>(table_rows_.size())-visible));
         const auto order = tableOrder();
-        for (int r = 0; r < visible && scroll+r < static_cast<int>(table_rows_.size()); ++r)
+        const int scroll = std::clamp(table_scroll_,0,
+            std::max(0,static_cast<int>(order.size())-visible));
+        for (int r = 0; r < visible && scroll+r < static_cast<int>(order.size()); ++r)
         {
             const auto& row = table_rows_[order[scroll+r]];
             const int y = bounds_.y+2+r;
@@ -1365,8 +1388,21 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             int column_x = bounds_.x+1;
             for (std::size_t i = 0; i < widths.size(); ++i)
             {
-                if (i < row.cells.size()) painter.text(column_x,y,
-                    clipText(row.cells[i],std::max(0,widths[i]-1)),style);
+                const auto formatted = table_format_cell_ ? table_format_cell_(row,i) :
+                    TableCellFormat{.text = i < row.cells.size() ? row.cells[i] : std::string{}};
+                TextStyle cell_style = style;
+                if (!row.disabled)
+                {
+                    if (formatted.foreground) cell_style.foreground = *formatted.foreground;
+                    if (formatted.background) cell_style.background = *formatted.background;
+                    cell_style.bold = cell_style.bold || formatted.bold;
+                }
+                if (formatted.background && !row.disabled)
+                    painter.fillBackground({.x = column_x,.y = y,.width = widths[i],.height = 1},
+                        *formatted.background);
+                const std::string cell_text = clipText(formatted.text,std::max(0,widths[i]-1));
+                painter.text(alignedX(column_x,widths[i]-1,textWidth(cell_text),
+                    table_columns_[i].alignment),y,cell_text,cell_style);
                 column_x += widths[i]+1;
             }
         }

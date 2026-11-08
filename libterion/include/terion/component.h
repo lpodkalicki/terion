@@ -71,10 +71,18 @@ struct TabOption
     bool disabled = false;
 }; /* End of struct TabOption */
 
+enum class TableAlignment
+{
+    Left,
+    Center,
+    Right
+}; /* End of enum TableAlignment */
+
 struct TableColumn
 {
     std::string title;
     int width = 0;
+    TableAlignment alignment = TableAlignment::Left;
 }; /* End of struct TableColumn */
 
 struct TableRow
@@ -83,6 +91,14 @@ struct TableRow
     std::vector<std::string> cells;
     bool disabled = false;
 }; /* End of struct TableRow */
+
+struct TableCellFormat
+{
+    std::string text;
+    std::optional<Color> foreground = std::nullopt;
+    std::optional<Color> background = std::nullopt;
+    bool bold = false;
+}; /* End of struct TableCellFormat */
 
 class Component
 {
@@ -144,6 +160,8 @@ public:
         std::vector<TabOption> tab_options = {};
         std::vector<TableColumn> table_columns = {};
         std::vector<TableRow> table_rows = {};
+        std::function<bool(const TableRow&)> table_filter = {};
+        std::function<TableCellFormat(const TableRow&,std::size_t)> table_format_cell = {};
         bool tab_panel_active = true;
         bool checked = false;
         bool dialog_open = false;

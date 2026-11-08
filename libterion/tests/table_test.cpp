@@ -91,3 +91,53 @@ TEST(Table, ScrollbarDragAndWheelShareScrollOffset)
     EXPECT_TRUE(table->scrollBy(-1000));
     EXPECT_EQ(table->scrollbarThumb().y,track.y);
 }
+
+TEST(Table, FilterAffectsSortingSelectionAndScrollbar)
+{
+    std::string selected;
+    Reconciler tree;
+    tree.update(Table({.columns = {{"Name",12}},.rows = {
+        {"a",{"Alpha"}},{"b",{"Bravo"}},{"c",{"Charlie"}},
+        {"d",{"Delta"}},{"e",{"Echo"}}},
+        .filter = [](const TableRow& row) { return row.key == "b" || row.key == "d"; },
+        .value = "b",.layout = {.height = 5},
+        .onChange = [&](std::string value) { selected = std::move(value); }}));
+    tree.root()->layout({.maximum = {.width = 20,.height = 5}});
+    const auto order = tree.root()->tableOrder();
+    ASSERT_EQ(order.size(),2U);
+    EXPECT_EQ(order[0],1U);
+    EXPECT_EQ(order[1],3U);
+    EXPECT_EQ(tree.root()->scrollbarTrack().height,0);
+    EXPECT_TRUE(tree.root()->handleTableKey({.key = Key::Down}));
+    EXPECT_EQ(selected,"d");
+    tree.update(Table({.columns = {{"Name",12}},.rows = {
+        {"a",{"Alpha"}},{"b",{"Bravo"}},{"c",{"Charlie"}},
+        {"d",{"Delta"}},{"e",{"Echo"}}},
+        .filter = [](const TableRow& row) { return row.key == "b" || row.key == "d"; },
+        .value = selected,.layout = {.height = 5},
+        .onChange = [&](std::string value) { selected = std::move(value); }}));
+    tree.root()->layout({.maximum = {.width = 20,.height = 5}});
+    EXPECT_TRUE(tree.root()->handleTableClick({.x = 2,.y = 2}));
+    EXPECT_EQ(selected,"b");
+}
+
+TEST(Table, AlignsAndFormatsIndividualCells)
+{
+    Reconciler tree;
+    const Color custom = Color::rgb(17,201,91);
+    tree.update(Table({.columns = {{"Left",10,TableAlignment::Left},
+            {"Center",10,TableAlignment::Center},{"Right",10,TableAlignment::Right}},
+        .rows = {{"one",{"A","B","C"}}},
+        .formatCell = [custom](const TableRow& row,std::size_t index) {
+            return TableCellFormat{.text = row.cells[index],.foreground = custom,.bold = true};
+        }}));
+    tree.root()->layout({.maximum = {.width = 40,.height = 5}});
+    ScreenBuffer screen({.width = 40,.height = 5});
+    Painter painter(screen);
+    tree.root()->paint(painter);
+    EXPECT_EQ(screen.at(1,2).grapheme,"A");
+    EXPECT_EQ(screen.at(16,2).grapheme,"B");
+    EXPECT_EQ(screen.at(31,2).grapheme,"C");
+    EXPECT_EQ(screen.at(31,2).style.foreground,custom);
+    EXPECT_TRUE(screen.at(31,2).style.bold);
+}

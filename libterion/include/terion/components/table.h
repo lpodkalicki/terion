@@ -16,6 +16,8 @@ public:
     {
         std::vector<TableColumn> columns = {};
         std::vector<TableRow> rows = {};
+        std::function<bool(const TableRow&)> filter = {};
+        std::function<TableCellFormat(const TableRow&,std::size_t)> formatCell = {};
         std::string value = {};
         std::string key = {};
         bool disabled = false;
@@ -30,7 +32,8 @@ public:
             .layout = props.layout,.on_event_capture = std::move(props.onEventCapture),
             .on_event = std::move(props.onEvent),.on_change = std::move(props.onChange),
             .disabled = props.disabled,.table_columns = std::move(props.columns),
-            .table_rows = std::move(props.rows)})
+            .table_rows = std::move(props.rows),.table_filter = std::move(props.filter),
+            .table_format_cell = std::move(props.formatCell)})
     {}
 }; /* End of class Table */
 
