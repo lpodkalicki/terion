@@ -28,6 +28,7 @@ class EffectBase
 public:
     virtual ~EffectBase() { cleanup(); }
     virtual void commit() = 0;
+    virtual void cancelPending() noexcept = 0;
 
 protected:
     void cleanup() noexcept
@@ -46,8 +47,12 @@ class EffectSlot final : public EffectBase
 public:
     void schedule(std::function<std::function<void()>()> effect,Dependencies dependencies,bool always)
     {
-        if (!always && dependencies_ && *dependencies_ == dependencies) return;
-        dependencies_ = std::move(dependencies);
+        if (!always && committed_dependencies_ && *committed_dependencies_ == dependencies)
+        {
+            cancelPending();
+            return;
+        }
+        staged_dependencies_ = std::move(dependencies);
         pending_ = std::move(effect);
     }
 
@@ -58,10 +63,19 @@ public:
         pending_ = {};
         cleanup();
         cleanup_ = effect();
+        committed_dependencies_ = std::move(staged_dependencies_);
+        staged_dependencies_.reset();
+    }
+
+    void cancelPending() noexcept override
+    {
+        pending_ = {};
+        staged_dependencies_.reset();
     }
 
 private:
-    std::optional<Dependencies> dependencies_;
+    std::optional<Dependencies> committed_dependencies_;
+    std::optional<Dependencies> staged_dependencies_;
     std::function<std::function<void()>()> pending_;
 };
 

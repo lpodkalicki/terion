@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <any>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -40,6 +41,7 @@ private:
     {
         const void* identity = nullptr;
         std::vector<std::any> slots;
+        std::optional<std::size_t> hook_count;
         std::size_t generation = 0;
     };
 
@@ -50,7 +52,7 @@ private:
     std::uint64_t next_id_ = 1;
     Stats stats_{};
     std::unordered_map<std::string,HookRecord> hooks_;
-    std::vector<HookRecord> retired_hooks_;
+    std::vector<std::pair<std::string,HookRecord>> retired_hooks_;
     std::size_t generation_ = 0;
 }; /* End of class Reconciler */
 

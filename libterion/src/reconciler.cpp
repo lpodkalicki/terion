@@ -41,15 +41,42 @@ void validateKeys(const Component& component)
 
 void Reconciler::update(const Component& component)
 {
+    // Reject visible duplicate keys before running user-defined component functions.
+    validateKeys(component);
     ++generation_;
-    auto expanded = expand(component,"root");
-    validateKeys(expanded);
-    stats_ = {};
-    reconcile(root_,expanded);
+    const auto retired_before = retired_hooks_.size();
+    try
+    {
+        auto expanded = expand(component,"root");
+        validateKeys(expanded);
+        stats_ = {};
+        reconcile(root_,expanded);
+    }
+    catch (...)
+    {
+        // A failed frame must not accidentally commit its scheduled effects.
+        for (auto& [path,record] : hooks_)
+        {
+            (void)path;
+            for (auto& slot : record.slots)
+            {
+                auto* effect = std::any_cast<std::shared_ptr<detail::EffectBase>>(&slot);
+                if (effect && *effect) (*effect)->cancelPending();
+            }
+        }
+        // Replacements of function identities are not committed on failed frames.
+        for (std::size_t i = retired_hooks_.size(); i > retired_before; --i)
+        {
+            auto& [path,previous] = retired_hooks_[i-1];
+            hooks_[path] = std::move(previous);
+        }
+        retired_hooks_.resize(retired_before);
+        throw;
+    }
     for (auto it = hooks_.begin(); it != hooks_.end();)
     {
         if (it->second.generation == generation_) { ++it; continue; }
-        retired_hooks_.push_back(std::move(it->second));
+        retired_hooks_.emplace_back(it->first,std::move(it->second));
         it = hooks_.erase(it);
     }
 }
@@ -94,23 +121,30 @@ Component Reconciler::expand(const Component& component, const std::string& path
         if (!props.render_function || !props.function_identity)
             throw std::invalid_argument("invalid function component");
         auto& record = hooks_[path];
-        if (record.identity != props.function_identity)
-        {
-            record.slots.clear();
-            record.identity = props.function_identity;
-        }
-        record.generation = generation_;
-        detail::HookContext context{record.slots};
+        const bool same_identity = record.identity == props.function_identity;
+        auto staged_slots = same_identity ? record.slots : std::vector<std::any>{};
+        detail::HookContext context{staged_slots};
         Component result = [&] {
             detail::HookScope scope(context);
             return props.render_function();
         }();
-        if (context.position != record.slots.size())
+        if (context.position != staged_slots.size() ||
+            (same_identity && record.hook_count && context.position != *record.hook_count))
             throw std::logic_error("useState() hook count changed between renders");
         // The instance's key controls identity, not the implementation's root key.
         auto actual = result.props();
         actual.key = props.key;
-        return expand(Component(std::move(actual)),path + "/fn");
+        auto expanded = expand(Component(std::move(actual)),path + "/fn");
+        if (!same_identity)
+        {
+            if (record.identity) retired_hooks_.emplace_back(path,std::move(record));
+            record = {};
+            record.identity = props.function_identity;
+        }
+        record.slots = std::move(staged_slots);
+        record.hook_count = context.position;
+        record.generation = generation_;
+        return expanded;
     }
 
     auto actual = props;

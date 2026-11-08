@@ -61,4 +61,10 @@ TEST(Hooks, RequiresMountAndStableHookOrder)
     Reconciler reconciler;
     reconciler.update(ComponentOf<BadHookOrder>("bad",false));
     EXPECT_THROW(reconciler.update(ComponentOf<BadHookOrder>("bad",true)),std::logic_error);
+    // A rejected render must leave the previous valid hook count intact.
+    EXPECT_NO_THROW(reconciler.update(ComponentOf<BadHookOrder>("bad",false)));
+
+    Reconciler another;
+    another.update(ComponentOf<BadHookOrder>("bad",true));
+    EXPECT_THROW(another.update(ComponentOf<BadHookOrder>("bad",false)),std::logic_error);
 }
