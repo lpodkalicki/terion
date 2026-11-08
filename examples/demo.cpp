@@ -95,6 +95,18 @@ int main()
         const int content_width = compact ? std::max(0,screen.width - 2) :
             std::max(0,screen.width - left_width - 4);
         const std::string active = page.get();
+        std::vector<TableColumn> file_columns = {
+            {"Name",22},{"Type",10,TableAlignment::Center},
+            {"Size",10,TableAlignment::Right},{"Modified",14}
+        };
+        if (compact) file_columns = {{"Name",22},{"Type",10}};
+        std::vector<TabOption> page_tabs = {
+            {"Files","files"},{"Details","details"},
+            {"Settings","settings"},{"Showcase","showcase"}
+        };
+        if (compact)
+            page_tabs = {{"Folders","folders"},{"Files","files"},
+                {"Details","details"},{"Settings","settings"},{"More","showcase"}};
 
         Component overview = TabPanel({
             .children = {
@@ -199,9 +211,7 @@ int main()
                 },.layout = {.gap = 1}}),
                 TextField({.value = filter.get(),.placeholder = "Search files...",.key = "table-filter",
                     .onChange = [&](std::string value) { filter.set(std::move(value)); }}),
-                ContextMenu({.child = Table({.columns = compact ? std::vector<TableColumn>{{"Name",22},{"Type",10}} :
-                    std::vector<TableColumn>{{"Name",22},{"Type",10,TableAlignment::Center},
-                        {"Size",10,TableAlignment::Right},{"Modified",14}},
+                ContextMenu({.child = Table({.columns = file_columns,
                     .rows = rows,
                     .filter = [query = filter.get(),hidden = show_hidden.get()](const TableRow& row) {
                         return (hidden || row.key != "hidden") &&
@@ -279,16 +289,14 @@ int main()
                 }})
         },.layout = {.padding = 1,.gap = 1}}); };
 
-        Component folders = TabPanel({.children = compact ? std::vector<Component>{makeFolderTree()} :
-            std::vector<Component>{},
+        std::vector<Component> folder_children;
+        if (compact) folder_children.emplace_back(makeFolderTree());
+        Component folders = TabPanel({.children = std::move(folder_children),
             .key = "folders-panel",.active = compact && active == "folders",
             .layout = {.padding = 0}});
         // The narrow layout keeps the folder tree as a page, preserving keyboard access.
         Component content = Column({.children = {
-            Tabs({.options = compact ? std::vector<TabOption>{{"Folders","folders"},{"Files","files"},
-                {"Details","details"},{"Settings","settings"},{"More","showcase"}} :
-                std::vector<TabOption>{{"Files","files"},{"Details","details"},
-                    {"Settings","settings"},{"Showcase","showcase"}},
+            Tabs({.options = page_tabs,
                 .value = active,.key = "demo-tabs",
                 .onChange = [&](std::string value) {
                     page.set(std::move(value));
