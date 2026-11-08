@@ -146,6 +146,7 @@ Color blendColor(const Color base, const Color overlay, const int overlay_percen
 
 Size RenderNode::measure(const Constraints& constraints) const
 {
+    if (type_ == Component::Type::TabPanel && !tab_panel_active_) return {};
     const int padding = std::max(0,style_.padding) + (border_ ? 1 : 0);
     const int gap = std::max(0,style_.gap);
     Size content{};
@@ -187,6 +188,12 @@ Size RenderNode::measure(const Constraints& constraints) const
         for (const auto& option : radio_options_) width = std::max(width,textWidth(option.label));
         content = {.width = addBounded(width,5),.height = static_cast<int>(radio_options_.size())};
     }
+    else if (type_ == Component::Type::Tabs)
+    {
+        int width = 0;
+        for (const auto& option : tab_options_) width = addBounded(width,textWidth(option.label)+4);
+        content = {.width = width,.height = 3};
+    }
     else if (type_ == Component::Type::TextField || type_ == Component::Type::Select)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
@@ -208,12 +215,14 @@ Size RenderNode::measure(const Constraints& constraints) const
         const int gap_space = std::max(0,style_.gap);
         int width = 0;
         int height = 0;
+        int visible = 0;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
+            if (!children_[i]->tabPanelActive()) continue;
             const auto child = children_[i]->measure(Constraints{.maximum = {
                 .width = available_width,.height = std::numeric_limits<int>::max() / 4}});
             width = std::max(width,child.width);
-            if (i > 0) height = addBounded(height,gap_space);
+            if (visible++ > 0) height = addBounded(height,gap_space);
             height = addBounded(height,child.height);
         }
         content = {.width = addBounded(width,inset),.height = addBounded(height,inset)};
@@ -256,7 +265,7 @@ Size RenderNode::measure(const Constraints& constraints) const
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
             const auto& child = children_[i];
-            if (child->type_ == Component::Type::Dialog) continue;
+            if (child->type_ == Component::Type::Dialog || !child->tabPanelActive()) continue;
             const auto child_size = child->measure(Constraints{.maximum = max_content});
             if (type_ == Component::Type::Row)
             {
@@ -289,9 +298,11 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
 {
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
+    if (type_ == Component::Type::TabPanel && !tab_panel_active_) return;
     if (type_ == Component::Type::Text || type_ == Component::Type::Dialog || type_ == Component::Type::Button ||
         type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
+        type_ == Component::Type::Tabs ||
         type_ == Component::Type::TextField || type_ == Component::Type::Select ||
         type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress) return;
@@ -308,12 +319,14 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         const auto measure_content = [&](const int width) {
             sizes.clear();
             int height = 0;
+            int visible = 0;
             for (std::size_t i = 0; i < children_.size(); ++i)
             {
+                if (!children_[i]->tabPanelActive()) { sizes.push_back({}); continue; }
                 const auto child_size = children_[i]->measure(Constraints{.maximum = {
                     .width = width,.height = std::numeric_limits<int>::max() / 4}});
                 sizes.push_back(child_size);
-                if (i > 0) height = addBounded(height,gap);
+                if (visible++ > 0) height = addBounded(height,gap);
                 height = addBounded(height,child_size.height);
             }
             return height;
@@ -327,11 +340,18 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         int y = origin.y + padding - offset;
         const int child_width = scrollbar_visible_ && max_scroll_offset_ > 0 && inner_width > 0 ?
             inner_width - 1 : inner_width;
+        int placed = 0;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
+            if (!children_[i]->tabPanelActive())
+            {
+                children_[i]->layout(Constraints{.maximum = {}},{.x = origin.x,.y = origin.y});
+                continue;
+            }
+            if (placed++ > 0) y += gap;
             children_[i]->layout(Constraints{.maximum = {.width = child_width,.height = sizes[i].height}},
                 {.x = origin.x + padding,.y = y});
-            y += sizes[i].height + gap;
+            y += sizes[i].height;
         }
         return;
     }
@@ -378,7 +398,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         const int cross_extent = horizontal ? inner_height : inner_width;
         int visible_children = 0;
         for (const auto& child : children_)
-            if (child->type_ != Component::Type::Dialog) ++visible_children;
+            if (child->type_ != Component::Type::Dialog && child->tabPanelActive()) ++visible_children;
         const int gaps = std::max(0,visible_children-1);
         const int gap_space = static_cast<int>(std::min(static_cast<long long>(main_extent),
             static_cast<long long>(gaps) * gap));
@@ -387,7 +407,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         long long total_flex = 0;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
-            if (children_[i]->type_ == Component::Type::Dialog) continue;
+            if (children_[i]->type_ == Component::Type::Dialog || !children_[i]->tabPanelActive()) continue;
             const int weight = std::max(0,children_[i]->style_.flex);
             if (weight > 0)
                 total_flex += weight;
@@ -405,7 +425,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         int remaining_space = available;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
-            if (children_[i]->type_ == Component::Type::Dialog) continue;
+            if (children_[i]->type_ == Component::Type::Dialog || !children_[i]->tabPanelActive()) continue;
             const int weight = std::max(0,children_[i]->style_.flex);
             if (weight > 0)
             {
@@ -427,6 +447,11 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
             if (children_[i]->type_ == Component::Type::Dialog)
+            {
+                children_[i]->layout(Constraints{.maximum = {}},{.x = origin.x,.y = origin.y});
+                continue;
+            }
+            if (!children_[i]->tabPanelActive())
             {
                 children_[i]->layout(Constraints{.maximum = {}},{.x = origin.x,.y = origin.y});
                 continue;
@@ -459,6 +484,11 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     for (const auto& child : children_)
     {
         if (child->type_ == Component::Type::Dialog)
+        {
+            child->layout(Constraints{.maximum = {}},{.x = origin.x,.y = origin.y});
+            continue;
+        }
+        if (!child->tabPanelActive())
         {
             child->layout(Constraints{.maximum = {}},{.x = origin.x,.y = origin.y});
             continue;
@@ -530,6 +560,85 @@ bool RenderNode::handleChoiceClick(const Point position)
     }
     else if (on_toggle_ && (type_ != Component::Type::Radio || !checked_))
         on_toggle_(!checked_);
+    return true;
+}
+
+bool RenderNode::handleTabsKey(const Event& event)
+{
+    if (type_ != Component::Type::Tabs || disabled_ || tab_options_.empty()) return false;
+    const int count = static_cast<int>(tab_options_.size());
+    int selected = -1;
+    for (int i = 0; i < count; ++i)
+        if (tab_options_[i].value == text_) { selected = i; break; }
+    int next = selected;
+    if (event.key == Key::Left || event.key == Key::Right)
+    {
+        const int direction = event.key == Key::Right ? 1 : -1;
+        for (int step = 1; step <= count; ++step)
+        {
+            const int candidate = ((selected < 0 ? (direction > 0 ? -1 : 0) : selected) +
+                direction*step + count*(step+1)) % count;
+            if (!tab_options_[candidate].disabled) { next = candidate; break; }
+        }
+    }
+    else if (event.key == Key::Home || event.key == Key::End)
+    {
+        for (int i = 0; i < count; ++i)
+        {
+            const int candidate = event.key == Key::Home ? i : count-1-i;
+            if (!tab_options_[candidate].disabled) { next = candidate; break; }
+        }
+    }
+    else if (event.key == Key::Enter || (event.key == Key::Character && event.character == U' '))
+    {
+        if (selected < 0)
+            for (int i = 0; i < count; ++i)
+                if (!tab_options_[i].disabled) { next = i; break; }
+    }
+    else return false;
+    if (next >= 0 && !tab_options_[next].disabled && next != selected && on_change_)
+        on_change_(tab_options_[next].value);
+    return true;
+}
+
+bool RenderNode::handleTabsClick(const Point position)
+{
+    if (type_ != Component::Type::Tabs || disabled_ || position.y < bounds_.y ||
+        position.y >= bounds_.y+bounds_.height) return false;
+    int x = bounds_.x;
+    for (const auto& option : tab_options_)
+    {
+        const int width = textWidth(option.label)+4;
+        if (position.x >= x && position.x < x+width)
+        {
+            if (!option.disabled && option.value != text_ && on_change_) on_change_(option.value);
+            return true;
+        }
+        x += width;
+    }
+    return false;
+}
+
+bool RenderNode::updateTabsHover(const Point position)
+{
+    if (type_ != Component::Type::Tabs) return false;
+    int index = -1;
+    if (!disabled_ && position.y >= bounds_.y && position.y < bounds_.y+bounds_.height)
+    {
+        int x = bounds_.x;
+        for (std::size_t i = 0; i < tab_options_.size(); ++i)
+        {
+            const int width = textWidth(tab_options_[i].label)+4;
+            if (position.x >= x && position.x < x+width)
+            {
+                if (!tab_options_[i].disabled) index = static_cast<int>(i);
+                break;
+            }
+            x += width;
+        }
+    }
+    if (index == hovered_tab_) return false;
+    hovered_tab_ = index;
     return true;
 }
 
@@ -1051,7 +1160,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     const std::string_view hovered_id, const std::optional<Color> background, const Theme* theme,
     const bool unicode) const
 {
-    if (type_ == Component::Type::Dialog) return;
+    if (type_ == Component::Type::Dialog || (type_ == Component::Type::TabPanel && !tab_panel_active_)) return;
     std::optional<Painter::ClipScope> clipping;
     if (style_.clip || type_ == Component::Type::ScrollView) clipping.emplace(painter,bounds_);
     std::optional<Color> effective_background = background;
@@ -1084,6 +1193,39 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             TextStyle segment_style = style;
             if (theme) segment_style.foreground = i < filled ? theme->palette.primary : theme->palette.muted;
             painter.put(bounds_.x+i,bounds_.y,i < filled ? "█" : "░",segment_style);
+        }
+        return;
+    }
+    if (type_ == Component::Type::Tabs)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const bool focused = focused_id == std::to_string(id_) && !disabled_;
+        const bool hovered = hovered_id == std::to_string(id_) && !disabled_;
+        const Color base = effective_background.value_or(palette.background);
+        painter.fillBackground(bounds_,base);
+        int x = bounds_.x;
+        for (std::size_t i = 0; i < tab_options_.size(); ++i)
+        {
+            const auto& option = tab_options_[i];
+            const int width = textWidth(option.label)+4;
+            if (x >= bounds_.x+bounds_.width) break;
+            const int visible_width = std::min(width,bounds_.x+bounds_.width-x);
+            const bool selected = option.value == text_;
+            const bool inactive = disabled_ || option.disabled;
+            const Color tab_bg = selected || (hovered && hovered_tab_ == static_cast<int>(i) && !inactive) ?
+                blendColor(base,palette.primary,selected ? 18 : 8) : base;
+            const TextStyle tab_style {.foreground = inactive ? palette.muted :
+                selected ? palette.primary : palette.foreground,.background = tab_bg,
+                .bold = selected};
+            painter.fillBackground({.x = x,.y = bounds_.y,.width = visible_width,
+                .height = std::max(1,bounds_.height-1)},tab_bg);
+            painter.text(x+2,bounds_.y+std::min(1,bounds_.height-1),
+                clipText(option.label,std::max(0,visible_width-3)),tab_style);
+            const TextStyle underline {.foreground = selected && !inactive ? palette.primary :
+                focused && !inactive ? palette.muted : palette.surface,.background = base};
+            painter.horizontalLine(x,bounds_.y+bounds_.height-1,visible_width,underline);
+            x += width;
         }
         return;
     }

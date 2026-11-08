@@ -57,6 +57,13 @@ public:
     }
     bool handleChoiceKey(const Event& event);
     bool handleChoiceClick(Point position);
+    bool handleTabsKey(const Event& event);
+    bool handleTabsClick(Point position);
+    bool updateTabsHover(Point position);
+    [[nodiscard]] bool tabPanelActive() const noexcept
+    {
+        return type_ != Component::Type::TabPanel || tab_panel_active_;
+    }
     [[nodiscard]] bool editable() const noexcept { return static_cast<bool>(on_change_) && !disabled_; }
     bool handleTextInput(const Event& event);
     void setCursorFromX(int x);
@@ -132,6 +139,9 @@ private:
     bool disabled_ = false;
     std::vector<SelectOption> select_options_;
     std::vector<RadioOption> radio_options_;
+    std::vector<TabOption> tab_options_;
+    int hovered_tab_ = -1;
+    bool tab_panel_active_ = true;
     bool checked_ = false;
     bool select_open_ = false;
     int select_highlight_ = 0;

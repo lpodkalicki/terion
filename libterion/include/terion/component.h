@@ -64,6 +64,13 @@ struct RadioOption
     bool disabled = false;
 }; /* End of struct RadioOption */
 
+struct TabOption
+{
+    std::string label;
+    std::string value;
+    bool disabled = false;
+}; /* End of struct TabOption */
+
 class Component
 {
 public:
@@ -83,6 +90,8 @@ public:
         TextField,
         Select,
         DropdownMenu,
+        Tabs,
+        TabPanel,
         Dialog,
         FocusScope,
         Divider,
@@ -118,6 +127,8 @@ public:
         bool scrollbar_visible = true;
         std::vector<SelectOption> select_options = {};
         std::vector<RadioOption> radio_options = {};
+        std::vector<TabOption> tab_options = {};
+        bool tab_panel_active = true;
         bool checked = false;
         bool dialog_open = false;
         std::string dialog_title = {};

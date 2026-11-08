@@ -12,6 +12,7 @@ void OverlayManager::collect(RenderNode* root)
     portals_.clear();
     if (!root) return;
     const auto visit = [&](const auto& self, RenderNode& node) -> void {
+        if (!node.tabPanelActive()) return;
         if (node.type() == Component::Type::Select || node.type() == Component::Type::DropdownMenu)
             addPortal(node);
         if (node.type() == Component::Type::Dialog) addPortal(node,100);

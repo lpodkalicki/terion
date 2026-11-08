@@ -60,6 +60,7 @@ void Application::syncFocusTargets()
     if (!dialog && reconciler_.root())
     {
         const auto find_active = [&](const auto& self, const RenderNode& node) -> const RenderNode* {
+            if (!node.tabPanelActive()) return nullptr;
             if (node.type() == Component::Type::Dialog && !node.dialogOpen()) return nullptr;
             if (node.focusScopeActive()) return &node;
             for (const auto& child : node.children())
@@ -75,6 +76,7 @@ void Application::syncFocusTargets()
     if (!component_) return;
 
     const auto visit = [&](const auto& self, RenderNode& node, const std::string& scope) -> void {
+        if (!node.tabPanelActive()) return;
         if (node.type() == Component::Type::Dialog)
         {
             if (!node.dialogOpen()) return;
@@ -124,6 +126,12 @@ void Application::syncFocusTargets()
         {
             const auto id = std::to_string(node.id());
             focus_.add(id,[&node](const Event& event) { return node.handleChoiceKey(event); },scope);
+            component_focus_ids_.push_back(id);
+        }
+        else if (node.type() == Component::Type::Tabs && !node.disabled())
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleTabsKey(event); },scope);
             component_focus_ids_.push_back(id);
         }
         for (const auto& child : node.children()) self(self,*child,scope);
@@ -214,6 +222,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
         hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
         (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
         (hit->type() == Component::Type::TextField && hit->editable()) ||
+        (hit->type() == Component::Type::Tabs && !hit->disabled()) ||
         hit->interactiveControl())) hit = nullptr;
     const std::string target = hit ? std::to_string(hit->id()) : std::string{};
 
@@ -245,12 +254,14 @@ bool Application::handleMouse(const MouseEvent& mouse)
     if (mouse.action == MouseAction::Release &&
         (mouse.button == MouseButton::Left || mouse.button == MouseButton::None))
     {
-        const bool activate = hit && (hit->type() == Component::Type::Button || hit->interactiveControl()) &&
+        const bool activate = hit && (hit->type() == Component::Type::Button ||
+            hit->type() == Component::Type::Tabs || hit->interactiveControl()) &&
             !pressed_button_id_.empty() && pressed_button_id_ == target;
         pressed_button_id_.clear();
         if (activate)
         {
             if (hit->interactiveControl()) return hit->handleChoiceClick(mouse.position);
+            if (hit->type() == Component::Type::Tabs) return hit->handleTabsClick(mouse.position);
             if (hit->onClick()) hit->onClick()();
             return true;
         }
@@ -276,12 +287,15 @@ void Application::updateHover(const MouseEvent& mouse)
         }
         if (hovered.empty())
         {
-            if (const auto* hit = root->hitTest(mouse.position))
+            if (auto* hit = root->hitTest(mouse.position))
             {
+                if (hit->type() == Component::Type::Tabs && hit->updateTabsHover(mouse.position))
+                    invalidate();
                 if (((hit->type() == Component::Type::Select ||
                     hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
                     (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
-                    (hit->type() == Component::Type::TextField && hit->editable()) || hit->interactiveControl())
+                    (hit->type() == Component::Type::TextField && hit->editable()) ||
+                    hit->interactiveControl() || (hit->type() == Component::Type::Tabs && !hit->disabled()))
                     hovered = std::to_string(hit->id());
             }
         }
@@ -319,7 +333,8 @@ void Application::updateMousePointer(const MouseEvent& mouse)
                 else if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
                     ((hit->type() == Component::Type::Select ||
                         hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
-                    hit->interactiveControl())
+                    hit->interactiveControl() ||
+                    (hit->type() == Component::Type::Tabs && !hit->disabled()))
                     shape = MousePointerShape::Pointer;
             }
         }
