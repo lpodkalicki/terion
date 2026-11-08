@@ -37,7 +37,7 @@ void Application::renderOnce()
     syncFocusTargets();
     if (component_)
     {
-        if (const auto* root = reconciler_.root()) root->paint(painter,focus_.current(),hovered_button_id_,std::nullopt,&theme_);
+        if (const auto* root = reconciler_.root()) root->paint(painter,focus_.current(),hovered_component_id_,std::nullopt,&theme_);
     }
     else if (paint_) paint_(painter,buffer.size());
     renderer_.render(buffer,*backend_);
@@ -79,18 +79,20 @@ void Application::syncFocusTargets()
     };
     if (auto* root = reconciler_.root()) visit(visit,*root);
     if (!previous_focus.empty()) focus_.focus(previous_focus);
-    if (std::ranges::find(component_focus_ids_,hovered_button_id_) == component_focus_ids_.end()) hovered_button_id_.clear();
+    if (std::ranges::find(component_focus_ids_,hovered_component_id_) == component_focus_ids_.end()) hovered_component_id_.clear();
     if (std::ranges::find(component_focus_ids_,pressed_button_id_) == component_focus_ids_.end()) pressed_button_id_.clear();
 }
 
 bool Application::handleMouse(const MouseEvent& mouse)
 {
+    updateHover(mouse);
     updateMousePointer(mouse);
     if (scrollbar_drag_id_ != 0)
     {
         if (mouse.action == MouseAction::Release)
         {
             scrollbar_drag_id_ = 0;
+            updateHover(mouse);
             updateMousePointer(mouse);
             return true;
         }
@@ -123,6 +125,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
             {
                 scrollbar_drag_id_ = target->id();
                 scrollbar_grab_offset_ = grab_offset;
+                updateHover(mouse);
                 updateMousePointer(mouse);
                 pressed_button_id_.clear();
                 focus_.focus(std::to_string(target->id()));
@@ -136,12 +139,6 @@ bool Application::handleMouse(const MouseEvent& mouse)
         (hit->type() == Component::Type::TextField && hit->editable()))) hit = nullptr;
     const std::string target = hit ? std::to_string(hit->id()) : std::string{};
 
-    const std::string hovered = hit && hit->type() == Component::Type::Button ? target : std::string{};
-    if (hovered_button_id_ != hovered)
-    {
-        hovered_button_id_ = hovered;
-        invalidate();
-    }
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
     {
         pressed_button_id_ = target;
@@ -172,6 +169,38 @@ bool Application::handleMouse(const MouseEvent& mouse)
     }
     if (mouse.action == MouseAction::Scroll) return false;
     return hit != nullptr;
+}
+
+void Application::updateHover(const MouseEvent& mouse)
+{
+    std::string hovered;
+    if (scrollbar_drag_id_ != 0)
+        hovered = std::to_string(scrollbar_drag_id_);
+    else if (component_ && reconciler_.root())
+    {
+        auto* root = reconciler_.root();
+        if (auto* scroll = root->scrollTarget(mouse.position))
+        {
+            const Rect track = scroll->scrollbarTrack();
+            if (mouse.position.x >= track.x && mouse.position.x < track.x + track.width &&
+                mouse.position.y >= track.y && mouse.position.y < track.y + track.height)
+                hovered = std::to_string(scroll->id());
+        }
+        if (hovered.empty())
+        {
+            if (const auto* hit = root->hitTest(mouse.position))
+            {
+                if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
+                    (hit->type() == Component::Type::TextField && hit->editable()))
+                    hovered = std::to_string(hit->id());
+            }
+        }
+    }
+    if (hovered_component_id_ != hovered)
+    {
+        hovered_component_id_ = std::move(hovered);
+        invalidate();
+    }
 }
 
 void Application::updateMousePointer(const MouseEvent& mouse)

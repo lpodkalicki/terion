@@ -70,6 +70,7 @@ public:
 private:
     void syncFocusTargets();
     bool handleMouse(const MouseEvent& mouse);
+    void updateHover(const MouseEvent& mouse);
     void updateMousePointer(const MouseEvent& mouse);
 
     std::unique_ptr<TerminalBackend> backend_;
@@ -83,7 +84,7 @@ private:
     FocusManager focus_;
     Theme theme_;
     std::vector<std::string> component_focus_ids_;
-    std::string hovered_button_id_;
+    std::string hovered_component_id_;
     std::string pressed_button_id_;
     std::uint64_t scrollbar_drag_id_ = 0;
     int scrollbar_grab_offset_ = 0;

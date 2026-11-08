@@ -610,17 +610,20 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         if (bounds_.width <= 0 || bounds_.height <= 0) return;
         const Palette palette = theme ? theme->palette : Theme::dark().palette;
         const bool focused = focused_id == std::to_string(id_) && !disabled_;
+        const bool hovered = hovered_id == std::to_string(id_) && !disabled_;
         const bool outlined = text_field_variant_ == TextFieldVariant::Outlined;
         const bool compact = bounds_.height < 3;
-        const Color background_color = disabled_ ? palette.surface :
+        Color background_color = disabled_ ? palette.surface :
             outlined ? effective_background.value_or(palette.background) : palette.surface;
+        if (hovered && !focused) background_color = blendColor(background_color,palette.primary,10);
         const Color foreground_color = disabled_ ? palette.muted : palette.foreground;
         const TextStyle field_style {.foreground = foreground_color,.background = background_color};
         painter.fillBackground(bounds_,background_color);
         if (outlined)
         {
             TextStyle outline = field_style;
-            outline.foreground = disabled_ ? palette.muted : focused ? palette.primary : palette.muted;
+            outline.foreground = disabled_ ? palette.muted : focused ? palette.primary :
+                hovered ? blendColor(palette.muted,palette.primary,55) : palette.muted;
             if (compact)
             {
                 painter.put(bounds_.x,bounds_.y,"▏",outline);
@@ -628,10 +631,10 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             }
             else painter.border(bounds_,focused ? BorderStyle::Heavy : BorderStyle::Rounded,outline);
         }
-        else if (focused && bounds_.height > 1)
+        else if ((focused || hovered) && bounds_.height > 1)
         {
             TextStyle underline = field_style;
-            underline.foreground = palette.primary;
+            underline.foreground = focused ? palette.primary : blendColor(palette.muted,palette.primary,55);
             painter.horizontalLine(bounds_.x,bounds_.y+bounds_.height-1,bounds_.width,underline);
         }
         const int inset = outlined ? 2 : 1;
@@ -666,10 +669,13 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     {
         const Palette palette = theme ? theme->palette : Theme::dark().palette;
         const Rect thumb = scrollbarThumb();
+        const bool hovered = hovered_id == std::to_string(id_);
         for (int i = 0; i < track.height; ++i)
         {
             const bool on_thumb = track.y+i >= thumb.y && track.y+i < thumb.y + thumb.height;
-            const TextStyle bar_style {.foreground = on_thumb ? palette.primary : palette.muted,
+            const TextStyle bar_style {.foreground = on_thumb ?
+                (hovered ? palette.on_primary : palette.primary) :
+                (hovered ? blendColor(palette.muted,palette.primary,45) : palette.muted),
                 .background = effective_background.value_or(palette.background)};
             painter.put(track.x,track.y+i,on_thumb ? "█" : "│",bar_style);
         }

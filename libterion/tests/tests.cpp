@@ -97,6 +97,10 @@ int main()
     assert(scroll_buffer.at(4,1).grapheme == "█");
     assert(scrolling.root()->scrollbarTrack().x == 4);
     assert(scrolling.root()->scrollbarThumb().y == 1);
+    ScreenBuffer hover_scroll_buffer({.width = 5,.height = 4});
+    Painter hover_scroll_painter(hover_scroll_buffer);
+    scrolling.root()->paint(hover_scroll_painter,{},std::to_string(scrolling.root()->id()));
+    assert(hover_scroll_buffer.at(4,1).style.foreground != scroll_buffer.at(4,1).style.foreground);
     int grab = -1;
     assert(scrolling.root()->scrollbarPress({.x = 4,.y = 1},grab));
     assert(grab == 0);
@@ -192,6 +196,10 @@ int main()
     fields.root()->paint(fields_painter,{},{},std::nullopt,&field_theme);
     assert(fields_buffer.at(2,1).grapheme == "Ł");
     assert(fields_buffer.at(2,1).style.background != field_theme.palette.primary);
+    const Color normal_field_background = fields_buffer.at(0,3).style.background;
+    fields_buffer.clear();
+    fields.root()->paint(fields_painter,{},std::to_string(field_nodes[1]->id()),std::nullopt,&field_theme);
+    assert(fields_buffer.at(0,3).style.background != normal_field_background);
 
     std::string edited;
     fields.update(TextField({.value = "123456789",.key = "long",.layout = {.width = 8},
