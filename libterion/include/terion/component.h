@@ -154,7 +154,8 @@ public:
         Divider,
         Progress,
         Slider,
-        Function
+        Function,
+        ContextProvider
     }; /* End of enum Type */
 
     struct Props
@@ -165,6 +166,8 @@ public:
         std::vector<Component> children = {};
         std::function<Component()> render_function = {};
         const void* function_identity = nullptr;
+        std::function<void()> enter_context = {};
+        std::function<void()> exit_context = {};
         LayoutStyle layout = {};
         TextStyle text_style = {};
         std::function<void()> on_click = {};

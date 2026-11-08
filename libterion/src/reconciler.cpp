@@ -72,6 +72,23 @@ void Reconciler::commitEffects()
 Component Reconciler::expand(const Component& component, const std::string& path)
 {
     const auto& props = component.props();
+    if (props.type == Component::Type::ContextProvider)
+    {
+        if (!props.enter_context || !props.exit_context || props.children.size() != 1)
+            throw std::invalid_argument("invalid context provider");
+        props.enter_context();
+        struct ContextExit
+        {
+            const std::function<void()>& callback;
+            ~ContextExit() { callback(); }
+        } exit{props.exit_context};
+        auto child = expand(props.children.front(),path + "/provider" +
+            std::to_string(props.key.size()) + ":" + props.key);
+        if (props.key.empty()) return child;
+        auto actual = child.props();
+        actual.key = props.key;
+        return Component(std::move(actual));
+    }
     if (props.type == Component::Type::Function)
     {
         if (!props.render_function || !props.function_identity)
@@ -93,7 +110,7 @@ Component Reconciler::expand(const Component& component, const std::string& path
         // The instance's key controls identity, not the implementation's root key.
         auto actual = result.props();
         actual.key = props.key;
-        return expand(Component(std::move(actual)),path);
+        return expand(Component(std::move(actual)),path + "/fn");
     }
 
     auto actual = props;

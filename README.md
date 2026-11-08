@@ -32,7 +32,12 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   while dependencies compare equal. `useEffect(effect, deps...)` runs after the frame;
   a returned cleanup callback runs before a changed effect and on unmount. With no
   dependencies, the effect runs on every frame; pass `std::tuple{}` as a stable
-  dependency to run it only on mount. `useContext` is not implemented yet.
+  dependency to run it only on mount.
+- `Context<T>` and `ContextProvider(context, value, child, key)` provide scoped values
+  to descendants without passing props through intermediate components. A mounted
+  function component reads the nearest provider using `useContext(context)`; outside
+  providers it receives the context's fallback. Nested providers override their
+  ancestors without affecting siblings. See `examples/context.cpp`.
 - Initial constraints-based layout supports text, `Row`, `Column`, `Box`, padding, gap and fixed dimensions.
 - Reactive `State<T>` automatically tracks dependencies in render callbacks; unchanged state does not trigger redraw.
 - MUI-inspired components in `<terion/components/>`: `Typography`, `Box`, `Row`, `Column` and interactive `Button`.
