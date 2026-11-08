@@ -67,8 +67,6 @@ void Application::renderOnce()
 {
     dirty_->store(false);
     ScreenBuffer buffer(backend_->size());
-    Painter painter(buffer);
-    painter.fillBackground({.width = buffer.size().width,.height = buffer.size().height},theme_.palette.background);
     DependencyTracker::Scope tracking(tracker_);
     if (component_)
     {
@@ -85,16 +83,41 @@ void Application::renderOnce()
         if (auto* dialog = overlays_.activeDialog()) dialog->layoutDialogChildren(buffer.size());
     }
     syncFocusTargets();
+    const bool unicode = backend_->capabilities().unicode;
+    const bool reuse_base = component_ && reconciler_.root() && base_frame_cache_ &&
+        base_frame_cache_->size() == buffer.size() &&
+        !reconciler_.root()->paintDirty() &&
+        !reconciler_.root()->hasIndeterminateProgress() &&
+        cached_focus_id_ == focus_.current() && cached_hover_id_ == hovered_component_id_ &&
+        cached_unicode_ == unicode;
+    if (reuse_base)
+    {
+        buffer = *base_frame_cache_;
+        ++render_stats_.cache_hits;
+    }
+    Painter painter(buffer);
+    if (!reuse_base)
+    {
+        painter.fillBackground({.width = buffer.size().width,.height = buffer.size().height},theme_.palette.background);
+        if (component_)
+        {
+            if (const auto* root = reconciler_.root())
+            {
+                root->paint(painter,focus_.current(),hovered_component_id_,std::nullopt,&theme_,unicode);
+                base_frame_cache_ = buffer;
+                cached_focus_id_ = focus_.current();
+                cached_hover_id_ = hovered_component_id_;
+                cached_unicode_ = unicode;
+                ++render_stats_.base_paints;
+            }
+        }
+        else if (paint_) paint_(painter,buffer.size());
+    }
     if (component_)
     {
-        if (const auto* root = reconciler_.root())
-        {
-            root->paint(painter,focus_.current(),hovered_component_id_,std::nullopt,&theme_,
-                backend_->capabilities().unicode);
+        if (reconciler_.root())
             overlays_.paint(painter,buffer.size(),theme_,focus_.current());
-        }
     }
-    else if (paint_) paint_(painter,buffer.size());
     if (!overlays_.modalOpen())
         toasts_.paint(painter,buffer.size(),theme_,overlays_.toastOccupiedHeight(buffer.size()));
     renderer_.render(buffer,*backend_);

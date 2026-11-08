@@ -37,6 +37,7 @@ public:
     {
         paint_ = std::move(callback);
         component_ = {};
+        base_frame_cache_.reset();
         invalidate();
     }
 
@@ -44,6 +45,7 @@ public:
     {
         component_ = std::move(callback);
         paint_ = {};
+        base_frame_cache_.reset();
         invalidate();
     }
 
@@ -62,9 +64,15 @@ public:
     void blur() noexcept { focus_.blur(); invalidate(); }
     [[nodiscard]] std::string_view focused() const noexcept { return focus_.current(); }
     [[nodiscard]] bool hasFocus(std::string_view component_key) const;
-    void setTheme(Theme theme) { theme_ = std::move(theme); invalidate(); }
+    void setTheme(Theme theme) { theme_ = std::move(theme); base_frame_cache_.reset(); invalidate(); }
     [[nodiscard]] const Theme& theme() const noexcept { return theme_; }
     [[nodiscard]] const Reconciler& reconciler() const noexcept { return reconciler_; }
+    struct RenderStats
+    {
+        std::uint64_t base_paints = 0;
+        std::uint64_t cache_hits = 0;
+    }; /* End of struct RenderStats */
+    [[nodiscard]] RenderStats renderStats() const noexcept { return render_stats_; }
 
     void quit() noexcept
     {
@@ -113,6 +121,11 @@ private:
     MousePointerShape pointer_shape_ = MousePointerShape::Default;
     bool pointer_shape_initialized_ = false;
     Size last_component_layout_size_{.width = -1,.height = -1};
+    std::optional<ScreenBuffer> base_frame_cache_;
+    std::string cached_focus_id_;
+    std::string cached_hover_id_;
+    bool cached_unicode_ = true;
+    RenderStats render_stats_{};
     bool running_ = false;
 }; /* End of class Application */
 
