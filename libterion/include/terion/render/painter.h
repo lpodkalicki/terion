@@ -5,7 +5,9 @@
 #ifndef TERION_RENDER_PAINTER_H
 #define TERION_RENDER_PAINTER_H
 
+#include <optional>
 #include <string_view>
+#include <vector>
 #include <terion/render/screen_buffer.h>
 
 namespace terion {
@@ -13,7 +15,21 @@ namespace terion {
 class Painter
 {
 public:
+    class ClipScope
+    {
+    public:
+        ClipScope(Painter& painter, Rect rect) : painter_(painter) { painter_.pushClip(rect); }
+        ~ClipScope() { painter_.popClip(); }
+        ClipScope(const ClipScope&) = delete;
+        ClipScope& operator=(const ClipScope&) = delete;
+
+    private:
+        Painter& painter_;
+    }; /* End of class ClipScope */
+
     explicit Painter(ScreenBuffer& buffer) : buffer_(buffer) {}
+    void pushClip(Rect rect);
+    void popClip();
     void put(int x, int y, std::string_view grapheme, TextStyle style = {}) const;
     void text(int x, int y, std::string_view text, TextStyle style = {}) const;
     void fill(Rect rect, Cell cell = {}) const;
@@ -26,6 +42,9 @@ public:
 
 private:
     ScreenBuffer& buffer_;
+    std::optional<Rect> clip_;
+    std::vector<std::optional<Rect>> clip_stack_;
+    [[nodiscard]] bool visible(int x, int y) const noexcept;
     void eraseGlyphAt(int x, int y) const;
 }; /* End of class Painter */
 

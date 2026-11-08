@@ -55,6 +55,7 @@ struct LayoutStyle
     int flex = 0;
     JustifyContent justifyContent = JustifyContent::Start;
     AlignItems alignItems = AlignItems::Start;
+    bool clip = false;
 
     bool operator==(const LayoutStyle&) const = default;
 }; /* End of struct LayoutStyle */

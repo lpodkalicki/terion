@@ -52,6 +52,7 @@ public:
         Row,
         Box,
         Grid,
+        ScrollView,
         Button,
         TextField,
         Divider,
@@ -78,6 +79,9 @@ public:
         SurfaceTone surface_tone = SurfaceTone::None;
         ButtonSize button_size = ButtonSize::Medium;
         TextFieldVariant text_field_variant = TextFieldVariant::Outlined;
+        int scroll_offset = 0;
+        std::function<void(int)> on_scroll = {};
+        bool scrollbar_visible = true;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

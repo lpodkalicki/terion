@@ -177,6 +177,23 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         content = {.width = textWidth(text_),.height = 1};
     }
+    else if (type_ == Component::Type::ScrollView)
+    {
+        const int inset = addBounded(padding,padding);
+        const int available_width = std::max(0,constraints.maximum.width - std::min(inset,constraints.maximum.width));
+        const int gap_space = std::max(0,style_.gap);
+        int width = 0;
+        int height = 0;
+        for (std::size_t i = 0; i < children_.size(); ++i)
+        {
+            const auto child = children_[i]->measure(Constraints{.maximum = {
+                .width = available_width,.height = std::numeric_limits<int>::max() / 4}});
+            width = std::max(width,child.width);
+            if (i > 0) height = addBounded(height,gap_space);
+            height = addBounded(height,child.height);
+        }
+        content = {.width = addBounded(width,inset),.height = addBounded(height,inset)};
+    }
     else if (type_ == Component::Type::Grid)
     {
         const int inset = addBounded(padding,padding);
@@ -254,6 +271,40 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     const int inset = addBounded(padding,padding);
     const int inner_width = std::max(0,size.width - inset);
     const int inner_height = std::max(0,size.height - inset);
+    if (type_ == Component::Type::ScrollView)
+    {
+        const int gap = std::max(0,style_.gap);
+        std::vector<Size> sizes;
+        const auto measure_content = [&](const int width) {
+            sizes.clear();
+            int height = 0;
+            for (std::size_t i = 0; i < children_.size(); ++i)
+            {
+                const auto child_size = children_[i]->measure(Constraints{.maximum = {
+                    .width = width,.height = std::numeric_limits<int>::max() / 4}});
+                sizes.push_back(child_size);
+                if (i > 0) height = addBounded(height,gap);
+                height = addBounded(height,child_size.height);
+            }
+            return height;
+        };
+        int content_height = measure_content(inner_width);
+        if (scrollbar_visible_ && content_height > inner_height && inner_width > 0)
+            content_height = measure_content(inner_width - 1);
+        viewport_height_ = inner_height;
+        max_scroll_offset_ = std::max(0,content_height - std::min(content_height,inner_height));
+        const int offset = std::clamp(scroll_offset_,0,max_scroll_offset_);
+        int y = origin.y + padding - offset;
+        const int child_width = scrollbar_visible_ && max_scroll_offset_ > 0 && inner_width > 0 ?
+            inner_width - 1 : inner_width;
+        for (std::size_t i = 0; i < children_.size(); ++i)
+        {
+            children_[i]->layout(Constraints{.maximum = {.width = child_width,.height = sizes[i].height}},
+                {.x = origin.x + padding,.y = y});
+            y += sizes[i].height + gap;
+        }
+        return;
+    }
     if (type_ == Component::Type::Grid)
     {
         const int columns = std::max(1,columns_);
@@ -381,9 +432,95 @@ const RenderNode* RenderNode::hitTest(const Point position) const noexcept
     return this;
 }
 
+RenderNode* RenderNode::scrollTarget(const Point position) noexcept
+{
+    if (position.x < bounds_.x || position.y < bounds_.y ||
+        position.x >= bounds_.x + bounds_.width || position.y >= bounds_.y + bounds_.height) return nullptr;
+    for (auto it = children_.rbegin(); it != children_.rend(); ++it)
+        if (auto* target = (*it)->scrollTarget(position)) return target;
+    return type_ == Component::Type::ScrollView && on_scroll_ ? this : nullptr;
+}
+
+bool RenderNode::scrollBy(const int delta)
+{
+    if (type_ != Component::Type::ScrollView || !on_scroll_) return false;
+    const auto target = std::clamp(static_cast<long long>(scroll_offset_) + delta,
+        0LL,static_cast<long long>(max_scroll_offset_));
+    if (target == std::clamp(scroll_offset_,0,max_scroll_offset_)) return true;
+    on_scroll_(static_cast<int>(target));
+    return true;
+}
+
+bool RenderNode::handleScrollKey(const Event& event)
+{
+    if (type_ != Component::Type::ScrollView || !on_scroll_) return false;
+    switch (event.key)
+    {
+        case Key::Up: return scrollBy(-1);
+        case Key::Down: return scrollBy(1);
+        case Key::PageUp: return scrollBy(-std::max(1,viewport_height_-1));
+        case Key::PageDown: return scrollBy(std::max(1,viewport_height_-1));
+        case Key::Home: return scrollBy(-std::numeric_limits<int>::max());
+        case Key::End: return scrollBy(std::numeric_limits<int>::max());
+        default: return false;
+    }
+}
+
+Rect RenderNode::scrollbarTrack() const noexcept
+{
+    if (type_ != Component::Type::ScrollView || !scrollbar_visible_ || max_scroll_offset_ <= 0 ||
+        viewport_height_ <= 0 || bounds_.width <= 0) return {};
+    const int inset = std::max(0,style_.padding) + (border_ ? 1 : 0);
+    return {.x = bounds_.x + bounds_.width - inset - 1,
+        .y = bounds_.y + inset,.width = 1,.height = viewport_height_};
+}
+
+Rect RenderNode::scrollbarThumb() const noexcept
+{
+    const Rect track = scrollbarTrack();
+    if (track.height <= 0) return {};
+    const int thumb_height = std::max(1,static_cast<int>(static_cast<long long>(track.height) *
+        track.height / (max_scroll_offset_ + static_cast<long long>(track.height))));
+    const int top = static_cast<int>(static_cast<long long>(std::clamp(scroll_offset_,0,max_scroll_offset_)) *
+        (track.height-thumb_height) / max_scroll_offset_);
+    return {.x = track.x,.y = track.y + top,.width = 1,.height = thumb_height};
+}
+
+bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
+{
+    if (!on_scroll_) return false;
+    const Rect track = scrollbarTrack();
+    const Rect thumb = scrollbarThumb();
+    if (track.height <= 0 || thumb.height <= 0) return false;
+    const int travel = track.height - thumb.height;
+    const int top = std::clamp(y - track.y - grab_offset,0,travel);
+    const int target = travel > 0 ? static_cast<int>((static_cast<long long>(top) * max_scroll_offset_ +
+        travel / 2) / travel) : 0;
+    if (target != std::clamp(scroll_offset_,0,max_scroll_offset_)) on_scroll_(target);
+    return true;
+}
+
+bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
+{
+    const Rect track = scrollbarTrack();
+    if (!on_scroll_ || position.x != track.x || position.y < track.y ||
+        position.y >= track.y + track.height) return false;
+    const Rect thumb = scrollbarThumb();
+    if (position.y >= thumb.y && position.y < thumb.y + thumb.height)
+        grab_offset = position.y - thumb.y;
+    else
+    {
+        grab_offset = thumb.height / 2;
+        scrollbarDrag(position.y,grab_offset);
+    }
+    return true;
+}
+
 void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     const std::string_view hovered_id, const std::optional<Color> background, const Theme* theme) const
 {
+    std::optional<Painter::ClipScope> clipping;
+    if (style_.clip || type_ == Component::Type::ScrollView) clipping.emplace(painter,bounds_);
     std::optional<Color> effective_background = background;
     if (surface_tone_ != SurfaceTone::None)
     {
@@ -525,6 +662,18 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         return;
     }
     for (const auto& child : children_) child->paint(painter,focused_id,hovered_id,effective_background,theme);
+    if (const Rect track = scrollbarTrack(); track.height > 0)
+    {
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const Rect thumb = scrollbarThumb();
+        for (int i = 0; i < track.height; ++i)
+        {
+            const bool on_thumb = track.y+i >= thumb.y && track.y+i < thumb.y + thumb.height;
+            const TextStyle bar_style {.foreground = on_thumb ? palette.primary : palette.muted,
+                .background = effective_background.value_or(palette.background)};
+            painter.put(track.x,track.y+i,on_thumb ? "█" : "│",bar_style);
+        }
+    }
     if (border_) painter.border(bounds_,*border_,style);
 }
 

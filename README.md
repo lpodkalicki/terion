@@ -30,6 +30,11 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `examples/fullscreen.cpp` demonstrates a terminal-sized dashboard with all current declarative components.
 - Buttons have true-color surfaces, Unicode rounded borders, hover/focus states and compact/medium/large sizes (`examples/buttons.cpp`).
 - Text fields have outlined/filled variants, themed focus/disabled states and horizontal text viewport (`examples/text_fields.cpp`).
+- Nested painter clipping and vertical `ScrollView` with controlled wheel scrolling (`examples/scroll_view.cpp`).
+- ScrollView shows a themed scrollbar and accepts arrows, PageUp/PageDown, Home/End when focused.
+- Scrollbar thumb can be dragged with the left mouse button; clicking the track jumps to that position.
+- Mouse pointer shapes use OSC 22 where supported: normal over surfaces, text over editable/text areas, hand over buttons, grab over scrollbars.
+- `TerminalBackend::capabilities()` reports terminal features. OSC 22 pointer shapes are enabled by default for Kitty and Ghostty only; set `TERION_MOUSE_POINTER_SHAPE=1` to opt in or `=0` to disable them explicitly. Other mouse interactions work independently.
 - UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.
 - Cmdly integration will be an optional `Console` component in a later milestone.
 

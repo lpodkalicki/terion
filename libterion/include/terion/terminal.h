@@ -54,6 +54,23 @@ enum class MouseAction
     Scroll
 }; /* End of enum MouseAction */
 
+enum class MousePointerShape
+{
+    Default,
+    Text,
+    Pointer,
+    Grab,
+    Grabbing
+}; /* End of enum MousePointerShape */
+
+struct TerminalCapabilities
+{
+    bool trueColor = true;
+    bool unicode = true;
+    bool mouse = true;
+    bool mousePointerShape = false;
+}; /* End of struct TerminalCapabilities */
+
 struct MouseEvent
 {
     Point position{};
@@ -95,11 +112,30 @@ public:
     virtual void write(std::string_view bytes) = 0;
     virtual void flush() = 0;
     virtual std::optional<Event> pollEvent() = 0;
+    [[nodiscard]] virtual TerminalCapabilities capabilities() const { return {}; }
+
+    virtual void setMousePointerShape(MousePointerShape shape)
+    {
+        std::string_view name = "default";
+        switch (shape)
+        {
+            case MousePointerShape::Text: name = "text"; break;
+            case MousePointerShape::Pointer: name = "pointer"; break;
+            case MousePointerShape::Grab: name = "grab"; break;
+            case MousePointerShape::Grabbing: name = "grabbing"; break;
+            default: break;
+        }
+        write(std::string("\033]22;") + std::string(name) + "\033\\");
+        flush();
+    }
 }; /* End of class TerminalBackend */
 
 class AnsiTerminalBackend final : public TerminalBackend
 {
 public:
+    [[nodiscard]] static TerminalCapabilities detectCapabilities(std::string_view terminal_program,
+        std::string_view pointer_override = {});
+
     AnsiTerminalBackend();
     ~AnsiTerminalBackend() override;
 
@@ -107,15 +143,18 @@ public:
     AnsiTerminalBackend& operator=(const AnsiTerminalBackend&) = delete;
 
     [[nodiscard]] Size size() const override;
+    [[nodiscard]] TerminalCapabilities capabilities() const override { return capabilities_; }
     void write(std::string_view bytes) override;
     void flush() override;
     std::optional<Event> pollEvent() override;
+    void setMousePointerShape(MousePointerShape shape) override;
 
 private:
     termios previous_{};
     bool active_ = false;
     Size last_size_{};
     InputDecoder decoder_;
+    TerminalCapabilities capabilities_{};
     std::chrono::steady_clock::time_point last_input_{};
 }; /* End of class AnsiTerminalBackend */
 
@@ -125,6 +164,10 @@ public:
     explicit HeadlessTerminalBackend(const Size size) : size_(size) {}
 
     [[nodiscard]] Size size() const override { return size_; }
+    [[nodiscard]] TerminalCapabilities capabilities() const override
+    {
+        return {.mousePointerShape = true};
+    }
     void resize(const Size size)
     {
         if (size_ == size) return;

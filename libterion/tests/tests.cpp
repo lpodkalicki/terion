@@ -13,6 +13,155 @@ using namespace terion;
 
 int main()
 {
+    assert(!AnsiTerminalBackend::detectCapabilities("Apple_Terminal").mousePointerShape);
+    assert(!AnsiTerminalBackend::detectCapabilities("vscode").mousePointerShape);
+    assert(!AnsiTerminalBackend::detectCapabilities("iTerm.app").mousePointerShape);
+    assert(AnsiTerminalBackend::detectCapabilities("ghostty").mousePointerShape);
+    assert(AnsiTerminalBackend::detectCapabilities("kitty").mousePointerShape);
+    assert(AnsiTerminalBackend::detectCapabilities("Apple_Terminal", "1").mousePointerShape);
+    assert(!AnsiTerminalBackend::detectCapabilities("kitty", "0").mousePointerShape);
+    auto pointer_backend = std::make_unique<HeadlessTerminalBackend>(Size{.width = 30,.height = 7});
+    auto* pointer_output = pointer_backend.get();
+    Application pointer_app(std::move(pointer_backend));
+    pointer_app.render([] {
+        return Column({.children = {
+            Typography({.text = "Label"}),
+            TextField({.value = "Edit",.key = "edit",.onChange = [](std::string) {},
+                .size = ButtonSize::Compact}),
+            Button({.text = "Click",.key = "click",.onClick = [] {},.size = ButtonSize::Compact}),
+            Box({.children = {Typography({.text = "Box"})},.layout = {.width = 20,.height = 3}})
+        }});
+    });
+    pointer_app.renderOnce();
+    pointer_output->clearOutput();
+    pointer_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 1,.y = 0},.action = MouseAction::Move}});
+    assert(pointer_output->output().find("\033]22;text\033\\") != std::string::npos);
+    pointer_output->clearOutput();
+    pointer_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 15,.y = 0},.action = MouseAction::Move}});
+    assert(pointer_output->output().find("\033]22;default\033\\") != std::string::npos);
+    pointer_output->clearOutput();
+    pointer_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 1},.action = MouseAction::Move}});
+    assert(pointer_output->output().find("\033]22;text\033\\") != std::string::npos);
+    pointer_output->clearOutput();
+    pointer_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 2},.action = MouseAction::Move}});
+    assert(pointer_output->output().find("\033]22;pointer\033\\") != std::string::npos);
+    pointer_output->clearOutput();
+    pointer_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 2,.y = 2},.action = MouseAction::Move}});
+    assert(pointer_output->output().empty());
+    pointer_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 15,.y = 4},.action = MouseAction::Move}});
+    assert(pointer_output->output().find("\033]22;default\033\\") != std::string::npos);
+
+    ScreenBuffer clipped_buffer({.width = 10,.height = 4});
+    Painter scoped_painter(clipped_buffer);
+    {
+        Painter::ClipScope outer(scoped_painter,{.x = 1,.y = 1,.width = 7,.height = 2});
+        scoped_painter.text(0,1,"ABCDEFGHIJ");
+        assert(clipped_buffer.at(0,1).grapheme == " ");
+        assert(clipped_buffer.at(1,1).grapheme == "B");
+        assert(clipped_buffer.at(7,1).grapheme == "H");
+        assert(clipped_buffer.at(8,1).grapheme == " ");
+        {
+            Painter::ClipScope inner(scoped_painter,{.x = 3,.y = 0,.width = 2,.height = 4});
+            scoped_painter.fill({.width = 10,.height = 4},Cell{.grapheme = "X"});
+        }
+        assert(clipped_buffer.at(2,1).grapheme == "C");
+        assert(clipped_buffer.at(3,1).grapheme == "X");
+        assert(clipped_buffer.at(4,1).grapheme == "X");
+        scoped_painter.put(8,1,"Z");
+        assert(clipped_buffer.at(8,1).grapheme == " ");
+    }
+    scoped_painter.put(8,1,"Z");
+    assert(clipped_buffer.at(8,1).grapheme == "Z");
+
+    int reported_scroll = -1;
+    Reconciler scrolling;
+    scrolling.update(ScrollView({.children = {
+        Typography({.text = "0"}),Typography({.text = "1"}),Typography({.text = "2"}),
+        Typography({.text = "3"}),Typography({.text = "4"}),Typography({.text = "5"})
+    },.layout = {.width = 5,.height = 3},.scrollOffset = 2,
+        .onScroll = [&](int offset) { reported_scroll = offset; }}));
+    scrolling.root()->layout(Constraints{.maximum = {.width = 5,.height = 3}});
+    ScreenBuffer scroll_buffer({.width = 5,.height = 6});
+    Painter scroll_painter(scroll_buffer);
+    scrolling.root()->paint(scroll_painter);
+    assert(scroll_buffer.at(0,0).grapheme == "2");
+    assert(scroll_buffer.at(0,2).grapheme == "4");
+    assert(scroll_buffer.at(0,3).grapheme == " ");
+    assert(scroll_buffer.at(4,0).grapheme == "│");
+    assert(scroll_buffer.at(4,1).grapheme == "█");
+    assert(scrolling.root()->scrollbarTrack().x == 4);
+    assert(scrolling.root()->scrollbarThumb().y == 1);
+    int grab = -1;
+    assert(scrolling.root()->scrollbarPress({.x = 4,.y = 1},grab));
+    assert(grab == 0);
+    assert(scrolling.root()->scrollbarDrag(2,grab));
+    assert(reported_scroll == 3);
+    assert(scrolling.root()->scrollbarPress({.x = 4,.y = 0},grab));
+    assert(reported_scroll == 0);
+    assert(scrolling.root()->scrollTarget({.x = 1,.y = 1}) == scrolling.root());
+    assert(scrolling.root()->scrollBy(3));
+    assert(reported_scroll == 3);
+    assert(scrolling.root()->scrollBy(-100));
+    assert(reported_scroll == 0);
+    assert(scrolling.root()->handleScrollKey(Event{.key = Key::PageDown}));
+    assert(reported_scroll == 3);
+    assert(scrolling.root()->handleScrollKey(Event{.key = Key::Up}));
+    assert(reported_scroll == 1);
+    assert(scrolling.root()->handleScrollKey(Event{.key = Key::Home}));
+    assert(reported_scroll == 0);
+    assert(scrolling.root()->handleScrollKey(Event{.key = Key::End}));
+    assert(reported_scroll == 3);
+    State<int> wheel_offset{0};
+    Application wheel_app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 8,.height = 3}));
+    wheel_app.render([&] {
+        return ScrollView({.children = {
+            Typography({.text = "0"}),Typography({.text = "1"}),Typography({.text = "2"}),
+            Typography({.text = "3"}),Typography({.text = "4"}),Typography({.text = "5"})
+        },.layout = {.width = 8,.height = 3},.scrollOffset = wheel_offset.get(),
+            .onScroll = [&](int next) { wheel_offset.set(next); }});
+    });
+    wheel_app.renderOnce();
+    assert(wheel_app.focus().current() == std::to_string(wheel_app.reconciler().root()->id()));
+    assert(wheel_app.dispatchEvent(Event{.key = Key::PageDown}));
+    assert(wheel_offset.get() == 2);
+    wheel_app.renderOnce();
+    assert(wheel_app.dispatchEvent(Event{.key = Key::Home}));
+    assert(wheel_offset.get() == 0);
+    wheel_app.renderOnce();
+    assert(wheel_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 1,.y = 1},.action = MouseAction::Scroll,.scrollY = -1}}));
+    assert(wheel_offset.get() == 3);
+    wheel_app.renderOnce();
+    assert(wheel_app.reconciler().root()->children()[0]->bounds().y == -3);
+    auto& wheel_pointer_output = dynamic_cast<HeadlessTerminalBackend&>(wheel_app.backend());
+    wheel_pointer_output.clearOutput();
+    wheel_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 7,.y = 2},.action = MouseAction::Move}});
+    assert(wheel_pointer_output.output().find("\033]22;grab\033\\") != std::string::npos);
+    wheel_pointer_output.clearOutput();
+    assert(wheel_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 7,.y = 2},.button = MouseButton::Left,.action = MouseAction::Press}}));
+    assert(wheel_pointer_output.output().find("\033]22;grabbing\033\\") != std::string::npos);
+    assert(wheel_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 7,.y = 0},.button = MouseButton::Left,.action = MouseAction::Move}}));
+    assert(wheel_offset.get() == 0);
+    wheel_app.renderOnce();
+    assert(wheel_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 30,.y = 100},.button = MouseButton::Left,.action = MouseAction::Move}}));
+    assert(wheel_offset.get() == 3);
+    assert(wheel_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 30,.y = 100},.button = MouseButton::Left,.action = MouseAction::Release}}));
+    wheel_app.renderOnce();
+    wheel_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
+        .position = {.x = 7,.y = 0},.action = MouseAction::Move}});
+    assert(wheel_offset.get() == 3);
+
     Reconciler fields;
     fields.update(Column({.children = {
         TextField({.value = "Łódź",.key = "outlined",.layout = {.width = 16}}),

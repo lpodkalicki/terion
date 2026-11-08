@@ -8,21 +8,53 @@
 
 using namespace terion;
 
+void Painter::pushClip(const Rect rect)
+{
+    clip_stack_.push_back(clip_);
+    if (!clip_)
+    {
+        clip_ = rect;
+        return;
+    }
+    const int x = std::max(clip_->x,rect.x);
+    const int y = std::max(clip_->y,rect.y);
+    const long long right = std::min(static_cast<long long>(clip_->x) + clip_->width,
+        static_cast<long long>(rect.x) + rect.width);
+    const long long bottom = std::min(static_cast<long long>(clip_->y) + clip_->height,
+        static_cast<long long>(rect.y) + rect.height);
+    clip_ = {.x = x,.y = y,.width = static_cast<int>(std::max(0LL,right-x)),
+        .height = static_cast<int>(std::max(0LL,bottom-y))};
+}
+
+void Painter::popClip()
+{
+    if (clip_stack_.empty()) return;
+    clip_ = clip_stack_.back();
+    clip_stack_.pop_back();
+}
+
+bool Painter::visible(const int x, const int y) const noexcept
+{
+    return buffer_.contains(x,y) && (!clip_ ||
+        (x >= clip_->x && y >= clip_->y && static_cast<long long>(x) < static_cast<long long>(clip_->x) + clip_->width &&
+         static_cast<long long>(y) < static_cast<long long>(clip_->y) + clip_->height));
+}
+
 void Painter::eraseGlyphAt(const int x, const int y) const
 {
-    if (!buffer_.contains(x,y)) return;
+    if (!visible(x,y)) return;
     auto& cell = buffer_.at(x,y);
-    if (cell.width == 0 && buffer_.contains(x-1,y)) buffer_.at(x-1,y) = {};
-    if (cell.width == 2 && buffer_.contains(x+1,y)) buffer_.at(x+1,y) = {};
+    if (cell.width == 0 && visible(x-1,y)) buffer_.at(x-1,y) = {};
+    if (cell.width == 2 && visible(x+1,y)) buffer_.at(x+1,y) = {};
     cell = {};
 }
 
 void Painter::put(const int x, const int y, const std::string_view grapheme, const TextStyle style) const
 {
-    if (grapheme.empty() || !buffer_.contains(x,y)) return;
+    if (grapheme.empty() || !visible(x,y)) return;
     const auto [code_point, bytes] = decodeUtf8(grapheme,0);
     const int width = codePointWidth(code_point);
-    if (width < 1 || (width == 2 && !buffer_.contains(x+1,y))) return;
+    if (width < 1 || (width == 2 && !visible(x+1,y))) return;
     eraseGlyphAt(x,y);
     if (width == 2) eraseGlyphAt(x+1,y);
     buffer_.at(x,y) = {.grapheme = std::string(grapheme),.style = style,.width = static_cast<unsigned char>(width)};
@@ -39,11 +71,11 @@ void Painter::text(int x, const int y, const std::string_view text, const TextSt
         const int width = codePointWidth(code_point);
         if (width == 0 && last_x >= 0)
         {
-            buffer_.at(last_x,y).grapheme.append(text.substr(i,bytes));
+            if (visible(last_x,y)) buffer_.at(last_x,y).grapheme.append(text.substr(i,bytes));
         }
         else if (width > 0)
         {
-            if (buffer_.contains(x,y) && (width == 1 || buffer_.contains(x+1,y)))
+            if (visible(x,y) && (width == 1 || visible(x+1,y)))
             {
                 put(x,y,text.substr(i,bytes),style);
                 last_x = x;
@@ -57,9 +89,12 @@ void Painter::text(int x, const int y, const std::string_view text, const TextSt
 
 void Painter::fill(const Rect rect, Cell cell) const
 {
-    const int x0 = std::max(0,rect.x), y0 = std::max(0,rect.y);
-    const int x1 = std::min(buffer_.size().width,rect.x + rect.width);
-    const int y1 = std::min(buffer_.size().height,rect.y + rect.height);
+    const int x0 = std::max({0,rect.x,clip_ ? clip_->x : 0});
+    const int y0 = std::max({0,rect.y,clip_ ? clip_->y : 0});
+    const int x1 = std::min({buffer_.size().width,rect.x + rect.width,
+        clip_ ? clip_->x + clip_->width : buffer_.size().width});
+    const int y1 = std::min({buffer_.size().height,rect.y + rect.height,
+        clip_ ? clip_->y + clip_->height : buffer_.size().height});
     if (cell.width != 1) cell = {};
     for (int y = y0; y < y1; ++y)
     {
@@ -72,25 +107,28 @@ void Painter::fill(const Rect rect, Cell cell) const
 
 void Painter::fillBackground(const Rect rect, const Color color) const
 {
-    const int x0 = std::max(0,rect.x), y0 = std::max(0,rect.y);
-    const int x1 = std::min(buffer_.size().width,rect.x + rect.width);
-    const int y1 = std::min(buffer_.size().height,rect.y + rect.height);
+    const int x0 = std::max({0,rect.x,clip_ ? clip_->x : 0});
+    const int y0 = std::max({0,rect.y,clip_ ? clip_->y : 0});
+    const int x1 = std::min({buffer_.size().width,rect.x + rect.width,
+        clip_ ? clip_->x + clip_->width : buffer_.size().width});
+    const int y1 = std::min({buffer_.size().height,rect.y + rect.height,
+        clip_ ? clip_->y + clip_->height : buffer_.size().height});
     for (int y = y0; y < y1; ++y)
         for (int x = x0; x < x1; ++x)
         {
             buffer_.at(x,y).style.background = color;
-            if (buffer_.at(x,y).width == 0 && buffer_.contains(x-1,y))
+            if (buffer_.at(x,y).width == 0 && visible(x-1,y))
                 buffer_.at(x-1,y).style.background = color;
         }
 }
 
 void Painter::styleAt(int x, const int y, const TextStyle style) const
 {
-    if (!buffer_.contains(x,y)) return;
-    if (buffer_.at(x,y).width == 0 && buffer_.contains(x-1,y)) --x;
+    if (!visible(x,y)) return;
+    if (buffer_.at(x,y).width == 0 && visible(x-1,y)) --x;
     auto& cell = buffer_.at(x,y);
     cell.style = style;
-    if (cell.width == 2 && buffer_.contains(x+1,y)) buffer_.at(x+1,y).style = style;
+    if (cell.width == 2 && visible(x+1,y)) buffer_.at(x+1,y).style = style;
 }
 
 void Painter::horizontalLine(const int x, const int y, const int length, const TextStyle style) const

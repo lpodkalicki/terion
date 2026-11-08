@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <atomic>
+#include <cstdint>
 #include <vector>
 #include <terion/component.h>
 #include <terion/focus.h>
@@ -69,6 +70,7 @@ public:
 private:
     void syncFocusTargets();
     bool handleMouse(const MouseEvent& mouse);
+    void updateMousePointer(const MouseEvent& mouse);
 
     std::unique_ptr<TerminalBackend> backend_;
     DifferentialRenderer renderer_;
@@ -83,6 +85,10 @@ private:
     std::vector<std::string> component_focus_ids_;
     std::string hovered_button_id_;
     std::string pressed_button_id_;
+    std::uint64_t scrollbar_drag_id_ = 0;
+    int scrollbar_grab_offset_ = 0;
+    MousePointerShape pointer_shape_ = MousePointerShape::Default;
+    bool pointer_shape_initialized_ = false;
     bool running_ = false;
 }; /* End of class Application */
 

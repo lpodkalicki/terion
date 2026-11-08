@@ -33,6 +33,14 @@ public:
     {
         return const_cast<RenderNode*>(static_cast<const RenderNode&>(*this).hitTest(position));
     }
+    [[nodiscard]] RenderNode* scrollTarget(Point position) noexcept;
+    bool scrollBy(int delta);
+    bool handleScrollKey(const Event& event);
+    [[nodiscard]] Rect scrollbarTrack() const noexcept;
+    [[nodiscard]] Rect scrollbarThumb() const noexcept;
+    bool scrollbarPress(Point position, int& grab_offset);
+    bool scrollbarDrag(int y, int grab_offset);
+    [[nodiscard]] bool scrollable() const noexcept { return static_cast<bool>(on_scroll_); }
     [[nodiscard]] bool disabled() const noexcept { return disabled_; }
     [[nodiscard]] const std::function<void()>& onClick() const noexcept { return on_click_; }
     [[nodiscard]] bool editable() const noexcept { return static_cast<bool>(on_change_) && !disabled_; }
@@ -71,6 +79,11 @@ private:
     std::string placeholder_;
     std::size_t cursor_byte_ = 0;
     mutable int scroll_columns_ = 0;
+    int scroll_offset_ = 0;
+    int max_scroll_offset_ = 0;
+    int viewport_height_ = 0;
+    bool scrollbar_visible_ = true;
+    std::function<void(int)> on_scroll_;
     bool disabled_ = false;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;

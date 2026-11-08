@@ -7,13 +7,34 @@
 #include <unistd.h>
 #include <cerrno>
 #include <chrono>
+#include <cstdlib>
 #include <stdexcept>
 #include <terion/terminal.h>
 
 using namespace terion;
 
+TerminalCapabilities AnsiTerminalBackend::detectCapabilities(const std::string_view terminal_program,
+    const std::string_view pointer_override)
+{
+    TerminalCapabilities capabilities;
+    capabilities.mousePointerShape = terminal_program == "kitty" || terminal_program == "ghostty";
+    if (pointer_override == "1") capabilities.mousePointerShape = true;
+    if (pointer_override == "0") capabilities.mousePointerShape = false;
+    return capabilities;
+}
+
+void AnsiTerminalBackend::setMousePointerShape(const MousePointerShape shape)
+{
+    if (!capabilities_.mousePointerShape) return;
+    TerminalBackend::setMousePointerShape(shape);
+}
+
 AnsiTerminalBackend::AnsiTerminalBackend()
 {
+    const char* terminal_program = std::getenv("TERM_PROGRAM");
+    const char* pointer_override = std::getenv("TERION_MOUSE_POINTER_SHAPE");
+    capabilities_ = detectCapabilities(terminal_program ? terminal_program : "",
+        pointer_override ? pointer_override : "");
     if (!::isatty(STDIN_FILENO) || !::isatty(STDOUT_FILENO)) throw std::runtime_error("Terion requires a TTY");
     if (::tcgetattr(STDIN_FILENO,&previous_) != 0) throw std::runtime_error("tcgetattr failed");
     termios raw = previous_;
@@ -31,6 +52,7 @@ AnsiTerminalBackend::~AnsiTerminalBackend()
     {
         try
         {
+            if (capabilities_.mousePointerShape) write("\033]22;\033\\");
             write("\033[?1006l\033[?1003l\033[0m\033[?25h\033[?1049l");
         }
         catch (...)

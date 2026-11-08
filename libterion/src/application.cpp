@@ -69,6 +69,12 @@ void Application::syncFocusTargets()
             focus_.add(id,[&node](const Event& event) { return node.handleTextInput(event); });
             component_focus_ids_.push_back(id);
         }
+        else if (node.type() == Component::Type::ScrollView && node.scrollable())
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleScrollKey(event); });
+            component_focus_ids_.push_back(id);
+        }
         for (const auto& child : node.children()) self(self,*child);
     };
     if (auto* root = reconciler_.root()) visit(visit,*root);
@@ -79,6 +85,51 @@ void Application::syncFocusTargets()
 
 bool Application::handleMouse(const MouseEvent& mouse)
 {
+    updateMousePointer(mouse);
+    if (scrollbar_drag_id_ != 0)
+    {
+        if (mouse.action == MouseAction::Release)
+        {
+            scrollbar_drag_id_ = 0;
+            updateMousePointer(mouse);
+            return true;
+        }
+        if (mouse.action == MouseAction::Move)
+        {
+            const auto find = [&](const auto& self, RenderNode& node) -> RenderNode* {
+                if (node.id() == scrollbar_drag_id_) return &node;
+                for (const auto& child : node.children())
+                    if (auto* target = self(self,*child)) return target;
+                return nullptr;
+            };
+            if (component_ && reconciler_.root())
+                if (auto* target = find(find,*reconciler_.root()))
+                    return target->scrollbarDrag(mouse.position.y,scrollbar_grab_offset_);
+            scrollbar_drag_id_ = 0;
+        }
+    }
+    if (mouse.action == MouseAction::Scroll && component_ && reconciler_.root())
+    {
+        if (auto* target = reconciler_.root()->scrollTarget(mouse.position))
+            return target->scrollBy(-mouse.scrollY * 3);
+    }
+    if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
+        component_ && reconciler_.root())
+    {
+        if (auto* target = reconciler_.root()->scrollTarget(mouse.position))
+        {
+            int grab_offset = 0;
+            if (target->scrollbarPress(mouse.position,grab_offset))
+            {
+                scrollbar_drag_id_ = target->id();
+                scrollbar_grab_offset_ = grab_offset;
+                updateMousePointer(mouse);
+                pressed_button_id_.clear();
+                focus_.focus(std::to_string(target->id()));
+                return true;
+            }
+        }
+    }
     RenderNode* hit = nullptr;
     if (component_ && reconciler_.root()) hit = reconciler_.root()->hitTest(mouse.position);
     if (hit && !((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
@@ -95,6 +146,15 @@ bool Application::handleMouse(const MouseEvent& mouse)
     {
         pressed_button_id_ = target;
         if (hit) focus_.focus(target);
+        if (!hit && component_ && reconciler_.root())
+        {
+            if (auto* scroll = reconciler_.root()->scrollTarget(mouse.position))
+            {
+                focus_.focus(std::to_string(scroll->id()));
+                pressed_button_id_.clear();
+                return true;
+            }
+        }
         if (hit && hit->type() == Component::Type::TextField)
         {
             hit->setCursorFromX(mouse.position.x);
@@ -112,6 +172,42 @@ bool Application::handleMouse(const MouseEvent& mouse)
     }
     if (mouse.action == MouseAction::Scroll) return false;
     return hit != nullptr;
+}
+
+void Application::updateMousePointer(const MouseEvent& mouse)
+{
+    if (!backend_->capabilities().mousePointerShape) return;
+    MousePointerShape shape = MousePointerShape::Default;
+    if (scrollbar_drag_id_ != 0 && mouse.action != MouseAction::Release)
+        shape = MousePointerShape::Grabbing;
+    else if (component_ && reconciler_.root())
+    {
+        RenderNode* root = reconciler_.root();
+        if (auto* scroll = root->scrollTarget(mouse.position))
+        {
+            const Rect track = scroll->scrollbarTrack();
+            if (track.width > 0 && mouse.position.x >= track.x &&
+                mouse.position.x < track.x + track.width && mouse.position.y >= track.y &&
+                mouse.position.y < track.y + track.height)
+                shape = MousePointerShape::Grab;
+        }
+        if (shape == MousePointerShape::Default)
+        {
+            if (const auto* hit = root->hitTest(mouse.position))
+            {
+                if (hit->type() == Component::Type::TextField || hit->type() == Component::Type::Text)
+                    shape = MousePointerShape::Text;
+                else if (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick())
+                    shape = MousePointerShape::Pointer;
+            }
+        }
+    }
+    if (!pointer_shape_initialized_ || pointer_shape_ != shape)
+    {
+        backend_->setMousePointerShape(shape);
+        pointer_shape_ = shape;
+        pointer_shape_initialized_ = true;
+    }
 }
 
 bool Application::dispatchEvent(const Event& event)
