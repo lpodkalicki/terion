@@ -52,6 +52,7 @@ public:
     bool handleSelectKey(const Event& event);
     bool handleSelectMouse(const MouseEvent& mouse, Size screen);
     void closeSelect() noexcept { select_open_ = false; }
+    void paintOverlay(Painter& painter, Size screen, const Theme& theme) const;
     void paintOverlays(Painter& painter, Size screen, const Theme& theme) const;
 
     [[nodiscard]] Size measure(const Constraints& constraints) const;

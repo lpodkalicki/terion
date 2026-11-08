@@ -24,6 +24,7 @@
 #include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/layout.h>
+#include <terion/overlay.h>
 #include <terion/reconciler.h>
 #include <terion/render_node.h>
 #include <terion/state.h>

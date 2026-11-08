@@ -21,7 +21,10 @@ int main()
                 {.label = "Beta",.value = "b"},
                 {.label = "Disabled",.value = "c",.disabled = true}},
                 .value = chosen.get(),.key = "choice",.layout = {.width = 15},
-                .onChange = [&](std::string value) { chosen.set(std::move(value)); }})
+                .onChange = [&](std::string value) { chosen.set(std::move(value)); }}),
+            Select({.options = {{.label = "One",.value = "1"},{.label = "Two",.value = "2"}},
+                .value = "1",.key = "second",.layout = {.width = 15},
+                .onChange = [](std::string) {}})
         }});
     });
     select_app.renderOnce();
@@ -54,6 +57,21 @@ int main()
     assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
     assert(select_app.dispatchEvent(Event{.key = Key::Escape}));
     assert(!select_app.reconciler().root()->children()[0]->selectOpen());
+
+    OverlayManager overlays;
+    Reconciler overlay_tree;
+    overlay_tree.update(Select({.options = {{.label = "Overlay",.value = "o"}},
+        .value = "o",.onChange = [](std::string) {}}));
+    overlays.collect(overlay_tree.root());
+    assert(overlay_tree.root()->handleSelectKey(Event{.key = Key::Enter}));
+    overlays.dismissExcept(nullptr);
+    assert(!overlay_tree.root()->selectOpen());
+    assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(select_app.reconciler().root()->children()[0]->selectOpen());
+    select_app.focus().focus(std::to_string(select_app.reconciler().root()->children()[1]->id()));
+    assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
+    assert(!select_app.reconciler().root()->children()[0]->selectOpen());
+    assert(select_app.reconciler().root()->children()[1]->selectOpen());
     assert(select_app.dispatchEvent(Event{.key = Key::Enter}));
     assert(select_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
         .position = {.x = 25,.y = 10},.button = MouseButton::Left,.action = MouseAction::Press}}) == false);

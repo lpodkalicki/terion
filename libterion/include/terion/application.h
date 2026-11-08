@@ -13,6 +13,7 @@
 #include <terion/component.h>
 #include <terion/focus.h>
 #include <terion/reconciler.h>
+#include <terion/overlay.h>
 #include <terion/state.h>
 #include <terion/theme.h>
 #include <terion/terminal.h>
@@ -78,6 +79,7 @@ private:
     PaintCallback paint_;
     ComponentCallback component_;
     Reconciler reconciler_;
+    OverlayManager overlays_;
     std::shared_ptr<std::atomic_bool> dirty_ = std::make_shared<std::atomic_bool>(true);
     DependencyTracker tracker_;
     EventCallback on_event_;

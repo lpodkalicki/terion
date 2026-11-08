@@ -37,6 +37,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `TerminalBackend::capabilities()` reports terminal features. OSC 22 pointer shapes are enabled by default for Kitty and Ghostty only; set `TERION_MOUSE_POINTER_SHAPE=1` to opt in or `=0` to disable them explicitly. Other mouse interactions work independently.
 - Unified hover tracking highlights interactive buttons, editable text fields and scrollbar thumbs, including terminals without OSC 22 pointer shapes.
 - Controlled `Select` with an overlay menu, keyboard navigation, mouse selection, wheel scrolling and disabled options (`examples/select.cpp`).
+- `OverlayManager` collects non-owning `Portal` entries after reconciliation, paints them above the component tree in z-index order, routes popup mouse events and dismisses inactive menus.
 - UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.
 - Cmdly integration will be an optional `Console` component in a later milestone.
 

@@ -33,6 +33,7 @@ void Application::renderOnce()
         {
             root->layout(Constraints{.maximum = buffer.size()});
         }
+        overlays_.collect(reconciler_.root());
     }
     syncFocusTargets();
     if (component_)
@@ -40,7 +41,7 @@ void Application::renderOnce()
         if (const auto* root = reconciler_.root())
         {
             root->paint(painter,focus_.current(),hovered_component_id_,std::nullopt,&theme_);
-            root->paintOverlays(painter,buffer.size(),theme_);
+            overlays_.paint(painter,buffer.size(),theme_);
         }
     }
     else if (paint_) paint_(painter,buffer.size());
@@ -99,27 +100,13 @@ bool Application::handleMouse(const MouseEvent& mouse)
     updateMousePointer(mouse);
     if (component_ && reconciler_.root())
     {
-        const auto visit = [&](const auto& self, RenderNode& node) -> bool {
-            for (const auto& child : node.children())
-                if (self(self,*child)) return true;
-            if (node.type() != Component::Type::Select) return false;
-            if (node.selectOpen() && node.selectContains(mouse.position,backend_->size()))
-            {
-                const bool consumed = node.handleSelectMouse(mouse,backend_->size());
-                if (consumed) focus_.focus(std::to_string(node.id()));
-                return consumed;
-            }
-            return false;
-        };
-        if (visit(visit,*reconciler_.root())) return true;
-        const auto dismiss = [&](const auto& self, RenderNode& node) -> void {
-            if (node.selectOpen() && mouse.action == MouseAction::Press &&
-                mouse.button == MouseButton::Left && !node.selectContains(mouse.position,backend_->size()) &&
-                !node.hitTest(mouse.position))
-                node.closeSelect();
-            for (const auto& child : node.children()) self(self,*child);
-        };
-        dismiss(dismiss,*reconciler_.root());
+        if (auto* target = overlays_.handleMouse(mouse,backend_->size()))
+        {
+            overlays_.dismissExcept(target);
+            focus_.focus(std::to_string(target->id()));
+            return true;
+        }
+        overlays_.dismissOutside(mouse,backend_->size());
     }
     if (scrollbar_drag_id_ != 0)
     {
@@ -179,7 +166,10 @@ bool Application::handleMouse(const MouseEvent& mouse)
         pressed_button_id_ = target;
         if (hit) focus_.focus(target);
         if (hit && hit->type() == Component::Type::Select)
+        {
+            overlays_.dismissExcept(hit);
             return hit->handleSelectMouse(mouse,backend_->size());
+        }
         if (!hit && component_ && reconciler_.root())
         {
             if (auto* scroll = reconciler_.root()->scrollTarget(mouse.position))
@@ -283,7 +273,21 @@ bool Application::dispatchEvent(const Event& event)
     if (event.key == Key::Resize) renderer_.invalidate();
     invalidate();
     if (event.key == Key::Mouse && handleMouse(event.mouse)) return true;
-    if (focus_.dispatch(event)) return true;
+    if (focus_.dispatch(event))
+    {
+        if (reconciler_.root())
+        {
+            const auto find = [&](const auto& self, RenderNode& node) -> RenderNode* {
+                if (node.type() == Component::Type::Select && node.selectOpen() &&
+                    std::to_string(node.id()) == focus_.current()) return &node;
+                for (const auto& child : node.children())
+                    if (auto* selected = self(self,*child)) return selected;
+                return nullptr;
+            };
+            if (auto* selected = find(find,*reconciler_.root())) overlays_.dismissExcept(selected);
+        }
+        return true;
+    }
     if (on_event_ && on_event_(event)) return true;
     if (event.key == Key::Escape)
     {

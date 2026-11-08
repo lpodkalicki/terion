@@ -1,0 +1,37 @@
+/*
+ * Copyright (c) 2026 by Łukasz Marcin Podkalicki <lpodkalicki@gmail.com>
+ */
+
+#ifndef TERION_OVERLAY_H
+#define TERION_OVERLAY_H
+
+#include <vector>
+#include <terion/render_node.h>
+
+namespace terion {
+
+struct Portal
+{
+    RenderNode* owner = nullptr;
+    int zIndex = 0;
+}; /* End of struct Portal */
+
+// A portal renders above the retained tree without changing its layout.
+// Entries are non-owning and must be rebuilt after each reconciliation.
+class OverlayManager
+{
+public:
+    void collect(RenderNode* root);
+    void addPortal(RenderNode& owner, int z_index = 0);
+    void paint(Painter& painter, Size screen, const Theme& theme) const;
+    [[nodiscard]] RenderNode* handleMouse(const MouseEvent& mouse, Size screen);
+    void dismissOutside(const MouseEvent& mouse, Size screen);
+    void dismissExcept(const RenderNode* active);
+
+private:
+    std::vector<Portal> portals_;
+}; /* End of class OverlayManager */
+
+} /* End of namespace terion */
+
+#endif /* TERION_OVERLAY_H */

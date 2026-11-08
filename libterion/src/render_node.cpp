@@ -574,6 +574,11 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
 void RenderNode::paintOverlays(Painter& painter, const Size screen, const Theme& theme) const
 {
     for (const auto& child : children_) child->paintOverlays(painter,screen,theme);
+    paintOverlay(painter,screen,theme);
+}
+
+void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& theme) const
+{
     const Rect popup = selectPopupRect(screen);
     if (popup.width <= 0 || popup.height <= 0) return;
     const Palette palette = theme.palette;
