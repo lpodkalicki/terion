@@ -84,6 +84,13 @@ enum class SplitDirection
     Vertical
 }; /* End of enum SplitDirection */
 
+enum class ProgressVariant
+{
+    Blocks,
+    Line,
+    Ascii
+}; /* End of enum ProgressVariant */
+
 struct TableColumn
 {
     std::string title;
@@ -204,6 +211,9 @@ public:
         int toast_duration_ms = 3500;
         int toast_severity = 0;
         std::function<void()> toast_on_close = {};
+        ProgressVariant progress_variant = ProgressVariant::Blocks;
+        bool progress_indeterminate = false;
+        bool progress_show_percentage = false;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

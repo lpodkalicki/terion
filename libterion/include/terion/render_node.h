@@ -133,6 +133,7 @@ public:
         std::optional<Color> background = std::nullopt, const Theme* theme = nullptr,
         bool unicode = true) const;
     [[nodiscard]] int height() const noexcept;
+    [[nodiscard]] bool hasIndeterminateProgress() const noexcept;
 
 private:
     friend class Reconciler;
@@ -154,6 +155,9 @@ private:
     CheckboxVariant checkbox_variant_ = CheckboxVariant::Default;
     TextFieldVariant text_field_variant_ = TextFieldVariant::Outlined;
     double value_ = 0.0;
+    ProgressVariant progress_variant_ = ProgressVariant::Blocks;
+    bool progress_indeterminate_ = false;
+    bool progress_show_percentage_ = false;
     int columns_ = 1;
     SurfaceTone surface_tone_ = SurfaceTone::None;
     std::function<void()> on_click_;

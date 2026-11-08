@@ -66,6 +66,9 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->on_scroll_ = props.on_scroll;
     node->scrollbar_visible_ = props.scrollbar_visible;
     node->value_ = props.value;
+    node->progress_variant_ = props.progress_variant;
+    node->progress_indeterminate_ = props.progress_indeterminate;
+    node->progress_show_percentage_ = props.progress_show_percentage;
     node->columns_ = std::max(1,props.columns);
     node->surface_tone_ = props.surface_tone;
     node->on_click_ = props.on_click;

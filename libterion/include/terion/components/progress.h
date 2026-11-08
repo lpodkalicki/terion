@@ -18,10 +18,15 @@ public:
         std::string key = {};
         LayoutStyle layout = {.width = 20};
         TextStyle style = {};
+        ProgressVariant variant = ProgressVariant::Blocks;
+        bool indeterminate = false;
+        bool showPercentage = false;
     }; /* End of struct Props */
 
     explicit Progress(Props props) : Component({.type = Type::Progress,.key = std::move(props.key),
-        .layout = props.layout,.text_style = props.style,.value = props.value})
+        .layout = props.layout,.text_style = props.style,.value = props.value,
+        .progress_variant = props.variant,.progress_indeterminate = props.indeterminate,
+        .progress_show_percentage = props.showPercentage})
     {}
 }; /* End of class Progress */
 

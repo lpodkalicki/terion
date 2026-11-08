@@ -543,10 +543,17 @@ int Application::run()
 {
     running_ = true;
     Size lastSize {.width = -1,.height = -1};
+    auto next_progress_frame = std::chrono::steady_clock::now();
     while (running_)
     {
         if (overlays_.tick()) invalidate();
         (void)toasts_.tick();
+        const auto now = std::chrono::steady_clock::now();
+        if (now >= next_progress_frame)
+        {
+            if (reconciler_.root() && reconciler_.root()->hasIndeterminateProgress()) invalidate();
+            next_progress_frame = now+std::chrono::milliseconds(90);
+        }
         const auto size = backend_->size();
         if (size != lastSize) { renderer_.invalidate(); lastSize = size; invalidate(); }
         if (needsRender()) renderOnce();

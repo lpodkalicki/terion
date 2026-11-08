@@ -5,9 +5,20 @@
 #include <terion/render_node.h>
 #include <terion/utf8.h>
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 using namespace terion;
+
+bool RenderNode::hasIndeterminateProgress() const noexcept
+{
+    if (type_ == Component::Type::TabPanel && !tab_panel_active_) return false;
+    if (type_ == Component::Type::Progress && progress_indeterminate_ &&
+        bounds_.width > 0 && bounds_.height > 0) return true;
+    for (const auto& child : children_)
+        if (child->hasIndeterminateProgress()) return true;
+    return false;
+}
 
 namespace {
 
@@ -1699,13 +1710,32 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     }
     if (type_ == Component::Type::Progress)
     {
-        const int filled = static_cast<int>(bounds_.width * std::clamp(value_,0.0,1.0));
-        for (int i = 0; i < bounds_.width; ++i)
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const double value = std::isfinite(value_) ? std::clamp(value_,0.0,1.0) : 0.0;
+        const int suffix_width = progress_show_percentage_ && !progress_indeterminate_ &&
+            bounds_.width >= 7 ? 5 : 0;
+        const int bar_width = bounds_.width-suffix_width;
+        const int filled = static_cast<int>(bar_width*value);
+        const int segment_width = std::max(1,bar_width/4);
+        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        const int phase = progress_indeterminate_ ?
+            static_cast<int>((elapsed/90) % std::max(1,bar_width+segment_width)) - segment_width : 0;
+        const bool ascii = !unicode || progress_variant_ == ProgressVariant::Ascii;
+        const std::string_view on = ascii ? "#" :
+            progress_variant_ == ProgressVariant::Line ? "━" : "█";
+        const std::string_view off = ascii ? "-" :
+            progress_variant_ == ProgressVariant::Line ? "─" : "░";
+        for (int i = 0; i < bar_width; ++i)
         {
+            const bool active = progress_indeterminate_ ? i >= phase && i < phase+segment_width : i < filled;
             TextStyle segment_style = style;
-            if (theme) segment_style.foreground = i < filled ? theme->palette.primary : theme->palette.muted;
-            painter.put(bounds_.x+i,bounds_.y,i < filled ? "█" : "░",segment_style);
+            if (theme) segment_style.foreground = active ? theme->palette.primary : theme->palette.muted;
+            painter.put(bounds_.x+i,bounds_.y,active ? on : off,segment_style);
         }
+        if (suffix_width > 0)
+            painter.text(bounds_.x+bar_width,bounds_.y,
+                " " + std::to_string(static_cast<int>(std::lround(value*100.0))) + "%",style);
         return;
     }
     if (type_ == Component::Type::TreeView)
