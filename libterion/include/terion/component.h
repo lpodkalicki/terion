@@ -78,6 +78,12 @@ enum class TableAlignment
     Right
 }; /* End of enum TableAlignment */
 
+enum class SplitDirection
+{
+    Horizontal,
+    Vertical
+}; /* End of enum SplitDirection */
+
 struct TableColumn
 {
     std::string title;
@@ -132,6 +138,7 @@ public:
         TabPanel,
         Table,
         TreeView,
+        ResizableSplit,
         Dialog,
         FocusScope,
         Divider,
@@ -175,6 +182,11 @@ public:
         std::vector<TreeItem> tree_items = {};
         std::vector<std::string> tree_expanded = {};
         std::function<void(std::string,bool)> tree_on_toggle = {};
+        SplitDirection split_direction = SplitDirection::Horizontal;
+        int split_position = 20;
+        int split_min_first = 3;
+        int split_min_second = 3;
+        std::function<void(int)> split_on_change = {};
         bool tab_panel_active = true;
         bool checked = false;
         bool dialog_open = false;

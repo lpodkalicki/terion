@@ -147,6 +147,12 @@ void Application::syncFocusTargets()
             focus_.add(id,[&node](const Event& event) { return node.handleTreeKey(event); },scope);
             component_focus_ids_.push_back(id);
         }
+        else if (node.type() == Component::Type::ResizableSplit)
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleSplitKey(event); },scope);
+            component_focus_ids_.push_back(id);
+        }
         for (const auto& child : node.children()) self(self,*child,scope);
     };
     if (auto* root = reconciler_.root()) visit(visit,*root,{});
@@ -205,6 +211,34 @@ bool Application::handleMouse(const MouseEvent& mouse)
                 if (auto* target = find(find,*reconciler_.root()))
                     return target->scrollbarDrag(mouse.position.y,scrollbar_grab_offset_);
             scrollbar_drag_id_ = 0;
+        }
+    }
+    if (split_drag_id_ != 0)
+    {
+        if (mouse.action == MouseAction::Release)
+        {
+            split_drag_id_ = 0;
+            updateHover(mouse);
+            updateMousePointer(mouse);
+            return true;
+        }
+        if (mouse.action == MouseAction::Move)
+        {
+            if (component_ && reconciler_.root())
+                if (auto* target = reconciler_.root()->findById(split_drag_id_))
+                    return target->dragSplit(mouse.position);
+            split_drag_id_ = 0;
+        }
+    }
+    if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
+        component_ && reconciler_.root())
+    {
+        if (auto* target = reconciler_.root()->splitTarget(mouse.position))
+        {
+            split_drag_id_ = target->id();
+            pressed_button_id_.clear();
+            focus_.focus(std::to_string(target->id()));
+            return true;
         }
     }
     if (mouse.action == MouseAction::Scroll && component_ && reconciler_.root())

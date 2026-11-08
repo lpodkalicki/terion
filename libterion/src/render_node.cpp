@@ -163,6 +163,17 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         content = {.width = 20,.height = 1};
     }
+    else if (type_ == Component::Type::ResizableSplit)
+    {
+        if (children_.size() == 2)
+        {
+            const Size a = children_[0]->measure(constraints);
+            const Size b = children_[1]->measure(constraints);
+            content = split_direction_ == SplitDirection::Horizontal ?
+                Size{.width = addBounded(addBounded(a.width,b.width),1),.height = std::max(a.height,b.height)} :
+                Size{.width = std::max(a.width,b.width),.height = addBounded(addBounded(a.height,b.height),1)};
+        }
+    }
     else if (type_ == Component::Type::Button)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
@@ -345,6 +356,24 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         }
     }
     if (type_ == Component::Type::TabPanel && !tab_panel_active_) return;
+    if (type_ == Component::Type::ResizableSplit && children_.size() == 2)
+    {
+        const bool horizontal = split_direction_ == SplitDirection::Horizontal;
+        const int extent = horizontal ? size.width : size.height;
+        const int available = std::max(0,extent-1);
+        const int lower = std::min(split_min_first_,available);
+        const int upper = std::max(lower,available-split_min_second_);
+        const int first = std::clamp(split_position_,lower,upper);
+        const Size first_size = horizontal ? Size{.width = first,.height = size.height} :
+            Size{.width = size.width,.height = first};
+        const Size second_size = horizontal ? Size{.width = available-first,.height = size.height} :
+            Size{.width = size.width,.height = available-first};
+        children_[0]->layout({.minimum = first_size,.maximum = first_size},origin);
+        children_[1]->layout({.minimum = second_size,.maximum = second_size},
+            horizontal ? Point{.x = origin.x+first+1,.y = origin.y} :
+                Point{.x = origin.x,.y = origin.y+first+1});
+        return;
+    }
     if (type_ == Component::Type::Text || type_ == Component::Type::Dialog || type_ == Component::Type::Button ||
         type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
@@ -712,6 +741,59 @@ std::vector<RenderNode::TreeVisibleItem> RenderNode::treeVisibleItems() const
     };
     visit(visit,tree_items_,{},0,{});
     return result;
+}
+
+Rect RenderNode::splitHandle() const noexcept
+{
+    if (type_ != Component::Type::ResizableSplit || children_.size() != 2) return {};
+    const auto first = children_[0]->bounds_;
+    return split_direction_ == SplitDirection::Horizontal ?
+        Rect{.x = first.x+first.width,.y = bounds_.y,.width = 1,.height = bounds_.height} :
+        Rect{.x = bounds_.x,.y = first.y+first.height,.width = bounds_.width,.height = 1};
+}
+
+RenderNode* RenderNode::splitTarget(const Point position) noexcept
+{
+    if (position.x < bounds_.x || position.y < bounds_.y ||
+        position.x >= bounds_.x+bounds_.width || position.y >= bounds_.y+bounds_.height) return nullptr;
+    if (type_ == Component::Type::ResizableSplit)
+    {
+        const auto handle = splitHandle();
+        if (position.x >= handle.x && position.x < handle.x+handle.width &&
+            position.y >= handle.y && position.y < handle.y+handle.height) return this;
+    }
+    for (auto it = children_.rbegin(); it != children_.rend(); ++it)
+        if (auto* target = (*it)->splitTarget(position)) return target;
+    return nullptr;
+}
+
+bool RenderNode::dragSplit(const Point position)
+{
+    if (type_ != Component::Type::ResizableSplit || !split_on_change_) return false;
+    const bool horizontal = split_direction_ == SplitDirection::Horizontal;
+    const int extent = horizontal ? bounds_.width : bounds_.height;
+    const int available = std::max(0,extent-1);
+    const int lower = std::min(split_min_first_,available);
+    const int upper = std::max(lower,available-split_min_second_);
+    const int proposed = (horizontal ? position.x-bounds_.x : position.y-bounds_.y);
+    const int next = std::clamp(proposed,lower,upper);
+    if (next != std::clamp(split_position_,lower,upper)) split_on_change_(next);
+    return true;
+}
+
+bool RenderNode::handleSplitKey(const Event& event)
+{
+    if (type_ != Component::Type::ResizableSplit || !split_on_change_) return false;
+    const bool horizontal = split_direction_ == SplitDirection::Horizontal;
+    const int step = event.key == Key::PageUp || event.key == Key::PageDown ? 5 : 1;
+    int delta = 0;
+    if (event.key == (horizontal ? Key::Left : Key::Up) || event.key == Key::PageUp) delta = -step;
+    else if (event.key == (horizontal ? Key::Right : Key::Down) || event.key == Key::PageDown) delta = step;
+    else if (event.key == Key::Home) delta = -std::numeric_limits<int>::max()/2;
+    else if (event.key == Key::End) delta = std::numeric_limits<int>::max()/2;
+    else return false;
+    return dragSplit(horizontal ? Point{.x = bounds_.x+split_position_+delta,.y = bounds_.y} :
+        Point{.x = bounds_.x,.y = bounds_.y+split_position_+delta});
 }
 
 bool RenderNode::handleTreeKey(const Event& event)
@@ -1881,6 +1963,26 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         if (bounds_.height > 0 && bounds_.width > 0)
         {
             painter.text(bounds_.x,bounds_.y,clipText(text_,bounds_.width),style);
+        }
+        return;
+    }
+    if (type_ == Component::Type::ResizableSplit)
+    {
+        for (const auto& child : children_)
+        {
+            Painter::ClipScope clip(painter,child->bounds_);
+            child->paint(painter,focused_id,hovered_id,effective_background,theme,unicode);
+        }
+        const Rect handle = splitHandle();
+        if (handle.width > 0 && handle.height > 0)
+        {
+            const Palette palette = theme ? theme->palette : Theme::dark().palette;
+            const bool focused = focused_id == std::to_string(id_);
+            const TextStyle divider {.foreground = focused ? palette.primary : palette.muted,
+                .background = effective_background.value_or(palette.background),.bold = focused};
+            if (split_direction_ == SplitDirection::Horizontal)
+                painter.verticalLine(handle.x,handle.y,handle.height,divider);
+            else painter.horizontalLine(handle.x,handle.y,handle.width,divider);
         }
         return;
     }

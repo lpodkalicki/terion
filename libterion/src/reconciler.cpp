@@ -84,6 +84,11 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->tree_items_ = props.tree_items;
     node->tree_expanded_ = props.tree_expanded;
     node->tree_on_toggle_ = props.tree_on_toggle;
+    node->split_direction_ = props.split_direction;
+    node->split_position_ = props.split_position;
+    node->split_min_first_ = std::max(0,props.split_min_first);
+    node->split_min_second_ = std::max(0,props.split_min_second);
+    node->split_on_change_ = props.split_on_change;
     if (node->tree_last_selected_ != props.text)
     {
         node->tree_last_selected_ = props.text;

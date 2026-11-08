@@ -64,6 +64,10 @@ public:
     bool handleTableClick(Point position);
     bool handleTreeKey(const Event& event);
     bool handleTreeClick(Point position);
+    [[nodiscard]] Rect splitHandle() const noexcept;
+    [[nodiscard]] RenderNode* splitTarget(Point position) noexcept;
+    bool handleSplitKey(const Event& event);
+    bool dragSplit(Point position);
     struct TreeVisibleItem
     {
         const TreeItem* item;
@@ -170,6 +174,11 @@ private:
     int tree_scroll_ = 0;
     std::string tree_last_selected_;
     bool tree_pending_reveal_ = false;
+    SplitDirection split_direction_ = SplitDirection::Horizontal;
+    int split_position_ = 20;
+    int split_min_first_ = 3;
+    int split_min_second_ = 3;
+    std::function<void(int)> split_on_change_;
     int hovered_tab_ = -1;
     bool tab_panel_active_ = true;
     bool checked_ = false;
