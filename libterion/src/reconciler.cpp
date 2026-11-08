@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <unordered_set>
+#include <unordered_map>
 
 using namespace terion;
 
@@ -138,21 +139,27 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         (static_cast<unsigned char>(node->text_[node->cursor_byte_]) & 0xC0) == 0x80)
         --node->cursor_byte_;
     auto previous = std::move(node->children_);
-    node->children_.reserve(props.children.size());
+    std::unordered_map<std::string,std::size_t> keyed;
+    keyed.reserve(previous.size());
+    for (std::size_t i = 0; i < previous.size(); ++i)
+        if (previous[i] && !previous[i]->key_.empty())
+            keyed.emplace(previous[i]->key_,i);
 
-    for (const auto& child : props.children)
+    std::vector<std::unique_ptr<RenderNode>> next;
+    next.reserve(props.children.size());
+    for (std::size_t i = 0; i < props.children.size(); ++i)
     {
+        const auto& child = props.children[i];
         std::unique_ptr<RenderNode> matched;
-        for (auto& candidate : previous)
+        if (!child.props().key.empty())
         {
-            if (!candidate) continue;
-            if (candidate->key_ == child.props().key)
-            {
-                matched = std::move(candidate);
-                break;
-            }
+            const auto found = keyed.find(child.props().key);
+            if (found != keyed.end()) matched = std::move(previous[found->second]);
         }
+        else if (i < previous.size() && previous[i] && previous[i]->key_.empty())
+            matched = std::move(previous[i]);
         reconcile(matched,child);
-        node->children_.push_back(std::move(matched));
+        next.push_back(std::move(matched));
     }
+    node->children_ = std::move(next);
 }

@@ -43,6 +43,60 @@ TEST(Reconciler, PreservesStableKeysAndRejectsDuplicates)
 
 }
 
+TEST(Reconciler, UnkeyedChildrenUseTheirPosition)
+{
+    Reconciler tree;
+    tree.update(Component::column({Component::text("first"),Component::text("second")}));
+    const auto first = tree.root()->children()[0]->id();
+    const auto second = tree.root()->children()[1]->id();
+    ASSERT_NE(first,second);
+    tree.update(Component::column({Component::text("updated first"),Component::text("updated second")}));
+    EXPECT_EQ(tree.root()->children()[0]->id(),first);
+    EXPECT_EQ(tree.root()->children()[1]->id(),second);
+    tree.update(Component::column({Component::text("only one")}));
+    EXPECT_EQ(tree.root()->children()[0]->id(),first);
+}
+
+TEST(Reconciler, KeyedReorderPreservesIdentityAroundUnkeyedChildren)
+{
+    Reconciler tree;
+    tree.update(Component::column({Component::text("A","a"),Component::text("middle"),
+        Component::text("B","b")}));
+    const auto a = tree.root()->children()[0]->id();
+    const auto middle = tree.root()->children()[1]->id();
+    const auto b = tree.root()->children()[2]->id();
+    tree.update(Component::column({Component::text("B moved","b"),Component::text("still middle"),
+        Component::text("A moved","a")}));
+    EXPECT_EQ(tree.root()->children()[0]->id(),b);
+    EXPECT_EQ(tree.root()->children()[1]->id(),middle);
+    EXPECT_EQ(tree.root()->children()[2]->id(),a);
+}
+
+TEST(Reconciler, KeyedAndUnkeyedCannotStealEachOthersState)
+{
+    Reconciler tree;
+    tree.update(Component::column({Component::text("anonymous"),Component::text("named","x")}));
+    const auto anonymous = tree.root()->children()[0]->id();
+    const auto named = tree.root()->children()[1]->id();
+    tree.update(Component::column({Component::text("named","x"),Component::text("anonymous")}));
+    EXPECT_EQ(tree.root()->children()[0]->id(),named);
+    EXPECT_NE(tree.root()->children()[1]->id(),anonymous);
+    EXPECT_NE(tree.root()->children()[1]->id(),named);
+}
+
+TEST(Reconciler, RejectedDuplicateKeysKeepExistingTree)
+{
+    Reconciler tree;
+    tree.update(Component::column({Component::text("a","a"),Component::text("b","b")}));
+    const auto root = tree.root()->id();
+    const auto first = tree.root()->children()[0]->id();
+    EXPECT_THROW(tree.update(Component::column({Component::text("x","duplicate"),
+        Component::text("y","duplicate")})),std::invalid_argument);
+    EXPECT_EQ(tree.root()->id(),root);
+    ASSERT_EQ(tree.root()->children().size(),2u);
+    EXPECT_EQ(tree.root()->children()[0]->id(),first);
+}
+
 TEST(Reconciler, MeasuresAndPositionsNestedLayouts)
 {
     Reconciler reconciler;
