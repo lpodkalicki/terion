@@ -29,7 +29,9 @@ TEST(Table, MouseSelectionRespectsHeaderAndRowPosition)
         {"one",{"One"}},{"two",{"Two"}}},.value = "one",
         .onChange = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 40,.height = 10}});
-    EXPECT_FALSE(tree.root()->handleTableClick({.x = 1,.y = 0}));
+    // Clicking the header is handled by sorting (introduced with sortable tables).
+    EXPECT_TRUE(tree.root()->handleTableClick({.x = 1,.y = 0}));
+    EXPECT_EQ(tree.root()->tableSortColumn(),0);
     EXPECT_TRUE(tree.root()->handleTableClick({.x = 1,.y = 3}));
     EXPECT_EQ(selected,"two");
 }
