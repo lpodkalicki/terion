@@ -5,6 +5,7 @@
 #ifndef TERION_THEME_H
 #define TERION_THEME_H
 
+#include <string_view>
 #include <terion/render/color.h>
 
 namespace terion {
@@ -25,10 +26,18 @@ struct Spacing
     constexpr int operator()(int multiplier) const { return unit * multiplier; }
 }; /* End of struct Spacing */
 
+struct ScrollbarStyle
+{
+    // Single-cell Unicode glyphs keep geometry and mouse hit testing unchanged.
+    std::string_view track = "│";
+    std::string_view thumb = "┃";
+}; /* End of struct ScrollbarStyle */
+
 struct Theme
 {
     Palette palette = {};
     Spacing spacing = {};
+    ScrollbarStyle scrollbar = {};
 
     static constexpr Theme dark() { return {}; }
     static constexpr Theme light()

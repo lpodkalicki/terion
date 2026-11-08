@@ -142,6 +142,22 @@ Color blendColor(const Color base, const Color overlay, const int overlay_percen
     return Color::rgb(mix(base.red,overlay.red),mix(base.green,overlay.green),mix(base.blue,overlay.blue));
 }
 
+void paintScrollbar(Painter& painter, const Rect track, const Rect thumb, const Theme& theme,
+    const Color background, const bool unicode, const bool hovered = false)
+{
+    if (track.width <= 0 || track.height <= 0) return;
+    const auto& palette = theme.palette;
+    for (int y = track.y; y < track.y+track.height; ++y)
+    {
+        const bool selected = y >= thumb.y && y < thumb.y+thumb.height;
+        const TextStyle style {.foreground = selected ?
+            (hovered ? palette.primary : palette.foreground) : palette.muted,
+            .background = background};
+        painter.put(track.x,y,selected ? (unicode ? theme.scrollbar.thumb : "#") :
+            (unicode ? theme.scrollbar.track : "|"),style);
+    }
+}
+
 } /* End of anonymous namespace */
 
 Size RenderNode::measure(const Constraints& constraints) const
@@ -1243,14 +1259,8 @@ void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& 
             highlighted ? palette.on_primary : palette.foreground,.background = background};
         painter.text(popup.x+1,popup.y+i,clipText(select_options_[index].label,
             std::max(0,popup.width-2-(track.width > 0 ? 1 : 0))),style);
-        if (track.width > 0)
-        {
-            const bool on_thumb = popup.y+i >= thumb.y && popup.y+i < thumb.y+thumb.height;
-            const TextStyle bar_style {.foreground = on_thumb ? palette.primary : palette.muted,
-                .background = palette.surface};
-            painter.put(track.x,popup.y+i,on_thumb ? "█" : "│",bar_style);
-        }
     }
+    paintScrollbar(painter,track,thumb,theme,palette.surface,true);
 }
 
 const RenderNode* RenderNode::findById(const std::uint64_t id) const noexcept
@@ -1610,12 +1620,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const Rect track = scrollbarTrack();
         if (track.height > 0)
         {
-            painter.verticalLine(track.x,track.y,track.height,
-                {.foreground = palette.muted,.background = palette.surface});
-            const Rect thumb = scrollbarThumb();
-            for (int y = thumb.y; y < thumb.y+thumb.height; ++y)
-                painter.put(thumb.x,y,unicode ? "█" : "#",
-                    {.foreground = palette.primary,.background = palette.surface});
+            paintScrollbar(painter,track,scrollbarThumb(),theme ? *theme : Theme::dark(),
+                palette.surface,unicode,hovered_id == std::to_string(id_));
         }
         return;
     }
@@ -1700,11 +1706,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const Rect track = scrollbarTrack();
         if (track.height > 0)
         {
-            painter.verticalLine(track.x,track.y,track.height,
-                {.foreground = palette.muted,.background = palette.surface});
-            const Rect thumb = scrollbarThumb();
-            for (int y = thumb.y; y < thumb.y+thumb.height; ++y)
-                painter.put(thumb.x,y,"█",{.foreground = palette.primary,.background = palette.surface});
+            paintScrollbar(painter,track,scrollbarThumb(),theme ? *theme : Theme::dark(),
+                palette.surface,unicode,hovered_id == std::to_string(id_));
         }
         return;
     }
@@ -1990,17 +1993,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     if (const Rect track = scrollbarTrack(); track.height > 0)
     {
         const Palette palette = theme ? theme->palette : Theme::dark().palette;
-        const Rect thumb = scrollbarThumb();
-        const bool hovered = hovered_id == std::to_string(id_);
-        for (int i = 0; i < track.height; ++i)
-        {
-            const bool on_thumb = track.y+i >= thumb.y && track.y+i < thumb.y + thumb.height;
-            const TextStyle bar_style {.foreground = on_thumb ?
-                (hovered ? palette.on_primary : palette.primary) :
-                (hovered ? blendColor(palette.muted,palette.primary,45) : palette.muted),
-                .background = effective_background.value_or(palette.background)};
-            painter.put(track.x,track.y+i,on_thumb ? "█" : "│",bar_style);
-        }
+        paintScrollbar(painter,track,scrollbarThumb(),theme ? *theme : Theme::dark(),
+            effective_background.value_or(palette.background),unicode,hovered_id == std::to_string(id_));
     }
     if (border_) painter.border(bounds_,*border_,style);
 }

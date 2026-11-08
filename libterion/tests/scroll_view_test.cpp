@@ -50,7 +50,7 @@ TEST(ScrollView, RendersScrollbarAndHandlesKeyboardNavigation)
     EXPECT_EQ(scroll_buffer.at(0,2).grapheme,"4");
     EXPECT_EQ(scroll_buffer.at(0,3).grapheme," ");
     EXPECT_EQ(scroll_buffer.at(4,0).grapheme,"│");
-    EXPECT_EQ(scroll_buffer.at(4,1).grapheme,"█");
+    EXPECT_EQ(scroll_buffer.at(4,1).grapheme,"┃");
     EXPECT_EQ(scrolling.root()->scrollbarTrack().x,4);
     EXPECT_EQ(scrolling.root()->scrollbarThumb().y,1);
     ScreenBuffer hover_scroll_buffer({.width = 5,.height = 4});
@@ -77,6 +77,30 @@ TEST(ScrollView, RendersScrollbarAndHandlesKeyboardNavigation)
     EXPECT_EQ(reported_scroll,0);
     EXPECT_TRUE(scrolling.root()->handleScrollKey(Event{.key = Key::End}));
     EXPECT_EQ(reported_scroll,3);
+}
+
+TEST(ScrollView, UsesThemeScrollbarGlyphsAndAsciiFallback)
+{
+    Reconciler scrolling;
+    scrolling.update(ScrollView({.children = {
+        Typography({.text = "0"}),Typography({.text = "1"}),
+        Typography({.text = "2"}),Typography({.text = "3"})
+    },.layout = {.width = 5,.height = 2},.scrollOffset = 1,.onScroll = [](int) {}}));
+    scrolling.root()->layout(Constraints{.maximum = {.width = 5,.height = 2}});
+
+    Theme custom = Theme::dark();
+    custom.scrollbar = {.track = "·",.thumb = "▌"};
+    ScreenBuffer unicode_buffer({.width = 5,.height = 2});
+    Painter unicode_painter(unicode_buffer);
+    scrolling.root()->paint(unicode_painter,{}, {},std::nullopt,&custom,true);
+    EXPECT_EQ(unicode_buffer.at(4,0).grapheme,"·");
+    EXPECT_EQ(unicode_buffer.at(4,1).grapheme,"▌");
+
+    ScreenBuffer ascii_buffer({.width = 5,.height = 2});
+    Painter ascii_painter(ascii_buffer);
+    scrolling.root()->paint(ascii_painter,{}, {},std::nullopt,&custom,false);
+    EXPECT_EQ(ascii_buffer.at(4,0).grapheme,"|");
+    EXPECT_EQ(ascii_buffer.at(4,1).grapheme,"#");
 }
 
 TEST(ScrollView, HandlesWheelAndScrollbarMouseDragging)
