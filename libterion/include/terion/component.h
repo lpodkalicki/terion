@@ -30,6 +30,13 @@ enum class ButtonSize
     Large
 }; /* End of enum ButtonSize */
 
+enum class CheckboxVariant
+{
+    Default,
+    Unicode,
+    Emoji
+}; /* End of enum CheckboxVariant */
+
 enum class TextFieldVariant
 {
     Outlined,
@@ -50,6 +57,13 @@ struct SelectOption
     bool disabled = false;
 }; /* End of struct SelectOption */
 
+struct RadioOption
+{
+    std::string label;
+    std::string value;
+    bool disabled = false;
+}; /* End of struct RadioOption */
+
 class Component
 {
 public:
@@ -62,6 +76,10 @@ public:
         Grid,
         ScrollView,
         Button,
+        Checkbox,
+        Switch,
+        Radio,
+        RadioGroup,
         TextField,
         Select,
         Dialog,
@@ -79,6 +97,7 @@ public:
         LayoutStyle layout = {};
         TextStyle text_style = {};
         std::function<void()> on_click = {};
+        std::function<void(bool)> on_toggle = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
         std::function<void(std::string)> on_change = {};
@@ -91,11 +110,14 @@ public:
         int columns = 1;
         SurfaceTone surface_tone = SurfaceTone::None;
         ButtonSize button_size = ButtonSize::Medium;
+        CheckboxVariant checkbox_variant = CheckboxVariant::Default;
         TextFieldVariant text_field_variant = TextFieldVariant::Outlined;
         int scroll_offset = 0;
         std::function<void(int)> on_scroll = {};
         bool scrollbar_visible = true;
         std::vector<SelectOption> select_options = {};
+        std::vector<RadioOption> radio_options = {};
+        bool checked = false;
         bool dialog_open = false;
         std::string dialog_title = {};
         std::string dialog_confirm_text = "Confirm";

@@ -13,6 +13,10 @@
 #include <terion/components/column.h>
 #include <terion/components/typography.h>
 #include <terion/components/button.h>
+#include <terion/components/checkbox.h>
+#include <terion/components/switch.h>
+#include <terion/components/radio.h>
+#include <terion/components/radio_group.h>
 #include <terion/components/text_field.h>
 #include <terion/components/select.h>
 #include <terion/components/dialog.h>

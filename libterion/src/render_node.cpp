@@ -169,6 +169,17 @@ Size RenderNode::measure(const Constraints& constraints) const
             (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
             .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
     }
+    else if (type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
+        type_ == Component::Type::Radio)
+    {
+        content = {.width = addBounded(textWidth(text_),type_ == Component::Type::Switch ? 7 : 5),.height = 1};
+    }
+    else if (type_ == Component::Type::RadioGroup)
+    {
+        int width = 0;
+        for (const auto& option : radio_options_) width = std::max(width,textWidth(option.label));
+        content = {.width = addBounded(width,5),.height = static_cast<int>(radio_options_.size())};
+    }
     else if (type_ == Component::Type::TextField || type_ == Component::Type::Select)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
@@ -272,6 +283,8 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
     if (type_ == Component::Type::Text || type_ == Component::Type::Dialog || type_ == Component::Type::Button ||
+        type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
+        type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
         type_ == Component::Type::TextField || type_ == Component::Type::Select || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress) return;
 
@@ -455,6 +468,61 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         else y += child->bounds_.height;
         ++placed_children;
     }
+}
+
+bool RenderNode::handleChoiceKey(const Event& event)
+{
+    if (!interactiveControl()) return false;
+    const bool activate = event.key == Key::Enter ||
+        (event.key == Key::Character && event.character == U' ');
+    if (type_ != Component::Type::RadioGroup)
+    {
+        if (!activate) return false;
+        if (on_toggle_ && (type_ != Component::Type::Radio || !checked_)) on_toggle_(!checked_);
+        return true;
+    }
+    if (radio_options_.empty()) return false;
+    const int count = static_cast<int>(radio_options_.size());
+    int selected = -1;
+    for (int i = 0; i < count; ++i)
+        if (radio_options_[i].value == text_) { selected = i; break; }
+    int next = selected;
+    if (event.key == Key::Up || event.key == Key::Left || event.key == Key::Down || event.key == Key::Right)
+    {
+        const int direction = event.key == Key::Up || event.key == Key::Left ? -1 : 1;
+        for (int step = 1; step <= count; ++step)
+        {
+            const int candidate = ((selected < 0 ? (direction > 0 ? -1 : 0) : selected) +
+                direction*step + count*(step+1)) % count;
+            if (!radio_options_[candidate].disabled) { next = candidate; break; }
+        }
+    }
+    else if (activate)
+    {
+        if (selected < 0)
+            for (int i = 0; i < count; ++i)
+                if (!radio_options_[i].disabled) { next = i; break; }
+    }
+    else return false;
+    if (next >= 0 && !radio_options_[next].disabled && next != selected && on_change_)
+        on_change_(radio_options_[next].value);
+    return true;
+}
+
+bool RenderNode::handleChoiceClick(const Point position)
+{
+    if (!interactiveControl()) return false;
+    if (type_ == Component::Type::RadioGroup)
+    {
+        const int index = position.y-bounds_.y;
+        if (index < 0 || index >= static_cast<int>(radio_options_.size()) ||
+            radio_options_[index].disabled) return true;
+        if (radio_options_[index].value != text_ && on_change_)
+            on_change_(radio_options_[index].value);
+    }
+    else if (on_toggle_ && (type_ != Component::Type::Radio || !checked_))
+        on_toggle_(!checked_);
+    return true;
 }
 
 const RenderNode* RenderNode::hitTest(const Point position) const noexcept
@@ -823,6 +891,8 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
         {
             if (dialog_pressed_child_ == child->id() && child->type() == Component::Type::Button &&
                 !child->disabled() && child->onClick()) child->onClick()();
+            if (dialog_pressed_child_ == child->id() && child->interactiveControl())
+                child->handleChoiceClick(mouse.position);
             dialog_pressed_child_ = 0;
             return true;
         }
@@ -950,7 +1020,8 @@ bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
 }
 
 void RenderNode::paint(Painter& painter, const std::string_view focused_id,
-    const std::string_view hovered_id, const std::optional<Color> background, const Theme* theme) const
+    const std::string_view hovered_id, const std::optional<Color> background, const Theme* theme,
+    const bool unicode) const
 {
     if (type_ == Component::Type::Dialog) return;
     std::optional<Painter::ClipScope> clipping;
@@ -1037,6 +1108,48 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const int x = bounds_.x + inset + std::max(0,(label_width - textWidth(label)) / 2);
         const int y = bounds_.y + bounds_.height / 2;
         painter.text(x,y,label,button_style);
+        return;
+    }
+    if (checkable())
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const bool focused = focused_id == std::to_string(id_) && !disabled_;
+        const bool hovered = hovered_id == std::to_string(id_) && !disabled_;
+        const Color base = effective_background.value_or(palette.background);
+        const Color bg = hovered ? blendColor(base,palette.primary,12) : base;
+        painter.fillBackground(bounds_,bg);
+        const auto draw = [&](const int y, const bool checked, const bool disabled,
+            const bool radio, const std::string_view label) {
+            const Color fg = disabled ? palette.muted : checked || focused ? palette.primary : palette.foreground;
+            const TextStyle indicator {.foreground = fg,.background = bg,.bold = focused};
+            const TextStyle label_style {.foreground = disabled ? palette.muted : palette.foreground,.background = bg};
+            std::string marker;
+            if (!unicode)
+                marker = type_ == Component::Type::Switch ? (checked ? "[ON]" : "[OFF]") :
+                    radio ? (checked ? "(*)" : "( )") : (checked ? "[x]" : "[ ]");
+            else if (type_ == Component::Type::Switch)
+            {
+                if (checkbox_variant_ == CheckboxVariant::Emoji) marker = checked ? "🟢" : "⚪";
+                else if (checkbox_variant_ == CheckboxVariant::Unicode) marker = checked ? "◉━━" : "━━◯";
+                else marker = checked ? "━━●" : "○━━";
+            }
+            else if (radio) marker = checked ? "◉" : "◯";
+            else if (checkbox_variant_ == CheckboxVariant::Emoji) marker = checked ? "✅" : "⬜";
+            else if (checkbox_variant_ == CheckboxVariant::Unicode) marker = checked ? "▣" : "▢";
+            else marker = checked ? "■" : "□";
+            painter.text(bounds_.x,y,marker,indicator);
+            const int inset = type_ == Component::Type::Switch ? 6 :
+                checkbox_variant_ == CheckboxVariant::Emoji && unicode ? 4 : 3;
+            painter.text(bounds_.x+inset,y,clipText(label,std::max(0,bounds_.width-inset)),label_style);
+        };
+        if (type_ == Component::Type::RadioGroup)
+        {
+            for (int i = 0; i < static_cast<int>(radio_options_.size()) && i < bounds_.height; ++i)
+                draw(bounds_.y+i,text_ == radio_options_[i].value,disabled_ || radio_options_[i].disabled,
+                    true,radio_options_[i].label);
+        }
+        else draw(bounds_.y,checked_,disabled_,type_ == Component::Type::Radio,text_);
         return;
     }
     if (type_ == Component::Type::Select)
@@ -1128,7 +1241,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         }
         return;
     }
-    for (const auto& child : children_) child->paint(painter,focused_id,hovered_id,effective_background,theme);
+    for (const auto& child : children_) child->paint(painter,focused_id,hovered_id,effective_background,theme,unicode);
     if (const Rect track = scrollbarTrack(); track.height > 0)
     {
         const Palette palette = theme ? theme->palette : Theme::dark().palette;

@@ -46,6 +46,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->background_ = props.background;
     node->button_variant_ = props.button_variant;
     node->button_size_ = props.button_size;
+    node->checkbox_variant_ = props.checkbox_variant;
     node->text_field_variant_ = props.text_field_variant;
     node->scroll_offset_ = std::max(0,props.scroll_offset);
     node->on_scroll_ = props.on_scroll;
@@ -54,12 +55,15 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->columns_ = std::max(1,props.columns);
     node->surface_tone_ = props.surface_tone;
     node->on_click_ = props.on_click;
+    node->on_toggle_ = props.on_toggle;
     node->on_event_capture_ = props.on_event_capture;
     node->on_event_ = props.on_event;
     node->on_change_ = props.on_change;
     node->placeholder_ = props.placeholder;
     node->disabled_ = props.disabled;
     node->select_options_ = props.select_options;
+    node->radio_options_ = props.radio_options;
+    node->checked_ = props.checked;
     node->dialog_open_ = props.dialog_open;
     node->focus_scope_active_ = props.focus_scope_active;
     node->dialog_title_ = props.dialog_title;

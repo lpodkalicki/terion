@@ -46,6 +46,17 @@ public:
     [[nodiscard]] bool scrollable() const noexcept { return static_cast<bool>(on_scroll_); }
     [[nodiscard]] bool disabled() const noexcept { return disabled_; }
     [[nodiscard]] const std::function<void()>& onClick() const noexcept { return on_click_; }
+    [[nodiscard]] bool checkable() const noexcept
+    {
+        return type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
+            type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup;
+    }
+    [[nodiscard]] bool interactiveControl() const noexcept
+    {
+        return checkable() && !disabled_;
+    }
+    bool handleChoiceKey(const Event& event);
+    bool handleChoiceClick(Point position);
     [[nodiscard]] bool editable() const noexcept { return static_cast<bool>(on_change_) && !disabled_; }
     bool handleTextInput(const Event& event);
     void setCursorFromX(int x);
@@ -76,7 +87,8 @@ public:
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
     void paint(Painter& painter, std::string_view focused_id = {}, std::string_view hovered_id = {},
-        std::optional<Color> background = std::nullopt, const Theme* theme = nullptr) const;
+        std::optional<Color> background = std::nullopt, const Theme* theme = nullptr,
+        bool unicode = true) const;
     [[nodiscard]] int height() const noexcept;
 
 private:
@@ -96,11 +108,13 @@ private:
     std::optional<Color> background_;
     ButtonVariant button_variant_ = ButtonVariant::Outlined;
     ButtonSize button_size_ = ButtonSize::Medium;
+    CheckboxVariant checkbox_variant_ = CheckboxVariant::Default;
     TextFieldVariant text_field_variant_ = TextFieldVariant::Outlined;
     double value_ = 0.0;
     int columns_ = 1;
     SurfaceTone surface_tone_ = SurfaceTone::None;
     std::function<void()> on_click_;
+    std::function<void(bool)> on_toggle_;
     std::function<void(ComponentEvent&)> on_event_capture_;
     std::function<void(ComponentEvent&)> on_event_;
     std::function<void(std::string)> on_change_;
@@ -114,6 +128,8 @@ private:
     std::function<void(int)> on_scroll_;
     bool disabled_ = false;
     std::vector<SelectOption> select_options_;
+    std::vector<RadioOption> radio_options_;
+    bool checked_ = false;
     bool select_open_ = false;
     int select_highlight_ = 0;
     int select_scroll_ = 0;

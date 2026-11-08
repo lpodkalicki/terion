@@ -42,7 +42,8 @@ void Application::renderOnce()
     {
         if (const auto* root = reconciler_.root())
         {
-            root->paint(painter,focus_.current(),hovered_component_id_,std::nullopt,&theme_);
+            root->paint(painter,focus_.current(),hovered_component_id_,std::nullopt,&theme_,
+                backend_->capabilities().unicode);
             overlays_.paint(painter,buffer.size(),theme_,focus_.current());
         }
     }
@@ -116,6 +117,12 @@ void Application::syncFocusTargets()
         {
             const auto id = std::to_string(node.id());
             focus_.add(id,[this,&node](const Event& event) { return node.handleSelectKey(event,backend_->size()); },scope);
+            component_focus_ids_.push_back(id);
+        }
+        else if (node.interactiveControl())
+        {
+            const auto id = std::to_string(node.id());
+            focus_.add(id,[&node](const Event& event) { return node.handleChoiceKey(event); },scope);
             component_focus_ids_.push_back(id);
         }
         for (const auto& child : node.children()) self(self,*child,scope);
@@ -204,7 +211,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
     if (component_ && reconciler_.root()) hit = reconciler_.root()->hitTest(mouse.position);
     if (hit && !((hit->type() == Component::Type::Select && !hit->disabled()) ||
         (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
-        (hit->type() == Component::Type::TextField && hit->editable()))) hit = nullptr;
+        (hit->type() == Component::Type::TextField && hit->editable()) ||
+        hit->interactiveControl())) hit = nullptr;
     const std::string target = hit ? std::to_string(hit->id()) : std::string{};
 
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
@@ -235,10 +243,15 @@ bool Application::handleMouse(const MouseEvent& mouse)
     if (mouse.action == MouseAction::Release &&
         (mouse.button == MouseButton::Left || mouse.button == MouseButton::None))
     {
-        const bool activate = hit && hit->type() == Component::Type::Button &&
+        const bool activate = hit && (hit->type() == Component::Type::Button || hit->interactiveControl()) &&
             !pressed_button_id_.empty() && pressed_button_id_ == target;
         pressed_button_id_.clear();
-        if (activate) { hit->onClick()(); return true; }
+        if (activate)
+        {
+            if (hit->interactiveControl()) return hit->handleChoiceClick(mouse.position);
+            if (hit->onClick()) hit->onClick()();
+            return true;
+        }
     }
     if (mouse.action == MouseAction::Scroll) return false;
     return hit != nullptr;
@@ -265,7 +278,7 @@ void Application::updateHover(const MouseEvent& mouse)
             {
                 if ((hit->type() == Component::Type::Select && !hit->disabled()) ||
                     (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
-                    (hit->type() == Component::Type::TextField && hit->editable()))
+                    (hit->type() == Component::Type::TextField && hit->editable()) || hit->interactiveControl())
                     hovered = std::to_string(hit->id());
             }
         }
@@ -301,7 +314,7 @@ void Application::updateMousePointer(const MouseEvent& mouse)
                 if (hit->type() == Component::Type::TextField || hit->type() == Component::Type::Text)
                     shape = MousePointerShape::Text;
                 else if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
-                    (hit->type() == Component::Type::Select && !hit->disabled()))
+                    (hit->type() == Component::Type::Select && !hit->disabled()) || hit->interactiveControl())
                     shape = MousePointerShape::Pointer;
             }
         }
