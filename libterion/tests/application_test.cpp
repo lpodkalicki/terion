@@ -213,3 +213,52 @@ TEST(Application, DispatchesCustomEventsAndStopsHeadlessLoop)
     observed->push(Event{.key = Key::Escape});
     EXPECT_EQ(app.run(),0);
 }
+
+TEST(Application, FocusesKeyedComponentsAndRecoversWhenControlIsDisabled)
+{
+    Application app(std::make_unique<HeadlessTerminalBackend>(Size{40,10}));
+    State<bool> available{true};
+    app.render([&] {
+        return Column({.children = {
+            Button({.text = "First",.key = "first",.onClick = [] {}}),
+            Button({.text = "Second",.key = "second",.disabled = !available.get(),.onClick = [] {}}),
+            Button({.text = "Third",.key = "third",.onClick = [] {}})
+        }});
+    });
+    app.renderOnce();
+    EXPECT_TRUE(app.focus("second"));
+    EXPECT_TRUE(app.hasFocus("second"));
+    EXPECT_FALSE(app.hasFocus("first"));
+    EXPECT_FALSE(app.focus("missing"));
+    EXPECT_TRUE(app.hasFocus("second"));
+
+    available.set(false);
+    app.renderOnce();
+    EXPECT_FALSE(app.hasFocus("second"));
+    EXPECT_FALSE(app.focus("second"));
+    EXPECT_FALSE(app.focused().empty());
+
+    app.blur();
+    EXPECT_TRUE(app.focused().empty());
+    EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::BackTab}));
+    EXPECT_TRUE(app.hasFocus("third"));
+    EXPECT_TRUE(app.focus("first"));
+    EXPECT_TRUE(app.hasFocus("first"));
+}
+
+TEST(Application, RegistersAndRemovesShortcutsWithoutHardcodedBindings)
+{
+    Application app(std::make_unique<HeadlessTerminalBackend>(Size{40,10}));
+    int count = 0;
+    const auto id = app.addShortcut(Shortcut{.key = Key::Character,.character = U'f',.ctrl = true},
+        [&] { ++count; });
+
+    EXPECT_FALSE(app.dispatchEvent(Event{.key = Key::Character,.character = U'f'}));
+    EXPECT_EQ(count,0);
+    EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Character,.character = U'f',.ctrl = true}));
+    EXPECT_EQ(count,1);
+    EXPECT_TRUE(app.removeShortcut(id));
+    EXPECT_FALSE(app.removeShortcut(id));
+    EXPECT_FALSE(app.dispatchEvent(Event{.key = Key::Character,.character = U'f',.ctrl = true}));
+    EXPECT_EQ(count,1);
+}

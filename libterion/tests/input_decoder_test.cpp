@@ -77,3 +77,30 @@ TEST(InputDecoder, DecodesShiftTabWithoutConsumingFollowingInput)
     EXPECT_EQ(decoder.nextEvent()->key,Key::BackTab);
     EXPECT_FALSE(decoder.nextEvent());
 }
+
+TEST(InputDecoder, DecodesControlAltAndModifiedArrowKeys)
+{
+    InputDecoder decoder;
+    decoder.feed("\x06\033f\033[1;5C\033[1;2D");
+    const auto ctrl_f = decoder.nextEvent();
+    ASSERT_TRUE(ctrl_f.has_value());
+    EXPECT_EQ(ctrl_f->key,Key::Character);
+    EXPECT_EQ(ctrl_f->character,U'f');
+    EXPECT_TRUE(ctrl_f->ctrl);
+
+    const auto alt_f = decoder.nextEvent();
+    ASSERT_TRUE(alt_f.has_value());
+    EXPECT_EQ(alt_f->character,U'f');
+    EXPECT_TRUE(alt_f->alt);
+
+    const auto ctrl_right = decoder.nextEvent();
+    ASSERT_TRUE(ctrl_right.has_value());
+    EXPECT_EQ(ctrl_right->key,Key::Right);
+    EXPECT_TRUE(ctrl_right->ctrl);
+
+    const auto shift_left = decoder.nextEvent();
+    ASSERT_TRUE(shift_left.has_value());
+    EXPECT_EQ(shift_left->key,Key::Left);
+    EXPECT_TRUE(shift_left->shift);
+    EXPECT_FALSE(decoder.nextEvent().has_value());
+}

@@ -107,9 +107,37 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
                     }
                     default: break;
                 }
+                bool shift = false;
+                bool alt = false;
+                bool ctrl = false;
+                if (bytes_[1] == '[')
+                {
+                    int modifier = 0;
+                    bool after_separator = false;
+                    for (std::size_t i = 2; i < end; ++i)
+                    {
+                        if (bytes_[i] == ';') { after_separator = true; modifier = 0; }
+                        else if (after_separator && bytes_[i] >= '0' && bytes_[i] <= '9')
+                            modifier = modifier < 10 ? modifier * 10 + bytes_[i] - '0' : 99;
+                    }
+                    if (after_separator && modifier >= 2 && modifier <= 8)
+                    {
+                        shift = ((modifier-1) & 1) != 0;
+                        alt = ((modifier-1) & 2) != 0;
+                        ctrl = ((modifier-1) & 4) != 0;
+                    }
+                }
                 for (std::size_t i = 0; i <= end; ++i) bytes_.pop_front();
-                return Event{.key = key};
+                return Event{.key = key,.shift = shift,.alt = alt,.ctrl = ctrl};
             }
+        }
+
+        if (bytes_.size() >= 2 && bytes_[1] >= 32 && bytes_[1] < 127)
+        {
+            const char32_t character = bytes_[1];
+            bytes_.pop_front();
+            bytes_.pop_front();
+            return Event{.key = Key::Character,.character = character,.alt = true};
         }
 
         bytes_.pop_front();
@@ -125,6 +153,9 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
     if (first < 32)
     {
         bytes_.pop_front();
+        if (first >= 1 && first <= 26)
+            return Event{.key = Key::Character,.character = U'a'+first-1,.ctrl = true};
+        if (first == 0) return Event{.key = Key::Character,.character = U' ',.ctrl = true};
         return Event{.key = Key::Unknown};
     }
 

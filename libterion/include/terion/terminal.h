@@ -90,7 +90,25 @@ struct Event
     char32_t character = 0;
     Size size{};
     MouseEvent mouse{};
+    bool shift = false;
+    bool alt = false;
+    bool ctrl = false;
 }; /* End of struct Event */
+
+struct Shortcut
+{
+    Key key = Key::Unknown;
+    char32_t character = 0;
+    bool shift = false;
+    bool alt = false;
+    bool ctrl = false;
+
+    [[nodiscard]] bool matches(const Event& event) const noexcept
+    {
+        return event.key == key && (key != Key::Character || event.character == character) &&
+            event.shift == shift && event.alt == alt && event.ctrl == ctrl;
+    }
+}; /* End of struct Shortcut */
 
 // Stateful incremental decoder. Incomplete UTF-8 and escape sequences are buffered.
 // Call nextEvent(true) after an input timeout to resolve incomplete sequences.

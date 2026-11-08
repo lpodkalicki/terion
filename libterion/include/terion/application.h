@@ -50,10 +50,16 @@ public:
     void invalidate() noexcept { dirty_->store(true); }
     [[nodiscard]] bool needsRender() const noexcept { return dirty_->load(); }
     void onEvent(EventCallback callback) { on_event_ = std::move(callback); }
+    std::uint64_t addShortcut(Shortcut shortcut, std::function<void()> callback);
+    bool removeShortcut(std::uint64_t id);
     bool dispatchEvent(const Event& event);
     int run();
 
     [[nodiscard]] FocusManager& focus() noexcept { return focus_; }
+    bool focus(std::string_view component_key);
+    void blur() noexcept { focus_.blur(); invalidate(); }
+    [[nodiscard]] std::string_view focused() const noexcept { return focus_.current(); }
+    [[nodiscard]] bool hasFocus(std::string_view component_key) const;
     void setTheme(Theme theme) { theme_ = std::move(theme); invalidate(); }
     [[nodiscard]] const Theme& theme() const noexcept { return theme_; }
     [[nodiscard]] const Reconciler& reconciler() const noexcept { return reconciler_; }
@@ -83,6 +89,14 @@ private:
     std::shared_ptr<std::atomic_bool> dirty_ = std::make_shared<std::atomic_bool>(true);
     DependencyTracker tracker_;
     EventCallback on_event_;
+    struct ShortcutEntry
+    {
+        std::uint64_t id;
+        Shortcut shortcut;
+        std::function<void()> callback;
+    };
+    std::vector<ShortcutEntry> shortcuts_;
+    std::uint64_t next_shortcut_id_ = 1;
     FocusManager focus_;
     Theme theme_;
     std::vector<std::string> component_focus_ids_;

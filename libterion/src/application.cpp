@@ -20,6 +20,49 @@ Application::Application(std::unique_ptr<TerminalBackend> backend) :
     if (!backend_) throw std::invalid_argument("backend is null");
 }
 
+bool Application::focus(const std::string_view component_key)
+{
+    if (!reconciler_.root() || component_key.empty()) return false;
+    const auto find = [&](const auto& self, const RenderNode& node) -> const RenderNode* {
+        if (node.key() == component_key) return &node;
+        for (const auto& child : node.children())
+            if (const auto* found = self(self,*child)) return found;
+        return nullptr;
+    };
+    const auto* node = find(find,*reconciler_.root());
+    if (!node || !focus_.focus(std::to_string(node->id()))) return false;
+    invalidate();
+    return true;
+}
+
+bool Application::hasFocus(const std::string_view component_key) const
+{
+    if (!reconciler_.root() || focus_.current().empty()) return false;
+    const auto find = [&](const auto& self, const RenderNode& node) -> bool {
+        if (node.key() == component_key && focus_.current() == std::to_string(node.id())) return true;
+        for (const auto& child : node.children()) if (self(self,*child)) return true;
+        return false;
+    };
+    return find(find,*reconciler_.root());
+}
+
+std::uint64_t Application::addShortcut(const Shortcut shortcut, std::function<void()> callback)
+{
+    if (!callback || shortcut.key == Key::Unknown || shortcut.key == Key::Mouse ||
+        shortcut.key == Key::Resize)
+        throw std::invalid_argument("shortcut requires a keyboard key and callback");
+    const auto id = next_shortcut_id_++;
+    shortcuts_.push_back({.id = id,.shortcut = shortcut,.callback = std::move(callback)});
+    return id;
+}
+
+bool Application::removeShortcut(const std::uint64_t id)
+{
+    const auto old_size = shortcuts_.size();
+    std::erase_if(shortcuts_,[id](const ShortcutEntry& item) { return item.id == id; });
+    return old_size != shortcuts_.size();
+}
+
 void Application::renderOnce()
 {
     dirty_->store(false);
@@ -444,6 +487,16 @@ bool Application::dispatchEvent(const Event& event)
     }
     if (event.key != Key::Resize && event.key != Key::Mouse && overlays_.handleKey(event)) return true;
     if (event.key == Key::Mouse && handleMouse(event.mouse)) return true;
+    if (event.key != Key::Resize && event.key != Key::Mouse)
+    {
+        for (const auto& shortcut : shortcuts_)
+        {
+            if (!shortcut.shortcut.matches(event)) continue;
+            const auto callback = shortcut.callback;
+            callback();
+            return true;
+        }
+    }
     if (focus_.dispatch(event))
     {
         if (reconciler_.root())
