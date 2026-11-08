@@ -85,6 +85,9 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
                     case 'D': key = Key::Left; break;
                     case 'H': key = Key::Home; break;
                     case 'F': key = Key::End; break;
+                    case 'Z':
+                        if (bytes_[1] == '[' && end == 2) key = Key::BackTab;
+                        break;
                     case '~':
                     {
                         int number = 0;

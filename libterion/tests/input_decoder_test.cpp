@@ -62,3 +62,18 @@ TEST(InputDecoder, DecodesMousePressReleaseAndWheel)
     EXPECT_EQ(decoder.nextEvent()->mouse.action,MouseAction::Move);
 
 }
+
+TEST(InputDecoder, DecodesShiftTabWithoutConsumingFollowingInput)
+{
+    InputDecoder decoder;
+    decoder.feed("\033[");
+    EXPECT_FALSE(decoder.nextEvent());
+    decoder.feed("Z\t");
+    const auto back_tab = decoder.nextEvent();
+    ASSERT_TRUE(back_tab.has_value());
+    EXPECT_EQ(back_tab->key,Key::BackTab);
+    decoder.feed("\033[Z");
+    EXPECT_EQ(decoder.nextEvent()->key,Key::Tab);
+    EXPECT_EQ(decoder.nextEvent()->key,Key::BackTab);
+    EXPECT_FALSE(decoder.nextEvent());
+}

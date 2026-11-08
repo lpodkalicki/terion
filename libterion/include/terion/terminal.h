@@ -24,6 +24,7 @@ enum class Key
     Enter,
     Backspace,
     Tab,
+    BackTab,
     Up,
     Down,
     Left,

@@ -43,3 +43,24 @@ TEST(Focus, BlurStopsKeyboardDispatchUntilNextFocus)
     EXPECT_TRUE(focus.previous());
     EXPECT_EQ(focus.current(),"second");
 }
+
+TEST(Focus, ShiftTabMovesBackwardAndWrapsWithinActiveScope)
+{
+    FocusManager focus;
+    focus.add("background",[](const Event&) { return true; });
+    focus.add("first",[](const Event&) { return true; },"dialog");
+    focus.add("second",[](const Event&) { return true; },"dialog");
+
+    EXPECT_EQ(focus.current(),"background");
+    EXPECT_TRUE(focus.dispatch(Event{.key = Key::BackTab}));
+    EXPECT_EQ(focus.current(),"background");
+
+    focus.setActiveScope("dialog");
+    EXPECT_EQ(focus.current(),"first");
+    EXPECT_TRUE(focus.dispatch(Event{.key = Key::BackTab}));
+    EXPECT_EQ(focus.current(),"second");
+    EXPECT_TRUE(focus.dispatch(Event{.key = Key::BackTab}));
+    EXPECT_EQ(focus.current(),"first");
+    EXPECT_TRUE(focus.dispatch(Event{.key = Key::Tab}));
+    EXPECT_EQ(focus.current(),"second");
+}

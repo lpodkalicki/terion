@@ -72,6 +72,7 @@ bool FocusManager::previous()
 bool FocusManager::dispatch(const Event& event)
 {
     if (event.key == Key::Tab) return next();
+    if (event.key == Key::BackTab) return previous();
     if (focused_ >= entries_.size() || entries_[focused_].scope != active_scope_) return false;
     return entries_[focused_].handler(event);
 }
