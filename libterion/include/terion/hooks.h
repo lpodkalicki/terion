@@ -86,6 +86,12 @@ struct MemoSlot
     Dependencies dependencies;
 };
 
+template<typename T>
+struct ReducerSlot
+{
+    State<T> state;
+};
+
 struct HookContext
 {
     std::vector<std::any>& slots;
@@ -149,6 +155,44 @@ template<typename T>
     auto* state = std::any_cast<State<T>>(&context->slots.at(index));
     if (!state) throw std::logic_error("useState() hook type/order changed between renders");
     return std::pair<T,StateSetter<T>>{state->get(),StateSetter<T>(*state)};
+}
+
+template<typename T,typename Reducer>
+class ReducerDispatch
+{
+public:
+    ReducerDispatch(State<T> state,Reducer reducer) :
+        state_(std::move(state)), reducer_(std::move(reducer))
+    {}
+
+    template<typename Action>
+        requires std::invocable<Reducer&,const T&,Action> &&
+            std::convertible_to<std::invoke_result_t<Reducer&,const T&,Action>,T>
+    void operator()(Action&& action) const
+    {
+        state_.update([reducer = reducer_,action = std::forward<Action>(action)](const T& previous)
+            mutable -> T { return std::invoke(reducer,previous,std::move(action)); });
+    }
+
+private:
+    mutable State<T> state_;
+    Reducer reducer_;
+};
+
+// Like useState, the slot survives renders and is discarded on unmount.
+// Dispatch computes the next value from the latest stored state, not a captured snapshot.
+template<typename Reducer,typename T>
+[[nodiscard]] auto useReducer(Reducer reducer,T initial)
+{
+    auto* context = detail::current_hook_context;
+    if (!context) throw std::logic_error("useReducer() requires a mounted function component");
+    const auto index = context->position++;
+    if (index == context->slots.size())
+        context->slots.emplace_back(detail::ReducerSlot<T>{State<T>(std::move(initial))});
+    auto* slot = std::any_cast<detail::ReducerSlot<T>>(&context->slots.at(index));
+    if (!slot) throw std::logic_error("useReducer() hook type/order changed between renders");
+    return std::pair<T,ReducerDispatch<T,Reducer>>{
+        slot->state.get(),ReducerDispatch<T,Reducer>(slot->state,std::move(reducer))};
 }
 
 template<typename T>

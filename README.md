@@ -33,6 +33,9 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   an updater function. Slots are retained across keyed reorders and discarded on unmount.
   Hooks must be called unconditionally in the same order. See `examples/hooks.cpp`.
 - `useRef(initial)` returns a stable shared pointer (mutating it does not request a redraw).
+- `useReducer(reducer, initial)` returns `[state, dispatch]` for state transitions based on
+  actions. `dispatch(action)` computes from the latest state; reducer slots follow the same
+  keyed lifecycle as `useState`. See `examples/reducer.cpp`.
   `useMemo(factory, deps...)` and `useCallback(callback, deps...)` cache their results
   while dependencies compare equal. `useEffect(effect, deps...)` runs after the frame;
   a returned cleanup callback runs before a changed effect and on unmount. With no
