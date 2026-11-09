@@ -32,6 +32,8 @@ public:
     bool handleKey(const Event& event);
     [[nodiscard]] bool modalOpen() const noexcept;
     [[nodiscard]] RenderNode* activeDialog() const noexcept;
+    [[nodiscard]] RenderNode* activePopup() const noexcept;
+    [[nodiscard]] bool acceptsInput(const RenderNode& node) const noexcept;
     void dismissOutside(const MouseEvent& mouse, Size screen);
     void dismissExcept(const RenderNode* active);
     void setHover(std::optional<Point> position) noexcept { hover_position_ = position; }

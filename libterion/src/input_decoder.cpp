@@ -5,6 +5,7 @@
 #include <terion/terminal.h>
 #include <terion/utf8.h>
 #include <limits>
+#include <algorithm>
 
 using namespace terion;
 
@@ -15,6 +16,45 @@ void InputDecoder::feed(const std::string_view bytes)
 
 std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
 {
+    if (pasting_)
+    {
+        constexpr std::string_view end_marker = "\033[201~";
+        while (!bytes_.empty())
+        {
+            const auto marker = std::search(bytes_.begin(),bytes_.end(),end_marker.begin(),end_marker.end());
+            if (marker != bytes_.end())
+            {
+                const auto count = static_cast<std::size_t>(std::distance(bytes_.begin(),marker));
+                for (std::size_t i = 0; i < count; ++i)
+                {
+                    if (paste_buffer_.size() < 1024 * 1024)
+                        paste_buffer_ += static_cast<char>(bytes_.front());
+                    bytes_.pop_front();
+                }
+                for (std::size_t i = 0; i < end_marker.size(); ++i) bytes_.pop_front();
+                pasting_ = false;
+                // A TextField is single-line: paste content is normalized once, atomically.
+                for (char& c : paste_buffer_)
+                    if (c == '\r' || c == '\n' || c == '\t') c = ' ';
+                Event event{.key = Key::Paste,.text = std::move(paste_buffer_)};
+                paste_buffer_.clear();
+                return event;
+            }
+            // Keep a possible split terminator until the next feed().
+            std::size_t keep = 0;
+            for (std::size_t len = 1; len < end_marker.size() && len <= bytes_.size(); ++len)
+                if (std::equal(bytes_.end()-static_cast<std::ptrdiff_t>(len),bytes_.end(),
+                    end_marker.begin())) keep = len;
+            while (bytes_.size() > keep)
+            {
+                if (paste_buffer_.size() < 1024 * 1024)
+                    paste_buffer_ += static_cast<char>(bytes_.front());
+                bytes_.pop_front();
+            }
+            return std::nullopt;
+        }
+        return std::nullopt;
+    }
     if (bytes_.empty()) return std::nullopt;
 
     const auto first = bytes_.front();
@@ -95,6 +135,11 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
                             number = number * 10 + bytes_[i] - '0';
                         switch (number)
                         {
+                            case 200:
+                                for (std::size_t i = 0; i <= end; ++i) bytes_.pop_front();
+                                paste_buffer_.clear();
+                                pasting_ = true;
+                                return nextEvent(flush_escape);
                             case 1: case 7: key = Key::Home; break;
                             case 2: key = Key::Insert; break;
                             case 3: key = Key::Delete; break;

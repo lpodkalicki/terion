@@ -42,7 +42,7 @@ AnsiTerminalBackend::AnsiTerminalBackend()
     if (::tcsetattr(STDIN_FILENO,TCSAFLUSH,&raw) != 0) throw std::runtime_error("tcsetattr failed");
     active_ = true;
     last_size_ = size();
-    try { write("\033[?1049h\033[?25l\033[?1003h\033[?1006h"); }
+    try { write("\033[?1049h\033[?25l\033[?1003h\033[?1006h\033[?2004h"); }
     catch (...) { ::tcsetattr(STDIN_FILENO,TCSAFLUSH,&previous_); active_ = false; throw; }
 }
 
@@ -53,7 +53,7 @@ AnsiTerminalBackend::~AnsiTerminalBackend()
         try
         {
             if (capabilities_.mousePointerShape) write("\033]22;\033\\");
-            write("\033[?1006l\033[?1003l\033[0m\033[?25h\033[?1049l");
+            write("\033[?2004l\033[?1006l\033[?1003l\033[0m\033[?25h\033[?1049l");
         }
         catch (...)
         {}

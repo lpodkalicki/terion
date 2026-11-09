@@ -27,6 +27,21 @@ TEST(Focus, CyclesThroughRegisteredHandlers)
 
 }
 
+TEST(Focus, ReorderingManagedTargetsPreservesFocusAndTabOrder)
+{
+    FocusManager focus;
+    focus.add("a",[](const Event&) { return true; });
+    focus.add("b",[](const Event&) { return true; });
+    focus.add("c",[](const Event&) { return true; });
+    ASSERT_TRUE(focus.focus("b"));
+    focus.reorder({"c","b","a"});
+    EXPECT_EQ(focus.current(),"b");
+    EXPECT_TRUE(focus.next());
+    EXPECT_EQ(focus.current(),"a");
+    EXPECT_TRUE(focus.next());
+    EXPECT_EQ(focus.current(),"c");
+}
+
 TEST(Focus, BlurStopsKeyboardDispatchUntilNextFocus)
 {
     FocusManager focus;

@@ -20,6 +20,8 @@ public:
 
     void add(std::string id, EventHandler handler, std::string scope = {});
     bool remove(std::string_view id);
+    // Reorders managed targets without recreating handlers or changing focus identity.
+    void reorder(const std::vector<std::string>& ids);
     bool focus(std::string_view id);
     void blur() noexcept { focused_ = entries_.size(); }
     bool next();

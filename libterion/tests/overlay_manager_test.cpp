@@ -66,6 +66,28 @@ TEST(OverlayManager, ModalPreventsDismissalOfItsOwnPopup)
     EXPECT_FALSE(inside->selectOpen());
 }
 
+TEST(OverlayManager, EscapeDismissesNestedPopupBeforeParentDialog)
+{
+    int closes = 0;
+    const Size screen{.width = 60,.height = 20};
+    Reconciler tree;
+    tree.update(Dialog({.open = true,.title = "Modal",.onClose = [&] { ++closes; },.children = {
+        ContextMenu({.child = Box({.layout = {.width = 20,.height = 4}}),
+            .options = {{"Save","save"}}})
+    }}));
+    tree.root()->layoutDialogChildren(screen);
+    auto* popup = tree.root()->children().front().get();
+    ASSERT_TRUE(popup->openContextMenu({.x = 5,.y = 5},screen));
+    OverlayManager overlays;
+    overlays.collect(tree.root());
+    ASSERT_EQ(overlays.activePopup(),popup);
+    EXPECT_TRUE(overlays.handleKey({.key = Key::Escape}));
+    EXPECT_FALSE(popup->selectOpen());
+    EXPECT_EQ(closes,0);
+    EXPECT_TRUE(overlays.handleKey({.key = Key::Escape}));
+    EXPECT_EQ(closes,1);
+}
+
 TEST(OverlayManager, HighestPopupZIndexReceivesMouseFirst)
 {
     const Size screen{.width = 40,.height = 12};

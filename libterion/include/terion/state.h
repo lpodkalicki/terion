@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -74,6 +75,7 @@ public:
 
     [[nodiscard]] T get() const
     {
+        rejectReentrantAccess();
         DependencyTracker::track(data_->signal);
         std::lock_guard lock(data_->mutex);
         return data_->value;
@@ -81,6 +83,7 @@ public:
 
     void set(T value)
     {
+        rejectReentrantAccess();
         {
             std::lock_guard lock(data_->mutex);
             if constexpr (std::equality_comparable<T>)
@@ -93,6 +96,18 @@ public:
     template<typename F>
     void update(F&& function)
     {
+        rejectReentrantAccess();
+        // A user callback runs under the lock to preserve atomic read-modify-write.
+        // Fail explicitly on same-thread reentrancy instead of deadlocking.
+        struct Guard
+        {
+            explicit Guard(const void* current) : previous(updating_)
+            {
+                updating_ = current;
+            }
+            ~Guard() { updating_ = previous; }
+            const void* previous;
+        } guard(data_.get());
         {
             std::lock_guard lock(data_->mutex);
             T value = std::invoke(std::forward<F>(function),data_->value);
@@ -104,6 +119,13 @@ public:
     }
 
 private:
+    void rejectReentrantAccess() const
+    {
+        if (updating_ == data_.get())
+            throw std::logic_error("reentrant access to State during update");
+    }
+
+    inline static thread_local const void* updating_ = nullptr;
     struct Data
     {
         explicit Data(T value) : value(std::move(value)), signal(std::make_shared<Signal>()) {}

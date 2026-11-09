@@ -36,7 +36,8 @@ enum class Key
     PageUp,
     PageDown,
     Resize,
-    Mouse
+    Mouse,
+    Paste
 }; /* End of enum Key */
 
 enum class MouseButton
@@ -88,6 +89,7 @@ struct Event
 {
     Key key = Key::Unknown;
     char32_t character = 0;
+    std::string text{};
     Size size{};
     MouseEvent mouse{};
     bool shift = false;
@@ -120,6 +122,8 @@ public:
 
 private:
     std::deque<unsigned char> bytes_;
+    bool pasting_ = false;
+    std::string paste_buffer_;
 }; /* End of class InputDecoder */
 
 class TerminalBackend

@@ -36,10 +36,12 @@ void DifferentialRenderer::render(const ScreenBuffer& current, TerminalBackend& 
             }
         }
 
-        // A continuation cell cannot be drawn independently. Repaint its leading cell.
+        // A continuation cell cannot be drawn independently. Account for both frames:
+        // a wide glyph may have been removed as well as introduced.
         for (int x = 1; x < size.width; ++x)
         {
-            if (current.at(x,y).width == 0 && dirty[x]) dirty[x-1] = true;
+            if (dirty[x] && (current.at(x,y).width == 0 ||
+                (!full && previous_->at(x,y).width == 0))) dirty[x-1] = true;
         }
 
         for (int x = 0; x < size.width;)

@@ -40,6 +40,20 @@ TEST(InputDecoder, DecodesEscapeKeysAndUnicodeInput)
     EXPECT_TRUE(!decoder.nextEvent());
 }
 
+TEST(InputDecoder, BracketedPasteIsAtomicAndNormalizesNewlines)
+{
+    InputDecoder decoder;
+    decoder.feed("\033[200~first\nsecond\033[20");
+    EXPECT_FALSE(decoder.nextEvent());
+    decoder.feed("1~X");
+    const auto pasted = decoder.nextEvent();
+    ASSERT_TRUE(pasted.has_value());
+    EXPECT_EQ(pasted->key,Key::Paste);
+    EXPECT_EQ(pasted->text,"first second");
+    ASSERT_TRUE(decoder.nextEvent().has_value());
+    EXPECT_EQ(decoder.nextEvent(),std::nullopt);
+}
+
 TEST(InputDecoder, DecodesMousePressReleaseAndWheel)
 {
     InputDecoder decoder;

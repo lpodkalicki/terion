@@ -71,7 +71,7 @@ public:
         const int height = std::max(1,static_cast<int>(static_cast<long long>(track.height)*
             viewport_/extent));
         const int travel = std::max(0,track.height-height);
-        const int top = static_cast<int>((static_cast<long long>(offset_)*travel+maximum_/2)/maximum_);
+        const int top = static_cast<int>(static_cast<long long>(offset_)*travel/maximum_);
         return {.x = track.x,.y = track.y+top,.width = track.width,.height = height};
     }
 

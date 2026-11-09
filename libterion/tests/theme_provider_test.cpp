@@ -50,6 +50,22 @@ TEST(ThemeProvider, MakesThemeAvailableToFunctionComponents)
     EXPECT_EQ(reconciler.root()->text(),"255");
 }
 
+TEST(ThemeProvider, ApplicationThemeIsInheritedWithoutExplicitProvider)
+{
+    auto backend = std::make_unique<HeadlessTerminalBackend>(Size{.width = 30,.height = 4});
+    Application app(std::move(backend));
+    const auto label = component([] {
+        const Theme theme = useTheme();
+        return Typography({.text = std::to_string(theme.palette.primary.red)});
+    });
+    app.setTheme(Theme::sunset());
+    app.render([&] { return label(); });
+    app.renderOnce();
+    ASSERT_NE(app.reconciler().root(),nullptr);
+    EXPECT_EQ(app.reconciler().root()->text(),
+        std::to_string(Theme::sunset().palette.primary.red));
+}
+
 TEST(ThemeProvider, HasNineDistinctPresets)
 {
     const std::array presets{Theme::dark(),Theme::light(),Theme::ocean(),Theme::forest(),

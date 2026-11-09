@@ -7,6 +7,28 @@
 
 using namespace terion;
 
+TEST(Dialog, RestoresPreviousFocusAfterModalScopeCloses)
+{
+    State<bool> opened(false);
+    Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 60,.height = 20}));
+    app.render([&] {
+        return Column({.children = {
+            Button({.text = "First",.key = "first",.onClick = [] {}}),
+            Button({.text = "Open",.key = "open",.onClick = [&] { opened.set(true); }}),
+            Dialog({.open = opened.get(),.title = "Dialog",.onClose = [&] { opened.set(false); },
+                .children = {Button({.text = "Inside",.key = "inside",.onClick = [] {}})}})
+        }});
+    });
+    app.renderOnce();
+    ASSERT_TRUE(app.focus("open"));
+    ASSERT_TRUE(app.dispatchEvent(Event{.key = Key::Enter}));
+    app.renderOnce();
+    EXPECT_TRUE(app.hasFocus("inside"));
+    ASSERT_TRUE(app.dispatchEvent(Event{.key = Key::Escape}));
+    app.renderOnce();
+    EXPECT_TRUE(app.hasFocus("open"));
+}
+
 TEST(Dialog, DimsBackgroundWithoutErasingText)
 {
     ScreenBuffer dim_buffer({.width = 10,.height = 2});

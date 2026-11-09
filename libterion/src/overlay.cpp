@@ -128,15 +128,27 @@ RenderNode* OverlayManager::activeDialog() const noexcept
     return nullptr;
 }
 
+RenderNode* OverlayManager::activePopup() const noexcept
+{
+    for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
+        if (it->owner->selectOpen() && belongsToActiveModal(*it->owner)) return it->owner;
+    return nullptr;
+}
+
+bool OverlayManager::acceptsInput(const RenderNode& node) const noexcept
+{
+    return belongsToActiveModal(node);
+}
+
 bool OverlayManager::handleKey(const Event& event)
 {
+    if (auto* popup = activePopup(); popup &&
+        (activeDialog() || popup->type() == Component::Type::ContextMenu))
+    {
+        (void)popup->handleSelectKey(event);
+        return true;
+    }
     if (auto* modal = activeDialog()) return modal->handleDialogKey(event);
-    for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
-        if (it->owner->type() == Component::Type::ContextMenu && it->owner->selectOpen())
-        {
-            (void)it->owner->handleSelectKey(event);
-            return true; // An open context menu captures keys, including shortcuts.
-        }
     return false;
 }
 

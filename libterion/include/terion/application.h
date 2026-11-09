@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdint>
 #include <vector>
+#include <unordered_map>
 #include <terion/component.h>
 #include <terion/focus.h>
 #include <terion/reconciler.h>
@@ -103,6 +104,7 @@ private:
 
     std::unique_ptr<TerminalBackend> backend_;
     DifferentialRenderer renderer_;
+    ScreenBuffer frame_buffer_;
     PaintCallback paint_;
     ComponentCallback component_;
     Reconciler reconciler_;
@@ -122,7 +124,7 @@ private:
     FocusManager focus_;
     Theme theme_;
     std::vector<std::string> component_focus_ids_;
-    std::string background_focus_id_;
+    std::unordered_map<std::string,std::string> scope_focus_history_;
     std::string hovered_component_id_;
     std::string pressed_button_id_;
     std::uint64_t scrollbar_drag_id_ = 0;

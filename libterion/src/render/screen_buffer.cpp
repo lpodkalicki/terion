@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include <algorithm>
+#include <limits>
 #include <terion/render/screen_buffer.h>
 
 using namespace terion;
@@ -16,6 +17,9 @@ ScreenBuffer::ScreenBuffer(const Size size)
 void ScreenBuffer::resize(const Size size)
 {
     if (size.width < 0 || size.height < 0) throw std::invalid_argument("negative buffer size");
+    if (size.height != 0 && static_cast<std::size_t>(size.width) >
+        std::numeric_limits<std::size_t>::max()/static_cast<std::size_t>(size.height))
+        throw std::length_error("screen buffer size overflow");
     size_ = size;
     cells_.assign(static_cast<std::size_t>(size.width) * static_cast<std::size_t>(size.height), Cell{});
 }

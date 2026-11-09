@@ -5,6 +5,7 @@
 #include <terion/focus.h>
 #include <algorithm>
 #include <stdexcept>
+#include <unordered_map>
 
 using namespace terion;
 
@@ -35,6 +36,28 @@ bool FocusManager::remove(const std::string_view id)
     else if (index < focused_) --focused_;
     else if (focused_ >= entries_.size()) --focused_;
     return true;
+}
+
+void FocusManager::reorder(const std::vector<std::string>& ids)
+{
+    const std::string selected(current());
+    std::unordered_map<std::string,std::size_t> ranks;
+    ranks.reserve(ids.size());
+    for (std::size_t i = 0; i < ids.size(); ++i) ranks.emplace(ids[i],i);
+    std::vector<std::size_t> positions;
+    std::vector<Entry> managed;
+    for (std::size_t i = 0; i < entries_.size(); ++i)
+        if (ranks.contains(entries_[i].id))
+        {
+            positions.push_back(i);
+            managed.push_back(std::move(entries_[i]));
+        }
+    std::stable_sort(managed.begin(),managed.end(),[&](const Entry& a, const Entry& b) {
+        return ranks.at(a.id) < ranks.at(b.id);
+    });
+    for (std::size_t i = 0; i < positions.size(); ++i)
+        entries_[positions[i]] = std::move(managed[i]);
+    if (!selected.empty()) (void)focus(selected);
 }
 
 bool FocusManager::focus(const std::string_view id)

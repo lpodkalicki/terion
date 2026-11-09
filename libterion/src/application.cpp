@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <charconv>
 #include <terion/application.h>
+#include <terion/theme_provider.h>
 
 using namespace terion;
 
@@ -69,12 +70,13 @@ void Application::renderOnce()
     const auto frame_start = Clock::now();
     FrameTimings timings{};
     dirty_->store(false);
-    ScreenBuffer buffer(backend_->size());
+    frame_buffer_.resize(backend_->size());
+    ScreenBuffer& buffer = frame_buffer_;
     DependencyTracker::Scope tracking(tracker_);
     if (component_)
     {
         const auto build_start = Clock::now();
-        auto tree = component_();
+        auto tree = ThemeProvider(theme_,component_());
         const auto build_end = Clock::now();
         timings.build = build_end-build_start;
         reconciler_.update(tree);
@@ -149,6 +151,7 @@ void Application::syncFocusTargets()
     const std::string previous_focus(focus_.current());
     const std::string previous_scope(focus_.activeScope());
     const bool previous_targets = !component_focus_ids_.empty();
+    const auto previous_ids = std::move(component_focus_ids_);
     const auto* dialog = overlays_.activeDialog();
     std::string next_scope = dialog ? std::to_string(dialog->id()) : std::string{};
     if (!dialog && reconciler_.root())
@@ -164,10 +167,14 @@ void Application::syncFocusTargets()
         if (const auto* active = find_active(find_active,*reconciler_.root()))
             next_scope = std::to_string(active->id());
     }
-    if (previous_scope.empty() && !next_scope.empty()) background_focus_id_ = previous_focus;
-    for (const auto& id : component_focus_ids_) focus_.remove(id);
+    if (previous_scope != next_scope && !previous_focus.empty())
+        scope_focus_history_[previous_scope] = previous_focus;
     component_focus_ids_.clear();
-    if (!component_) return;
+    if (!component_)
+    {
+        for (const auto& id : previous_ids) focus_.remove(id);
+        return;
+    }
 
     const auto visit = [&](const auto& self, RenderNode& node, const std::string& scope) -> void {
         if (!node.tabPanelActive()) return;
@@ -255,14 +262,16 @@ void Application::syncFocusTargets()
         for (const auto& child : node.children()) self(self,*child,scope);
     };
     if (auto* root = reconciler_.root()) visit(visit,*root,{});
+    for (const auto& id : previous_ids)
+        if (std::ranges::find(component_focus_ids_,id) == component_focus_ids_.end())
+            focus_.remove(id);
+    focus_.reorder(component_focus_ids_);
     focus_.setActiveScope(next_scope);
     if (previous_scope == next_scope && !previous_focus.empty()) focus_.focus(previous_focus);
     if (previous_scope == next_scope && previous_focus.empty() && previous_targets) focus_.blur();
-    if (!previous_scope.empty() && next_scope.empty() && !background_focus_id_.empty())
-    {
-        focus_.focus(background_focus_id_);
-        background_focus_id_.clear();
-    }
+    if (previous_scope != next_scope)
+        if (auto it = scope_focus_history_.find(next_scope); it != scope_focus_history_.end())
+            if (focus_.focus(it->second)) scope_focus_history_.erase(it);
     if (auto* active = overlays_.activeDialog(); active && !focus_.current().empty())
     {
         std::uint64_t id = 0;
@@ -581,6 +590,10 @@ bool Application::dispatchEvent(const Event& event)
         }
         if (root->propagateEvent(event,target)) return true;
     }
+    // The topmost popup owns keyboard input, including Escape, before its modal parent.
+    if (event.key != Key::Resize && event.key != Key::Mouse &&
+        overlays_.activeDialog() && overlays_.activePopup())
+        return overlays_.handleKey(event);
     if (auto* dialog = overlays_.activeDialog(); dialog && event.key != Key::Resize && event.key != Key::Mouse)
     {
         if (event.key == Key::Escape || !focus_.hasTargetsInActiveScope()) return dialog->handleDialogKey(event);
