@@ -81,6 +81,11 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   and `useTheme()` returns the nearest provider's theme in function components.
   Nine presets are available: `dark`, `light`, `ocean`, `forest`, `sunset`,
   `violet`, `nord`, `dracula`, and `solarized`. See `examples/themes.cpp`.
+- Semantic palette tokens `success`, `warning`, `error`, and `info` (plus matching
+  `on_*` foregrounds) are available in every theme. `Button`, `Typography`, and
+  `Progress` accept `.color = ColorVariant::Success` (or `Warning`, `Error`, `Info`,
+  `Primary`), while existing components retain their default appearance.
+  See `examples/semantic_colors.cpp`.
 - `When(visible, Widget())` conditionally includes a component without mounting its
   hooks when hidden. `ForEach(items, [](const auto& item) { return RowWidget(item).keyed(item.id); })`
   expands a range into siblings and requires unique nonempty keys for reliable state retention.

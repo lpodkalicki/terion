@@ -10,6 +10,8 @@
 
 namespace terion {
 
+enum class ColorVariant { Default, Primary, Success, Warning, Error, Info };
+
 struct Palette
 {
     Color primary = Color::rgb(90,160,255);
@@ -18,6 +20,38 @@ struct Palette
     Color background = Color::rgb(20,22,28);
     Color surface = Color::rgb(38,42,52);
     Color muted = Color::rgb(105,110,120);
+    Color success = Color::rgb(88,206,132);
+    Color on_success = Color::rgb(12,38,21);
+    Color warning = Color::rgb(255,194,81);
+    Color on_warning = Color::rgb(53,32,6);
+    Color error = Color::rgb(255,104,112);
+    Color on_error = Color::rgb(55,10,17);
+    Color info = Color::rgb(105,191,255);
+    Color on_info = Color::rgb(12,29,49);
+    [[nodiscard]] constexpr Color resolve(const ColorVariant variant) const noexcept
+    {
+        switch (variant)
+        {
+            case ColorVariant::Primary: return primary;
+            case ColorVariant::Success: return success;
+            case ColorVariant::Warning: return warning;
+            case ColorVariant::Error: return error;
+            case ColorVariant::Info: return info;
+            default: return foreground;
+        }
+    }
+    [[nodiscard]] constexpr Color onColor(const ColorVariant variant) const noexcept
+    {
+        switch (variant)
+        {
+            case ColorVariant::Primary: return on_primary;
+            case ColorVariant::Success: return on_success;
+            case ColorVariant::Warning: return on_warning;
+            case ColorVariant::Error: return on_error;
+            case ColorVariant::Info: return on_info;
+            default: return background;
+        }
+    }
     bool operator==(const Palette&) const = default;
 }; /* End of struct Palette */
 
@@ -51,7 +85,11 @@ struct Theme
                             .foreground = Color::rgb(30,35,42),
                             .background = Color::rgb(248,249,251),
                             .surface = Color::rgb(228,231,238),
-                            .muted = Color::rgb(115,120,130)}};
+                            .muted = Color::rgb(115,120,130),
+                            .success = Color::rgb(25,124,71),.on_success = Color::rgb(255,255,255),
+                            .warning = Color::rgb(165,95,8),.on_warning = Color::rgb(255,255,255),
+                            .error = Color::rgb(188,45,55),.on_error = Color::rgb(255,255,255),
+                            .info = Color::rgb(26,111,166),.on_info = Color::rgb(255,255,255)}};
     }
     static constexpr Theme ocean() { return {.palette = {
         .primary = Color::rgb(51,194,224),.on_primary = Color::rgb(6,32,46),

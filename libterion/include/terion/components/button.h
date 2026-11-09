@@ -17,6 +17,7 @@ public:
         std::string text = {};
         std::string key = {};
         ButtonVariant variant = ButtonVariant::Outlined;
+        ColorVariant color = ColorVariant::Primary;
         bool disabled = false;
         std::function<void()> onClick = {};
         TextStyle style = {};
@@ -28,7 +29,8 @@ public:
 
     explicit Button(Props props) :
         Component({.type = Type::Button,.key = std::move(props.key),.text = std::move(props.text),
-            .layout = props.layout,.text_style = props.style,.on_click = std::move(props.onClick),
+            .layout = props.layout,.text_style = props.style,.color_variant = props.color,
+            .on_click = std::move(props.onClick),
             .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
             .disabled = props.disabled,
             .button_variant = props.variant,.button_size = props.size})

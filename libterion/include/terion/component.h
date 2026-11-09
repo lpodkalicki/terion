@@ -176,6 +176,7 @@ public:
         std::optional<Theme> theme_override = std::nullopt;
         LayoutStyle layout = {};
         TextStyle text_style = {};
+        ColorVariant color_variant = ColorVariant::Default;
         std::function<void()> on_click = {};
         std::function<void(bool)> on_toggle = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};

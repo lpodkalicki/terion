@@ -1838,6 +1838,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         style.foreground = theme->palette.foreground;
         style.background = theme->palette.background;
     }
+    if (theme && color_variant_ != ColorVariant::Default && text_style_ == TextStyle{})
+        style.foreground = theme->palette.resolve(color_variant_);
     if (effective_background) style.background = *effective_background;
 
     if (effective_background && (background_ || surface_tone_ != SurfaceTone::None))
@@ -1869,7 +1871,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         {
             const bool active = progress_indeterminate_ ? i >= phase && i < phase+segment_width : i < filled;
             TextStyle segment_style = style;
-            if (theme) segment_style.foreground = active ? theme->palette.primary : theme->palette.muted;
+            if (theme) segment_style.foreground = active ?
+                theme->palette.resolve(color_variant_) : theme->palette.muted;
             painter.put(bounds_.x+i,bounds_.y,active ? on : off,segment_style);
         }
         if (suffix_width > 0)
@@ -2076,11 +2079,12 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const bool compact = bounds_.height < 3;
         const bool outlined = button_variant_ == ButtonVariant::Outlined;
         Color background_color = effective_background.value_or(palette.background);
-        Color foreground_color = palette.primary;
+        const Color accent = palette.resolve(color_variant_);
+        Color foreground_color = accent;
         if (button_variant_ == ButtonVariant::Contained)
         {
-            background_color = palette.primary;
-            foreground_color = palette.on_primary;
+            background_color = accent;
+            foreground_color = palette.onColor(color_variant_);
         }
         if (disabled_)
         {
@@ -2090,7 +2094,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         else if (hovered || focused)
         {
             const Color highlight = button_variant_ == ButtonVariant::Contained ?
-                palette.on_primary : palette.primary;
+                palette.onColor(color_variant_) : accent;
             background_color = blendColor(background_color,highlight,hovered ? 16 : 24);
         }
         if (button_variant_ == ButtonVariant::Text && !hovered && !focused && !disabled_)
