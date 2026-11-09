@@ -109,9 +109,6 @@ private:
     HookContext* previous_;
 };
 
-template<auto Function>
-inline constexpr int component_identity = 0;
-
 template<typename Function>
 inline constexpr int callable_component_identity = 0;
 
@@ -262,18 +259,6 @@ template<typename Function>
 [[nodiscard]] auto component(Function&& function)
 {
     return ComponentFactory<std::decay_t<Function>>(std::forward<Function>(function));
-}
-
-// Backward compatibility for existing function-based projects.
-template<auto Function,typename... Args>
-[[nodiscard]] Component ComponentOf(std::string key,Args&&... args)
-{
-    auto bound = [arguments = std::make_tuple(std::forward<Args>(args)...)]() mutable -> Component {
-        return std::apply(Function,arguments);
-    };
-    return Component({.type = Component::Type::Function,.key = std::move(key),
-        .render_function = std::move(bound),
-        .function_identity = &detail::component_identity<Function>});
 }
 
 } /* End of namespace terion */

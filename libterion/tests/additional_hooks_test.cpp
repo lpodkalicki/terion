@@ -14,8 +14,7 @@ int effect_cleanups = 0;
 int memo_calculations = 0;
 std::shared_ptr<int> last_ref;
 
-Component HooksPanel(int value)
-{
+const auto HooksPanel = component([](int value) {
     auto ref = useRef(5);
     last_ref = ref;
     auto doubled = useMemo([value] {
@@ -28,7 +27,7 @@ Component HooksPanel(int value)
         return [value] { (void)value; ++effect_cleanups; };
     },value);
     return Typography({.text = std::to_string(doubled + callback() + *ref)});
-}
+});
 
 } /* End of anonymous namespace */
 
@@ -37,21 +36,21 @@ TEST(AdditionalHooks, MemoRefCallbackAndEffectLifecycle)
     effect_starts = effect_cleanups = memo_calculations = 0;
     last_ref.reset();
     Reconciler reconciler;
-    reconciler.update(ComponentOf<HooksPanel>("panel",2));
+    reconciler.update(HooksPanel(2).keyed("panel"));
     EXPECT_EQ(reconciler.root()->text(),"11");
     EXPECT_EQ(effect_starts,0);
     reconciler.commitEffects();
     EXPECT_EQ(effect_starts,1);
 
     *last_ref = 9;
-    reconciler.update(ComponentOf<HooksPanel>("panel",2));
+    reconciler.update(HooksPanel(2).keyed("panel"));
     EXPECT_EQ(reconciler.root()->text(),"15");
     EXPECT_EQ(memo_calculations,1);
     reconciler.commitEffects();
     EXPECT_EQ(effect_starts,1);
     EXPECT_EQ(effect_cleanups,0);
 
-    reconciler.update(ComponentOf<HooksPanel>("panel",3));
+    reconciler.update(HooksPanel(3).keyed("panel"));
     EXPECT_EQ(reconciler.root()->text(),"18");
     reconciler.commitEffects();
     EXPECT_EQ(memo_calculations,2);

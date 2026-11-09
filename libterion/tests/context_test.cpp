@@ -11,15 +11,13 @@ namespace {
 
 const Context<std::string> context("default");
 
-Component Reader()
-{
+const auto Reader = component([] {
     return Typography({.text = useContext(context)});
-}
+});
 
-Component Middle()
-{
-    return ComponentOf<Reader>("reader");
-}
+const auto Middle = component([] {
+    return Reader().keyed("reader");
+});
 
 } /* End of anonymous namespace */
 
@@ -27,10 +25,10 @@ TEST(Context, FallsBackAndOverridesWithNearestProvider)
 {
     Reconciler reconciler;
     reconciler.update(Column({.children = {
-        ComponentOf<Reader>("outside"),
+        Reader().keyed("outside"),
         ContextProvider(context,std::string("outer"),Column({.children = {
-            ComponentOf<Middle>("middle"),
-            ContextProvider(context,std::string("inner"),ComponentOf<Reader>("nested"),"nested-provider")
+            Middle().keyed("middle"),
+            ContextProvider(context,std::string("inner"),Reader().keyed("nested"),"nested-provider")
         }}),"outer-provider")
     }}));
     const auto& children = reconciler.root()->children();
@@ -45,7 +43,7 @@ TEST(Context, UpdatesOnProviderChange)
 {
     Reconciler reconciler;
     const auto build = [](std::string value) {
-        return ContextProvider(context,std::move(value),ComponentOf<Reader>("reader"),"provider");
+        return ContextProvider(context,std::move(value),Reader().keyed("reader"),"provider");
     };
     reconciler.update(build("light"));
     const auto id = reconciler.root()->id();

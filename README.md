@@ -23,7 +23,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   Calling `Counter()` creates a deferred component declaration; the reconciler invokes its
   body with the correct hook and context scope. Pass props as lambda arguments, and use
   `Counter(props).keyed("stable-key")` for keyed lists. See `examples/hooks.cpp` and
-  `examples/context.cpp`. Legacy `ComponentOf<Function>` is retained for source compatibility.
+  `examples/context.cpp`.
   Local state uses
   `useState(initial)` returns a value and setter; the setter accepts either a new value or
   an updater function. Slots are retained across keyed reorders and discarded on unmount.

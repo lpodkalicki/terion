@@ -9,20 +9,18 @@ using namespace terion;
 
 namespace {
 
-Component Counter()
-{
+const auto Counter = component([] {
     auto [count,setCount] = useState(0);
     return Button({.text = std::to_string(count),
         .onClick = [setCount] { setCount([](int previous) { return previous + 1; }); }});
-}
+});
 
-Component BadHookOrder(bool second)
-{
+const auto BadHookOrder = component([](bool second) {
     auto [count,setCount] = useState(0);
     (void)setCount;
     if (second) (void)useState(std::string("extra"));
     return Typography({.text = std::to_string(count)});
-}
+});
 
 } /* End of anonymous namespace */
 
@@ -31,8 +29,8 @@ TEST(Hooks, IndependentInstancesAndKeyedReordering)
     Reconciler reconciler;
     const auto build = [](bool reversed) {
         return reversed
-            ? Column({.children = {ComponentOf<Counter>("b"),ComponentOf<Counter>("a")}})
-            : Column({.children = {ComponentOf<Counter>("a"),ComponentOf<Counter>("b")}});
+            ? Column({.children = {Counter().keyed("b"),Counter().keyed("a")}})
+            : Column({.children = {Counter().keyed("a"),Counter().keyed("b")}});
     };
     reconciler.update(build(false));
     ASSERT_EQ(reconciler.root()->children().size(),2u);
@@ -46,27 +44,28 @@ TEST(Hooks, IndependentInstancesAndKeyedReordering)
 TEST(Hooks, UnmountDiscardsState)
 {
     Reconciler reconciler;
-    reconciler.update(Column({.children = {ComponentOf<Counter>("counter")}}));
+    reconciler.update(Column({.children = {Counter().keyed("counter")}}));
     reconciler.root()->children()[0]->onClick()();
-    reconciler.update(Column({.children = {ComponentOf<Counter>("counter")}}));
+    reconciler.update(Column({.children = {Counter().keyed("counter")}}));
     EXPECT_EQ(reconciler.root()->children()[0]->text(),"1");
     reconciler.update(Column({.children = {}}));
-    reconciler.update(Column({.children = {ComponentOf<Counter>("counter")}}));
+    reconciler.update(Column({.children = {Counter().keyed("counter")}}));
     EXPECT_EQ(reconciler.root()->children()[0]->text(),"0");
 }
 
 TEST(Hooks, RequiresMountAndStableHookOrder)
 {
-    EXPECT_THROW((void)Counter(),std::logic_error);
+    EXPECT_NO_THROW((void)Counter());
+    EXPECT_THROW((void)useState(0),std::logic_error);
     Reconciler reconciler;
-    reconciler.update(ComponentOf<BadHookOrder>("bad",false));
-    EXPECT_THROW(reconciler.update(ComponentOf<BadHookOrder>("bad",true)),std::logic_error);
+    reconciler.update(BadHookOrder(false).keyed("bad"));
+    EXPECT_THROW(reconciler.update(BadHookOrder(true).keyed("bad")),std::logic_error);
     // A rejected render must leave the previous valid hook count intact.
-    EXPECT_NO_THROW(reconciler.update(ComponentOf<BadHookOrder>("bad",false)));
+    EXPECT_NO_THROW(reconciler.update(BadHookOrder(false).keyed("bad")));
 
     Reconciler another;
-    another.update(ComponentOf<BadHookOrder>("bad",true));
-    EXPECT_THROW(another.update(ComponentOf<BadHookOrder>("bad",false)),std::logic_error);
+    another.update(BadHookOrder(true).keyed("bad"));
+    EXPECT_THROW(another.update(BadHookOrder(false).keyed("bad")),std::logic_error);
 }
 
 TEST(Hooks, CallableComponentsPreserveKeyedState)
