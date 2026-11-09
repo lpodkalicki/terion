@@ -15,22 +15,22 @@ struct ThemeState
 const Context<ThemeState> themeContext({"system",{}});
 
 // A custom hook is an ordinary C++ function called during component rendering.
-ThemeState useTheme()
+ThemeState useThemeState()
 {
     return useContext(themeContext);
 }
 
 const auto ThemeLabel = component([] {
-    const auto theme = useTheme();
+    const auto theme = useThemeState();
     return Typography({.text = "Current theme: " + theme.name});
 });
 
 const auto ThemeToggle = component([] {
-    const auto theme = useTheme();
+    const auto theme = useThemeState();
     return Button({.text = "Toggle theme",.onClick = theme.toggle});
 });
 
-const auto ThemeProvider = component([] {
+const auto StatefulThemeProvider = component([] {
     auto [dark,setDark] = useState(false);
     ThemeState state{
         dark ? "dark" : "light",
@@ -46,7 +46,7 @@ int main()
 {
     Application app(std::make_unique<AnsiTerminalBackend>());
     app.render([] {
-        return Column({.children = {ThemeProvider()},.layout = {.padding = 2,.gap = 1}});
+        return Column({.children = {StatefulThemeProvider()},.layout = {.padding = 2,.gap = 1}});
     });
     return app.run();
 }

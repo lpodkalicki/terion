@@ -27,6 +27,10 @@ public:
     [[nodiscard]] Component::Type type() const noexcept { return type_; }
     [[nodiscard]] const std::string& key() const noexcept { return key_; }
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
+    [[nodiscard]] const Theme& resolvedTheme(const Theme& fallback) const noexcept
+    {
+        return theme_override_ ? *theme_override_ : fallback;
+    }
     [[nodiscard]] const std::vector<std::unique_ptr<RenderNode>>& children() const noexcept { return children_; }
     [[nodiscard]] Rect bounds() const noexcept { return bounds_; }
     [[nodiscard]] bool propagateEvent(const Event& event, std::uint64_t target) const;
@@ -246,6 +250,7 @@ private:
     int dialog_scroll_grab_offset_ = 0;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
+    std::optional<Theme> theme_override_ = std::nullopt;
 }; /* End of class RenderNode */
 
 } /* End of namespace terion */

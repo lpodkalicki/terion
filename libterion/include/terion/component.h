@@ -13,6 +13,7 @@
 #include <terion/layout.h>
 #include <terion/event.h>
 #include <terion/render/color.h>
+#include <terion/theme.h>
 
 namespace terion {
 
@@ -157,7 +158,8 @@ public:
         Function,
         ContextProvider,
         Fragment,
-        ErrorBoundary
+        ErrorBoundary,
+        ThemeScope
     }; /* End of enum Type */
 
     struct Props
@@ -171,6 +173,7 @@ public:
         std::function<void()> enter_context = {};
         std::function<void()> exit_context = {};
         std::function<Component(const std::string&)> error_fallback = {};
+        std::optional<Theme> theme_override = std::nullopt;
         LayoutStyle layout = {};
         TextStyle text_style = {};
         std::function<void()> on_click = {};

@@ -1670,9 +1670,10 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
 void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& theme,
     const std::string_view focused_id) const
 {
+    const Theme& local_theme = resolvedTheme(theme);
     const Rect rect = dialogRect(screen);
     if (rect.width <= 0 || rect.height <= 0) return;
-    const Palette palette = theme.palette;
+    const Palette palette = local_theme.palette;
     painter.dim({.width = screen.width,.height = screen.height},palette.background,75);
     const TextStyle style {.foreground = palette.foreground,.background = palette.surface};
     painter.fill(rect,Cell{.grapheme = " ",.style = style});
@@ -1692,9 +1693,9 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
             const int bottom = rect.y+rect.height-(dialog_show_actions_ ? 3 : 1);
             Painter::ClipScope clip(painter,{.x = rect.x+1,.y = top,
                 .width = std::max(0,rect.width-2),.height = std::max(0,bottom-top)});
-            for (const auto& child : children_) child->paint(painter,focused_id,{},palette.surface,&theme);
+            for (const auto& child : children_) child->paint(painter,focused_id,{},palette.surface,&local_theme);
         }
-        paintScrollbar(painter,scrollbarTrack(),scrollbarThumb(),theme,palette.surface,true,
+        paintScrollbar(painter,scrollbarTrack(),scrollbarThumb(),local_theme,palette.surface,true,
             dialog_scroll_dragging_);
         if (!dialog_show_actions_) return;
         const int row = rect.y+rect.height-2;
@@ -1821,6 +1822,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
 {
     if (type_ == Component::Type::Dialog || type_ == Component::Type::Toast ||
         (type_ == Component::Type::TabPanel && !tab_panel_active_)) return;
+    if (theme_override_) theme = &*theme_override_;
     std::optional<Painter::ClipScope> clipping;
     if (style_.clip || type_ == Component::Type::ScrollView) clipping.emplace(painter,bounds_);
     std::optional<Color> effective_background = background;

@@ -76,6 +76,11 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   `useDialogManager()` from descendant function components; changes automatically
   update the modal host. See `examples/dialog_manager_scroll.cpp` for a long
   document rendered inside a scrollable managed dialog.
+- `ThemeProvider(theme,child)` applies a theme to its entire descendant subtree,
+  including dialog overlays; nested providers override the nearest ancestor,
+  and `useTheme()` returns the nearest provider's theme in function components.
+  Nine presets are available: `dark`, `light`, `ocean`, `forest`, `sunset`,
+  `violet`, `nord`, `dracula`, and `solarized`. See `examples/themes.cpp`.
 - `When(visible, Widget())` conditionally includes a component without mounting its
   hooks when hidden. `ForEach(items, [](const auto& item) { return RowWidget(item).keyed(item.id); })`
   expands a range into siblings and requires unique nonempty keys for reliable state retention.

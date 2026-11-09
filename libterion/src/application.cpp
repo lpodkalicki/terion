@@ -109,7 +109,10 @@ void Application::renderOnce()
     Painter painter(buffer);
     if (!reuse_base)
     {
-        painter.fillBackground({.width = buffer.size().width,.height = buffer.size().height},theme_.palette.background);
+        const Theme& root_theme = reconciler_.root() ?
+            reconciler_.root()->resolvedTheme(theme_) : theme_;
+        painter.fillBackground({.width = buffer.size().width,.height = buffer.size().height},
+            root_theme.palette.background);
         if (component_)
         {
             if (const auto* root = reconciler_.root())

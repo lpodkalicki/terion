@@ -38,13 +38,14 @@ void OverlayManager::paint(Painter& painter, const Size screen, const Theme& the
     for (const auto& portal : portals_)
     {
         if (portal.owner->selectOpen() && (!modal || !modal->findById(portal.owner->id())))
-            portal.owner->paintOverlay(painter,screen,theme);
-        if (portal.owner->dialogOpen()) portal.owner->paintDialog(painter,screen,theme,focused_id);
+            portal.owner->paintOverlay(painter,screen,portal.owner->resolvedTheme(theme));
+        if (portal.owner->dialogOpen())
+            portal.owner->paintDialog(painter,screen,portal.owner->resolvedTheme(theme),focused_id);
     }
     if (modal)
         for (const auto& portal : portals_)
             if (portal.owner->selectOpen() && modal->findById(portal.owner->id()))
-                portal.owner->paintOverlay(painter,screen,theme);
+                portal.owner->paintOverlay(painter,screen,portal.owner->resolvedTheme(theme));
     if (hover_position_ && !modal)
     {
         const Point point = *hover_position_;
@@ -54,7 +55,7 @@ void OverlayManager::paint(Painter& painter, const Size screen, const Theme& the
             for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
                 if (it->owner->tooltipContains(point))
                 {
-                    it->owner->paintTooltip(painter,point,screen,theme);
+                    it->owner->paintTooltip(painter,point,screen,it->owner->resolvedTheme(theme));
                     break;
                 }
     }
@@ -63,7 +64,7 @@ void OverlayManager::paint(Painter& painter, const Size screen, const Theme& the
         if (portal.owner->toastOpen())
         {
             const Rect popup = portal.owner->toastRect(screen,offset);
-            portal.owner->paintToast(painter,screen,theme,offset);
+            portal.owner->paintToast(painter,screen,portal.owner->resolvedTheme(theme),offset);
             if (popup.height > 0) offset += popup.height+1;
         }
 }

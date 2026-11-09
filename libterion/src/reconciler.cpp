@@ -102,6 +102,19 @@ void Reconciler::commitEffects()
 Component Reconciler::expand(const Component& component, const std::string& path)
 {
     const auto& props = component.props();
+    if (props.type == Component::Type::ThemeScope)
+    {
+        if (!props.theme_override || props.children.size() != 1)
+            throw std::invalid_argument("invalid theme provider");
+        const auto apply_theme = [&](const auto& self, const Component& node) -> Component {
+            auto actual = node.props();
+            if (actual.theme_override) return node; // A nested provider wins.
+            actual.theme_override = props.theme_override;
+            for (auto& child : actual.children) child = self(self,child);
+            return Component(std::move(actual));
+        };
+        return apply_theme(apply_theme,expand(props.children.front(),path+"/theme"));
+    }
     if (props.type == Component::Type::ErrorBoundary)
     {
         if (!props.error_fallback || props.children.size() != 1)
@@ -260,7 +273,8 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     // Paint depends on visible properties as well as geometry. Callbacks and
     // event handlers do not affect pixels; interactive widgets remain dirty
     // until their visual state has a complete comparison strategy.
-    bool paint_dirty = layout_dirty || node->text_style_ != props.text_style ||
+    bool paint_dirty = layout_dirty || node->theme_override_ != props.theme_override ||
+        node->text_style_ != props.text_style ||
         node->background_ != props.background || node->surface_tone_ != props.surface_tone ||
         node->value_ != props.value || node->disabled_ != props.disabled ||
         node->progress_variant_ != props.progress_variant ||
@@ -270,6 +284,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->text_ = props.text;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
+    node->theme_override_ = props.theme_override;
     node->border_ = props.border;
     node->background_ = props.background;
     node->button_variant_ = props.button_variant;
