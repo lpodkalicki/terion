@@ -56,6 +56,11 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `Fragment({.children = {...}})` groups sibling declarations without introducing a
   layout node. It also works when returned from `component(lambda)`; a top-level
   fragment uses one root column host. See `examples/fragment.cpp`.
+- `ErrorBoundary({.child = Panel(),.fallback = [](const std::string& message) {
+  return Typography({.text = message}); }})` catches standard exceptions raised while
+  expanding its descendant components and displays a fallback instead. A subsequent
+  update retries the child. Errors raised by the fallback itself still propagate.
+  See `examples/error_boundary.cpp`.
 - `When(visible, Widget())` conditionally includes a component without mounting its
   hooks when hidden. `ForEach(items, [](const auto& item) { return RowWidget(item).keyed(item.id); })`
   expands a range into siblings and requires unique nonempty keys for reliable state retention.

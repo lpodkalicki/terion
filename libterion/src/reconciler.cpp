@@ -102,6 +102,62 @@ void Reconciler::commitEffects()
 Component Reconciler::expand(const Component& component, const std::string& path)
 {
     const auto& props = component.props();
+    if (props.type == Component::Type::ErrorBoundary)
+    {
+        if (!props.error_fallback || props.children.size() != 1)
+            throw std::invalid_argument("invalid error boundary");
+
+        // Keep the failed branch isolated, including hook identity replacements.
+        const auto child_path = path + "/error-boundary/child";
+        const auto belongs_to_child = [&](const std::string& candidate) {
+            return candidate == child_path ||
+                (candidate.size() > child_path.size() &&
+                candidate.compare(0,child_path.size(),child_path) == 0 &&
+                candidate[child_path.size()] == '/');
+        };
+        std::unordered_map<std::string,HookRecord> saved_hooks;
+        for (const auto& [name,record] : hooks_)
+            if (belongs_to_child(name)) saved_hooks.emplace(name,record);
+        const auto retired_before = retired_hooks_.size();
+
+        Component result = Component::column({});
+        try
+        {
+            result = expand(props.children.front(),child_path);
+        }
+        catch (const std::exception& error)
+        {
+            // Pending effects from an abandoned render must never be committed.
+            for (auto it = hooks_.begin(); it != hooks_.end();)
+            {
+                if (!belongs_to_child(it->first)) { ++it; continue; }
+                for (auto& slot : it->second.slots)
+                {
+                    auto* effect = std::any_cast<std::shared_ptr<detail::EffectBase>>(&slot);
+                    if (effect && *effect) (*effect)->cancelPending();
+                }
+                it = hooks_.erase(it);
+            }
+            for (std::size_t i = retired_before; i < retired_hooks_.size(); ++i)
+            {
+                if (!belongs_to_child(retired_hooks_[i].first)) continue;
+                for (auto& slot : retired_hooks_[i].second.slots)
+                {
+                    auto* effect = std::any_cast<std::shared_ptr<detail::EffectBase>>(&slot);
+                    if (effect && *effect) (*effect)->cancelPending();
+                }
+            }
+            retired_hooks_.resize(retired_before);
+            for (auto& [name,record] : saved_hooks)
+                hooks_.emplace(std::move(name),std::move(record));
+            // The fallback is expanded outside the handler; its own errors propagate.
+            result = expand(props.error_fallback(error.what()),path + "/error-boundary/fallback");
+        }
+        if (props.key.empty()) return result;
+        auto actual = result.props();
+        actual.key = props.key;
+        return Component(std::move(actual));
+    }
     if (props.type == Component::Type::ContextProvider)
     {
         if (!props.enter_context || !props.exit_context || props.children.size() != 1)

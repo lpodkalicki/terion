@@ -156,7 +156,8 @@ public:
         Slider,
         Function,
         ContextProvider,
-        Fragment
+        Fragment,
+        ErrorBoundary
     }; /* End of enum Type */
 
     struct Props
@@ -169,6 +170,7 @@ public:
         const void* function_identity = nullptr;
         std::function<void()> enter_context = {};
         std::function<void()> exit_context = {};
+        std::function<Component(const std::string&)> error_fallback = {};
         LayoutStyle layout = {};
         TextStyle text_style = {};
         std::function<void()> on_click = {};
