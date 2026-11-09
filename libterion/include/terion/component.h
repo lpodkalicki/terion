@@ -237,6 +237,13 @@ public:
 
     [[nodiscard]] const Props& props() const noexcept { return props_; }
 
+    [[nodiscard]] Component keyed(std::string key) const
+    {
+        auto props = props_;
+        props.key = std::move(key);
+        return Component(std::move(props));
+    }
+
 private:
     Props props_;
 }; /* End of class Component */

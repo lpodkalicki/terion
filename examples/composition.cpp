@@ -21,16 +21,14 @@ struct FileRowProps
     std::function<void()> onOpen;
 };
 
-// An ordinary C++ function is all that is needed for a stateless component.
-Component FileRow(FileRowProps props)
-{
+const auto FileRow = component([](FileRowProps props) {
     return Row({.children = {
         Typography({.text = props.kind,.key = "kind"}),
         Typography({.text = props.name,.key = "filename"}),
         Button({.text = "Open",.key = "open",.onClick = std::move(props.onOpen),
             .size = ButtonSize::Compact})
     },.key = std::move(props.key),.layout = {.gap = 2}});
-}
+});
 
 struct FileListProps
 {
@@ -41,18 +39,17 @@ struct FileListProps
 };
 
 // Composition: FileList renders FileRow without knowing its internal structure.
-Component FileList(FileListProps props)
-{
+const auto FileList = component([](FileListProps props) {
     std::vector<Component> rows;
     rows.reserve(props.files.size());
     for (const auto& name : props.files)
     {
         rows.emplace_back(FileRow({.name = name,.kind = "FILE",.key = name,
-            .onOpen = [onOpen = props.onOpen,name] { if (onOpen) onOpen(name); }}));
+            .onOpen = [onOpen = props.onOpen,name] { if (onOpen) onOpen(name); }}).keyed(name));
     }
     return Card({.title = std::move(props.title),.children = std::move(rows),
         .key = std::move(props.key)});
-}
+});
 
 } /* End of anonymous namespace */
 
@@ -69,11 +66,11 @@ int main()
         content.emplace_back(Button({.text = "Toggle archives",.key = "toggle",
             .onClick = [&] { show_archives.set(!show_archives.get()); }}));
         content.emplace_back(FileList({.title = "Documents",.files = {"report.pdf","notes.txt"},
-            .key = "documents",.onOpen = [&](const std::string& name) { selected.set(name); }}));
+            .key = "documents",.onOpen = [&](const std::string& name) { selected.set(name); }}).keyed("documents"));
         if (show_archives.get())
         {
             content.emplace_back(FileList({.title = "Archives",.files = {"backup.zip","logs.tar"},
-                .key = "archives",.onOpen = [&](const std::string& name) { selected.set(name); }}));
+                .key = "archives",.onOpen = [&](const std::string& name) { selected.set(name); }}).keyed("archives"));
         }
         return Column({.children = std::move(content),.layout = {.padding = 1,.gap = 1}});
     });

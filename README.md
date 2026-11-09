@@ -19,11 +19,12 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - Terminal abstraction: `TerminalBackend`, `AnsiTerminalBackend`, `HeadlessTerminalBackend`.
 - `Application` supports both low-level paint callbacks and a first declarative `Component` tree.
 - `RenderNode` and `Reconciler` retain keyed node identity across view rebuilds.
-- User-defined, stateless components are ordinary C++ functions returning `Component`; use a
-  `Props` struct for inputs and pass `children`/callbacks as needed. See `examples/composition.cpp`.
-  Preserve a stable `key` on each returned component when rendering keyed lists. Local
-  stateful components use the same function definitions, but are instantiated with
-  `ComponentOf<Counter>("stable-key")` so the reconciler invokes them in a hook context.
+- User-defined components use `inline const auto Counter = component([] { ... });`.
+  Calling `Counter()` creates a deferred component declaration; the reconciler invokes its
+  body with the correct hook and context scope. Pass props as lambda arguments, and use
+  `Counter(props).keyed("stable-key")` for keyed lists. See `examples/hooks.cpp` and
+  `examples/context.cpp`. Legacy `ComponentOf<Function>` is retained for source compatibility.
+  Local state uses
   `useState(initial)` returns a value and setter; the setter accepts either a new value or
   an updater function. Slots are retained across keyed reorders and discarded on unmount.
   Hooks must be called unconditionally in the same order. See `examples/hooks.cpp`.

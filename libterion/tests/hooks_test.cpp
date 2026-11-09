@@ -68,3 +68,24 @@ TEST(Hooks, RequiresMountAndStableHookOrder)
     another.update(ComponentOf<BadHookOrder>("bad",true));
     EXPECT_THROW(another.update(ComponentOf<BadHookOrder>("bad",false)),std::logic_error);
 }
+
+TEST(Hooks, CallableComponentsPreserveKeyedState)
+{
+    const auto counter = component([] {
+        auto [count,setCount] = useState(0);
+        return Button({.text = std::to_string(count),
+            .onClick = [setCount] { setCount([](int value) { return value + 1; }); }});
+    });
+
+    Reconciler reconciler;
+    auto build = [&](bool reverse) {
+        return reverse
+            ? Column({.children = {counter().keyed("b"),counter().keyed("a")}})
+            : Column({.children = {counter().keyed("a"),counter().keyed("b")}});
+    };
+    reconciler.update(build(false));
+    reconciler.root()->children()[0]->onClick()();
+    reconciler.update(build(true));
+    EXPECT_EQ(reconciler.root()->children()[0]->text(),"0");
+    EXPECT_EQ(reconciler.root()->children()[1]->text(),"1");
+}

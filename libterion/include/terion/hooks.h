@@ -112,6 +112,18 @@ private:
 template<auto Function>
 inline constexpr int component_identity = 0;
 
+template<typename Function>
+inline constexpr int callable_component_identity = 0;
+
+template<typename Signature>
+struct CallableProps;
+
+template<typename Owner,typename Result,typename Arg>
+struct CallableProps<Result (Owner::*)(Arg) const>
+{
+    using Type = std::decay_t<Arg>;
+};
+
 } /* End of namespace detail */
 
 template<typename T>
@@ -211,7 +223,48 @@ void useEffect(Effect&& effect,Dependencies&&... dependencies)
         sizeof...(Dependencies) == 0);
 }
 
-// Function definitions stay ordinary C++. Instantiation is deferred until reconciliation.
+// A component declaration is lightweight; its callable runs only during reconciliation.
+template<typename Function>
+class ComponentFactory
+{
+public:
+    explicit ComponentFactory(Function function) : function_(std::move(function)) {}
+
+    // A concrete Props parameter makes C++20 designated initializers deducible.
+    template<typename F = Function>
+    [[nodiscard]] Component operator()(typename detail::CallableProps<decltype(&F::operator())>::Type props) const
+    {
+        return defer(std::make_tuple(std::move(props)));
+    }
+
+    template<typename... Args>
+        requires std::invocable<const Function&,std::decay_t<Args>...> &&
+            std::convertible_to<std::invoke_result_t<const Function&,std::decay_t<Args>...>,Component>
+    [[nodiscard]] Component operator()(Args&&... args) const
+    {
+        return defer(std::make_tuple(std::forward<Args>(args)...));
+    }
+
+private:
+    template<typename Arguments>
+    [[nodiscard]] Component defer(Arguments arguments) const
+    {
+        auto bound = [function = function_,arguments = std::move(arguments)]()
+            mutable -> Component { return std::apply(function,arguments); };
+        return Component({.type = Component::Type::Function,
+            .render_function = std::move(bound),
+            .function_identity = &detail::callable_component_identity<Function>});
+    }
+    Function function_;
+};
+
+template<typename Function>
+[[nodiscard]] auto component(Function&& function)
+{
+    return ComponentFactory<std::decay_t<Function>>(std::forward<Function>(function));
+}
+
+// Backward compatibility for existing function-based projects.
 template<auto Function,typename... Args>
 [[nodiscard]] Component ComponentOf(std::string key,Args&&... args)
 {

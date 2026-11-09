@@ -12,17 +12,15 @@ namespace {
 
 const Context<std::string> theme_context("system");
 
-Component ThemeLabel()
-{
+const auto ThemeLabel = component([] {
     const auto theme = useContext(theme_context);
     return Typography({.text = "Theme: " + theme});
-}
+});
 
-Component ThemePanel()
-{
+const auto ThemePanel = component([] {
     // ThemePanel does not receive or forward any theme props.
-    return Card({.title = "User panel",.children = {ComponentOf<ThemeLabel>("theme")}});
-}
+    return Card({.title = "User panel",.children = {ThemeLabel()}});
+});
 
 } /* End of anonymous namespace */
 
@@ -36,8 +34,8 @@ int main()
         return Column({.children = {
             Button({.text = "Toggle theme",.key = "toggle",
                 .onClick = [&] { dark.set(!dark.get()); }}),
-            ContextProvider(theme_context,current,ComponentOf<ThemePanel>("panel"),"provider"),
-            ComponentOf<ThemeLabel>("fallback")
+            ContextProvider(theme_context,current,ThemePanel(),"provider"),
+            ThemeLabel().keyed("fallback")
         },.layout = {.padding = 2,.gap = 1}});
     });
     return app.run();

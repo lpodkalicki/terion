@@ -59,3 +59,26 @@ TEST(Context, RequiresMountedFunction)
 {
     EXPECT_THROW((void)useContext(context),std::logic_error);
 }
+
+TEST(Context, CallableComponentsInheritNearestProvider)
+{
+    const auto reader = component([] {
+        return Typography({.text = useContext(context)});
+    });
+    const auto middle = component([&] {
+        return Column({.children = {reader()}});
+    });
+
+    Reconciler reconciler;
+    reconciler.update(Column({.children = {
+        reader(),
+        ContextProvider(context,std::string("outer"),Column({.children = {
+            middle(),
+            ContextProvider(context,std::string("inner"),reader())
+        }}))
+    }}));
+    const auto& children = reconciler.root()->children();
+    EXPECT_EQ(children[0]->text(),"default");
+    EXPECT_EQ(children[1]->children()[0]->children()[0]->text(),"outer");
+    EXPECT_EQ(children[1]->children()[1]->text(),"inner");
+}

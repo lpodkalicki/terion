@@ -8,9 +8,7 @@
 
 using namespace terion;
 
-// Exactly the same C++ function syntax as for a stateless component.
-Component Counter()
-{
+const auto Counter = component([] {
     auto [count,setCount] = useState(0);
     auto renders = useRef(0);
     ++*renders;
@@ -20,7 +18,7 @@ Component Counter()
     });
     return Button({.text = title + " (renders: " + std::to_string(*renders) + ")",
         .onClick = std::move(increment)});
-}
+});
 
 int main()
 {
@@ -30,8 +28,8 @@ int main()
     app.render([&] {
         std::vector<Component> children;
         children.emplace_back(Typography({.text = "Independent counter instances"}));
-        children.emplace_back(ComponentOf<Counter>("first"));
-        if (show_second.get()) children.emplace_back(ComponentOf<Counter>("second"));
+        children.emplace_back(Counter().keyed("first"));
+        if (show_second.get()) children.emplace_back(Counter().keyed("second"));
         children.emplace_back(Button({.text = "Toggle second",.key = "toggle",
             .onClick = [&] { show_second.set(!show_second.get()); }}));
         return Column({.children = std::move(children),.layout = {.padding = 2,.gap = 1}});
