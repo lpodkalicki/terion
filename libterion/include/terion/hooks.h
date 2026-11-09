@@ -228,6 +228,7 @@ public:
     explicit ComponentFactory(Function function) : function_(std::move(function)) {}
 
     // A concrete Props parameter makes C++20 designated initializers deducible.
+    // The declaration owns the Props value even when render takes const Props&.
     template<typename F = Function>
     [[nodiscard]] Component operator()(typename detail::CallableProps<decltype(&F::operator())>::Type props) const
     {
@@ -239,6 +240,7 @@ public:
             std::convertible_to<std::invoke_result_t<const Function&,std::decay_t<Args>...>,Component>
     [[nodiscard]] Component operator()(Args&&... args) const
     {
+        // Decayed tuple values keep temporary and lvalue arguments alive until render.
         return defer(std::make_tuple(std::forward<Args>(args)...));
     }
 

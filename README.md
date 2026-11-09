@@ -24,6 +24,10 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   body with the correct hook and context scope. Pass props as lambda arguments, and use
   `Counter(props).keyed("stable-key")` for keyed lists. See `examples/hooks.cpp` and
   `examples/context.cpp`.
+  For reusable components with larger props, prefer `component([](const MyProps& props) {
+  ... })`. Declarations capture an owned snapshot of the arguments before deferred
+  rendering; `.keyed("id")` moves an rvalue declaration instead of copying its tree.
+  Props should own their referenced data (do not retain dangling `string_view` or pointers).
   Local state uses
   `useState(initial)` returns a value and setter; the setter accepts either a new value or
   an updater function. Slots are retained across keyed reorders and discarded on unmount.

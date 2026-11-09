@@ -238,11 +238,17 @@ public:
 
     [[nodiscard]] const Props& props() const noexcept { return props_; }
 
-    [[nodiscard]] Component keyed(std::string key) const
+    [[nodiscard]] Component keyed(std::string key) const &
     {
         auto props = props_;
         props.key = std::move(key);
         return Component(std::move(props));
+    }
+
+    [[nodiscard]] Component keyed(std::string key) &&
+    {
+        props_.key = std::move(key);
+        return std::move(*this);
     }
 
 private:

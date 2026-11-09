@@ -21,13 +21,13 @@ struct FileRowProps
     std::function<void()> onOpen;
 };
 
-const auto FileRow = component([](FileRowProps props) {
+const auto FileRow = component([](const FileRowProps& props) {
     return Row({.children = {
         Typography({.text = props.kind,.key = "kind"}),
         Typography({.text = props.name,.key = "filename"}),
-        Button({.text = "Open",.key = "open",.onClick = std::move(props.onOpen),
+        Button({.text = "Open",.key = "open",.onClick = props.onOpen,
             .size = ButtonSize::Compact})
-    },.key = std::move(props.key),.layout = {.gap = 2}});
+    },.key = props.key,.layout = {.gap = 2}});
 });
 
 struct FileListProps
@@ -39,7 +39,7 @@ struct FileListProps
 };
 
 // Composition: FileList renders FileRow without knowing its internal structure.
-const auto FileList = component([](FileListProps props) {
+const auto FileList = component([](const FileListProps& props) {
     std::vector<Component> rows;
     rows.reserve(props.files.size());
     for (const auto& name : props.files)
@@ -47,8 +47,8 @@ const auto FileList = component([](FileListProps props) {
         rows.emplace_back(FileRow({.name = name,.kind = "FILE",.key = name,
             .onOpen = [onOpen = props.onOpen,name] { if (onOpen) onOpen(name); }}).keyed(name));
     }
-    return Card({.title = std::move(props.title),.children = std::move(rows),
-        .key = std::move(props.key)});
+    return Card({.title = props.title,.children = std::move(rows),
+        .key = props.key});
 });
 
 } /* End of anonymous namespace */
