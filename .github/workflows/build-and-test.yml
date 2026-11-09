@@ -1,75 +1,55 @@
-
 name: Build and Test
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  BUILD_TYPE: Release
+    branches: [main]
 
 jobs:
   build:
-    name: Build and Test (Ubuntu)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, compiler: gcc, build_type: Debug}
+          - {os: ubuntu-latest, compiler: clang, build_type: Debug}
+          - {os: ubuntu-latest, compiler: gcc, build_type: Release}
+          - {os: macos-latest, compiler: clang, build_type: Debug}
+          - {os: macos-latest, compiler: clang, build_type: Release}
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          clean: true
-          persist-credentials: false
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            cmake \
-            ninja-build \
-            libgtest-dev \
-            libgmock-dev
-
-      - name: Configure CMake
-        run: |
-          cmake --fresh \
-            -S . \
-            -B build \
-            -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DBUILD_TESTING=ON \
-            -DBUILD_EXAMPLES=ON
-
+      - uses: actions/checkout@v4
+      - name: Install test dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtest-dev libgmock-dev ninja-build
+      - name: Install test dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install googletest ninja
+      - name: Configure
+        env:
+          CC: ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}
+          CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON -DBUILD_EXAMPLES=ON
       - name: Build
-        run: |
-          cmake --build build \
-            --config ${{ env.BUILD_TYPE }} \
-            --parallel 2
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
 
-      - name: Run tests
-        run: |
-          ctest \
-            --test-dir build \
-            --build-config ${{ env.BUILD_TYPE }} \
-            --output-on-failure \
-            --parallel 2
-
-      - name: Show CMake test logs on failure
-        if: failure()
-        run: |
-          if [ -f build/Testing/Temporary/LastTest.log ]; then
-            sed -n '1,2000p' build/Testing/Temporary/LastTest.log
-          fi
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtest-dev libgmock-dev ninja-build
+      - name: Configure
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+          -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+          -DCMAKE_SHARED_LINKER_FLAGS='-fsanitize=address,undefined'
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
