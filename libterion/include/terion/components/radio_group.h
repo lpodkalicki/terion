@@ -18,6 +18,7 @@ public:
         std::string value = {};
         std::string key = {};
         bool disabled = false;
+        ColorVariant color = ColorVariant::Primary;
         std::function<void(std::string)> onChange = {};
         LayoutStyle layout = {};
         std::function<void(ComponentEvent&)> onEventCapture = {};
@@ -26,7 +27,8 @@ public:
 
     explicit RadioGroup(Props props) :
         Component({.type = Type::RadioGroup,.key = std::move(props.key),.text = std::move(props.value),
-            .layout = props.layout,.on_event_capture = std::move(props.onEventCapture),
+            .layout = props.layout,.color_variant = props.color,
+            .on_event_capture = std::move(props.onEventCapture),
             .on_event = std::move(props.onEvent),.on_change = std::move(props.onChange),
             .disabled = props.disabled,.radio_options = std::move(props.options)})
     {}

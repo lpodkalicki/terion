@@ -18,6 +18,7 @@ public:
         std::string key = {};
         bool checked = false;
         CheckboxVariant variant = CheckboxVariant::Default;
+        ColorVariant color = ColorVariant::Primary;
         bool disabled = false;
         std::function<void(bool)> onChange = {};
         LayoutStyle layout = {};
@@ -27,7 +28,7 @@ public:
 
     explicit Checkbox(Props props) :
         Component({.type = Type::Checkbox,.key = std::move(props.key),.text = std::move(props.label),
-            .layout = props.layout,.on_toggle = std::move(props.onChange),
+            .layout = props.layout,.color_variant = props.color,.on_toggle = std::move(props.onChange),
             .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
             .disabled = props.disabled,.checkbox_variant = props.variant,.checked = props.checked})
     {}

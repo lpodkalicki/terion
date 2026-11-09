@@ -17,6 +17,7 @@ public:
         std::string label = {};
         std::string key = {};
         bool checked = false;
+        ColorVariant color = ColorVariant::Primary;
         bool disabled = false;
         std::function<void(bool)> onChange = {};
         LayoutStyle layout = {};
@@ -26,7 +27,7 @@ public:
 
     explicit Radio(Props props) :
         Component({.type = Type::Radio,.key = std::move(props.key),.text = std::move(props.label),
-            .layout = props.layout,.on_toggle = std::move(props.onChange),
+            .layout = props.layout,.color_variant = props.color,.on_toggle = std::move(props.onChange),
             .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
             .disabled = props.disabled,.checked = props.checked})
     {}

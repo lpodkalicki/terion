@@ -26,7 +26,14 @@ Component PalettePreview()
             Button({.text = "Info",.variant = ButtonVariant::Text,.color = ColorVariant::Info})
         },.layout = {.gap = 1}}),
         Progress({.value = 0.7,.color = ColorVariant::Success}),
-        Progress({.value = 0.4,.color = ColorVariant::Warning})
+        Progress({.value = 0.4,.color = ColorVariant::Warning}),
+        Checkbox({.label = "Accept changes",.checked = true,.color = ColorVariant::Success}),
+        Switch({.label = "Monitoring enabled",.checked = true,.color = ColorVariant::Info}),
+        Radio({.label = "Selected",.checked = true,.color = ColorVariant::Warning}),
+        RadioGroup({.options = {{.label = "First",.value = "first"},
+            {.label = "Second",.value = "second"}},.value = "second",
+            .color = ColorVariant::Error}),
+        Slider({.value = 65,.color = ColorVariant::Success})
     },.layout = {.padding = 2,.gap = 1}});
 }
 

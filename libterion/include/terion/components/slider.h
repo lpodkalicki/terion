@@ -23,12 +23,13 @@ public:
         std::string key = {};
         bool disabled = false;
         bool showValue = true;
+        ColorVariant color = ColorVariant::Primary;
         std::function<void(double)> onChange = {};
         LayoutStyle layout = {.width = 25};
     }; /* End of struct Props */
 
     explicit Slider(Props props) : Component({.type = Type::Slider,.key = std::move(props.key),
-        .layout = props.layout,.disabled = props.disabled,.value = props.value,
+        .layout = props.layout,.color_variant = props.color,.disabled = props.disabled,.value = props.value,
         .slider_min = props.min,.slider_max = props.max,.slider_step = props.step,
         .slider_show_value = props.showValue,.slider_on_change = std::move(props.onChange)})
     {}

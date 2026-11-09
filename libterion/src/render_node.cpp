@@ -1895,7 +1895,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         for (int i = 0; i < width; ++i)
         {
             const bool active = i <= thumb;
-            const Color foreground = disabled_ ? palette.muted : active ? palette.primary : palette.muted;
+            const Color foreground = disabled_ ? palette.muted : active ?
+                palette.resolve(color_variant_) : palette.muted;
             const TextStyle segment{.foreground = foreground,.background = style.background};
             painter.put(bounds_.x+i,bounds_.y,i == thumb ? (unicode ? "●" : "O") :
                 active ? (unicode ? "━" : "=") : (unicode ? "─" : "-"),segment);
@@ -2129,11 +2130,12 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const bool focused = focused_id == std::to_string(id_) && !disabled_;
         const bool hovered = hovered_id == std::to_string(id_) && !disabled_;
         const Color base = effective_background.value_or(palette.background);
-        const Color bg = hovered ? blendColor(base,palette.primary,12) : base;
+        const Color accent = palette.resolve(color_variant_);
+        const Color bg = hovered ? blendColor(base,accent,12) : base;
         painter.fillBackground(bounds_,bg);
         const auto draw = [&](const int y, const bool checked, const bool disabled,
             const bool radio, const std::string_view label) {
-            const Color fg = disabled ? palette.muted : checked || focused ? palette.primary : palette.foreground;
+            const Color fg = disabled ? palette.muted : checked || focused ? accent : palette.foreground;
             const TextStyle indicator {.foreground = fg,.background = bg,.bold = focused};
             const TextStyle label_style {.foreground = disabled ? palette.muted : palette.foreground,.background = bg};
             std::string marker;
