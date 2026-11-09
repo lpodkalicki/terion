@@ -242,6 +242,8 @@ private:
     int dialog_max_scroll_offset_ = 0;
     Rect dialog_content_rect_{};
     Size dialog_screen_{};
+    bool dialog_scroll_dragging_ = false;
+    int dialog_scroll_grab_offset_ = 0;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
 }; /* End of class RenderNode */

@@ -9,6 +9,7 @@
 #include <terion/component.h>
 #include <terion/hooks.h>
 #include <terion/context.h>
+#include <terion/dialog_manager.h>
 #include <terion/event.h>
 #include <terion/components/box.h>
 #include <terion/components/row.h>

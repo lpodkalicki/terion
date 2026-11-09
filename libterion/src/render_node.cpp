@@ -1599,12 +1599,25 @@ bool RenderNode::handleDialogKey(const Event& event)
 bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
 {
     if (!dialogOpen()) return false;
+    if (dialog_scroll_dragging_)
+    {
+        if (mouse.action == MouseAction::Release) { dialog_scroll_dragging_ = false; return true; }
+        if (mouse.action == MouseAction::Move)
+            return scrollbarDrag(mouse.position.y,dialog_scroll_grab_offset_);
+    }
     const Rect rect = dialogRect(screen);
     const bool inside = mouse.position.x >= rect.x && mouse.position.x < rect.x+rect.width &&
         mouse.position.y >= rect.y && mouse.position.y < rect.y+rect.height;
     if (mouse.action == MouseAction::Scroll)
     {
         if (inside) (void)scrollDialog(-mouse.scrollY*3,screen);
+        return true;
+    }
+    if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
+        scrollbarPress(mouse.position,dialog_scroll_grab_offset_))
+    {
+        dialog_scroll_dragging_ = true;
+        dialog_pressed_child_ = 0;
         return true;
     }
     if (auto* child = dialogChildAt(mouse.position))
@@ -1681,17 +1694,8 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
                 .width = std::max(0,rect.width-2),.height = std::max(0,bottom-top)});
             for (const auto& child : children_) child->paint(painter,focused_id,{},palette.surface,&theme);
         }
-        if (dialog_max_scroll_offset_ > 0 && dialog_content_rect_.height > 0)
-        {
-            const int x = rect.x+rect.width-2;
-            const int h = dialog_content_rect_.height;
-            const int thumb = std::max(1,h*h/(h+dialog_max_scroll_offset_));
-            const int position = static_cast<int>(static_cast<long long>(dialog_scroll_offset_)*
-                (h-thumb)/dialog_max_scroll_offset_);
-            for (int i = 0; i < h; ++i)
-                painter.put(x,dialog_content_rect_.y+i,
-                    i >= position && i < position+thumb ? "#" : "|",style);
-        }
+        paintScrollbar(painter,scrollbarTrack(),scrollbarThumb(),theme,palette.surface,true,
+            dialog_scroll_dragging_);
         if (!dialog_show_actions_) return;
         const int row = rect.y+rect.height-2;
         const int confirm_x = rect.x+std::max(1,rect.width-static_cast<int>(dialog_confirm_text_.size())-3);
@@ -1714,6 +1718,13 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
 
 Rect RenderNode::scrollbarTrack() const
 {
+    if (type_ == Component::Type::Dialog)
+    {
+        if (!dialogOpen() || dialog_max_scroll_offset_ <= 0 || dialog_content_rect_.height <= 0)
+            return {};
+        return {.x = dialog_content_rect_.x+dialog_content_rect_.width,
+            .y = dialog_content_rect_.y,.width = 1,.height = dialog_content_rect_.height};
+    }
     if (type_ == Component::Type::TreeView)
     {
         if (bounds_.width <= 0 || bounds_.height <= 0 ||
@@ -1748,6 +1759,14 @@ Rect RenderNode::scrollbarThumb() const
         const int top = std::clamp(offset,0,maximum)*(track.height-length)/maximum;
         return {.x = track.x,.y = track.y+top,.width = 1,.height = length};
     }
+    if (type_ == Component::Type::Dialog)
+    {
+        const int thumb_height = std::max(1,static_cast<int>(static_cast<long long>(track.height)*
+            track.height/(dialog_max_scroll_offset_+static_cast<long long>(track.height))));
+        const int top = static_cast<int>((static_cast<long long>(dialog_scroll_offset_)*
+            (track.height-thumb_height)+dialog_max_scroll_offset_/2)/dialog_max_scroll_offset_);
+        return {.x = track.x,.y = track.y+top,.width = 1,.height = thumb_height};
+    }
     const int thumb_height = std::max(1,static_cast<int>(static_cast<long long>(track.height) *
         track.height / (max_scroll_offset_ + static_cast<long long>(track.height))));
     const int top = static_cast<int>((static_cast<long long>(std::clamp(scroll_offset_,0,max_scroll_offset_)) *
@@ -1757,7 +1776,8 @@ Rect RenderNode::scrollbarThumb() const
 
 bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
 {
-    if (type_ != Component::Type::Table && type_ != Component::Type::TreeView && !on_scroll_) return false;
+    if (type_ != Component::Type::Dialog && type_ != Component::Type::Table &&
+        type_ != Component::Type::TreeView && !on_scroll_) return false;
     const Rect track = scrollbarTrack();
     const Rect thumb = scrollbarThumb();
     if (track.height <= 0 || thumb.height <= 0) return false;
@@ -1766,10 +1786,12 @@ bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
     const int maximum = type_ == Component::Type::Table ?
         static_cast<int>(tableOrder().size())-track.height :
         type_ == Component::Type::TreeView ? static_cast<int>(treeVisibleItems().size())-track.height :
-        max_scroll_offset_;
+        type_ == Component::Type::Dialog ? dialog_max_scroll_offset_ : max_scroll_offset_;
     const int target = travel > 0 ? static_cast<int>((static_cast<long long>(top) * maximum +
         travel / 2) / travel) : 0;
-    if (type_ == Component::Type::Table) table_scroll_ = target;
+    if (type_ == Component::Type::Dialog)
+        (void)scrollDialog(target-dialog_scroll_offset_,dialog_screen_);
+    else if (type_ == Component::Type::Table) table_scroll_ = target;
     else if (type_ == Component::Type::TreeView) tree_scroll_ = target;
     else if (target != std::clamp(scroll_offset_,0,max_scroll_offset_)) on_scroll_(target);
     return true;
@@ -1778,7 +1800,8 @@ bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
 bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
 {
     const Rect track = scrollbarTrack();
-    if ((type_ != Component::Type::Table && type_ != Component::Type::TreeView && !on_scroll_) ||
+    if ((type_ != Component::Type::Dialog && type_ != Component::Type::Table &&
+        type_ != Component::Type::TreeView && !on_scroll_) ||
         position.x != track.x || position.y < track.y ||
         position.y >= track.y + track.height) return false;
     const Rect thumb = scrollbarThumb();

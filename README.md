@@ -69,7 +69,13 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - Long dialog content scrolls within a clipped viewport using the mouse wheel,
   PageUp/PageDown, Home/End, or Up/Down when no child handles the key. Focused
   controls are automatically scrolled into view; the header and action footer
-  remain fixed.
+  remain fixed. Its scrollbar uses the same themed track/thumb glyphs as
+  `ScrollView` and supports clicking the track and dragging the thumb.
+- `DialogManager` provides imperative `open(Dialog::Props)` and `close()` for a
+  single managed modal. Wrap the UI with `DialogProvider(manager,root)` and call
+  `useDialogManager()` from descendant function components; changes automatically
+  update the modal host. See `examples/dialog_manager_scroll.cpp` for a long
+  document rendered inside a scrollable managed dialog.
 - `When(visible, Widget())` conditionally includes a component without mounting its
   hooks when hidden. `ForEach(items, [](const auto& item) { return RowWidget(item).keyed(item.id); })`
   expands a range into siblings and requires unique nonempty keys for reliable state retention.

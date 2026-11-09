@@ -145,3 +145,38 @@ TEST(Dialog, RevealsFocusedChildAfterScrolling)
     const auto rect = dialog->dialogRect(screen);
     EXPECT_LT(last->bounds().y,rect.y+rect.height-1);
 }
+
+TEST(Dialog, UsesThemedScrollbarAndSupportsDragging)
+{
+    std::vector<Component> children;
+    for (int i = 0; i < 30; ++i)
+        children.push_back(Typography({.text = "Paragraph " + std::to_string(i)}));
+    Reconciler reconciler;
+    reconciler.update(Dialog({.open = true,.title = "Document",
+        .children = std::move(children)}));
+    auto* dialog = reconciler.root();
+    const Size screen{.width = 50,.height = 12};
+    dialog->layoutDialogChildren(screen);
+    const Rect track = dialog->scrollbarTrack();
+    const Rect initial_thumb = dialog->scrollbarThumb();
+    ASSERT_GT(track.height,0);
+    ASSERT_GT(initial_thumb.height,0);
+
+    Theme theme = Theme::dark();
+    theme.scrollbar.track = ".";
+    theme.scrollbar.thumb = "@";
+    ScreenBuffer buffer(screen);
+    Painter painter(buffer);
+    dialog->paintDialog(painter,screen,theme);
+    EXPECT_EQ(buffer.at(initial_thumb.x,initial_thumb.y).grapheme,"@");
+    EXPECT_EQ(buffer.at(track.x,track.y+track.height-1).grapheme,".");
+
+    const Point start{.x = initial_thumb.x,.y = initial_thumb.y};
+    EXPECT_TRUE(dialog->handleDialogMouse({.position = start,.button = MouseButton::Left,
+        .action = MouseAction::Press},screen));
+    EXPECT_TRUE(dialog->handleDialogMouse({.position = {.x = start.x,.y = track.y+track.height-1},
+        .action = MouseAction::Move},screen));
+    EXPECT_TRUE(dialog->handleDialogMouse({.position = {.x = start.x,.y = track.y+track.height-1},
+        .button = MouseButton::Left,.action = MouseAction::Release},screen));
+    EXPECT_GT(dialog->scrollbarThumb().y,initial_thumb.y);
+}
