@@ -11,8 +11,8 @@ namespace {
 
 struct PanelProps
 {
-    std::string title;
-    std::vector<std::string> names;
+    std::string title = {};
+    std::vector<std::string> names = {};
 };
 
 const auto Panel = component([](const PanelProps& props) {
