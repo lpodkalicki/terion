@@ -46,6 +46,10 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `Fragment({.children = {...}})` groups sibling declarations without introducing a
   layout node. It also works when returned from `component(lambda)`; a top-level
   fragment uses one root column host. See `examples/fragment.cpp`.
+- `When(visible, Widget())` conditionally includes a component without mounting its
+  hooks when hidden. `ForEach(items, [](const auto& item) { return RowWidget(item).keyed(item.id); })`
+  expands a range into siblings and requires unique nonempty keys for reliable state retention.
+  See `examples/composition_helpers.cpp`.
 - Initial constraints-based layout supports text, `Row`, `Column`, `Box`, padding, gap and fixed dimensions.
 - Reactive `State<T>` automatically tracks dependencies in render callbacks; unchanged state does not trigger redraw.
 - MUI-inspired components in `<terion/components/>`: `Typography`, `Box`, `Row`, `Column` and interactive `Button`.

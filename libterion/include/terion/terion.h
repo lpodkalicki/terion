@@ -14,6 +14,7 @@
 #include <terion/components/row.h>
 #include <terion/components/column.h>
 #include <terion/components/fragment.h>
+#include <terion/components/composition.h>
 #include <terion/components/typography.h>
 #include <terion/components/button.h>
 #include <terion/components/checkbox.h>
