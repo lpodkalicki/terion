@@ -1100,7 +1100,7 @@ bool RenderNode::openContextMenu(const Point position, const Size screen)
     if (type_ != Component::Type::ContextMenu || disabled_ || select_options_.empty()) return false;
     context_anchor_ = position;
     select_open_ = true;
-    select_dragging_ = false;
+    select_drag_.end();
     select_scroll_ = 0;
     select_highlight_ = 0;
     for (std::size_t i = 0; i < select_options_.size(); ++i)
@@ -1220,14 +1220,14 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
 {
     if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu &&
         type_ != Component::Type::ContextMenu) || disabled_) return false;
-    if (select_dragging_)
+    if (select_drag_.active())
     {
-        if (mouse.action == MouseAction::Release) { select_dragging_ = false; return true; }
+        if (mouse.action == MouseAction::Release) { select_drag_.end(); return true; }
         if (mouse.action == MouseAction::Move)
         {
             const Rect track = selectScrollbarTrack(screen);
             const ScrollController scroll(static_cast<int>(select_options_.size()),track.height,select_scroll_);
-            select_scroll_ = scroll.offsetAt(track,mouse.position.y,select_grab_offset_);
+            select_scroll_ = select_drag_.move(scroll,track,mouse.position.y);
             return true;
         }
     }
@@ -1238,12 +1238,9 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
         if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
             track.width > 0 && mouse.position.x == track.x)
         {
-            const Rect thumb = selectScrollbarThumb(screen);
-            select_grab_offset_ = mouse.position.y >= thumb.y && mouse.position.y < thumb.y+thumb.height ?
-                mouse.position.y-thumb.y : thumb.height/2;
-            select_dragging_ = true;
             const ScrollController scroll(static_cast<int>(select_options_.size()),track.height,select_scroll_);
-            select_scroll_ = scroll.offsetAt(track,mouse.position.y,select_grab_offset_);
+            int target = select_scroll_;
+            if (select_drag_.begin(scroll,track,mouse.position,target)) select_scroll_ = target;
             return true;
         }
         if (mouse.action == MouseAction::Scroll)
@@ -1574,11 +1571,11 @@ bool RenderNode::handleDialogKey(const Event& event)
 bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
 {
     if (!dialogOpen()) return false;
-    if (dialog_scroll_dragging_)
+    if (scrollbar_drag_.active())
     {
-        if (mouse.action == MouseAction::Release) { dialog_scroll_dragging_ = false; return true; }
+        if (mouse.action == MouseAction::Release) { scrollbar_drag_.end(); return true; }
         if (mouse.action == MouseAction::Move)
-            return scrollbarDrag(mouse.position.y,dialog_scroll_grab_offset_);
+            return moveScrollbarDrag(mouse.position.y);
     }
     const Rect rect = dialogRect(screen);
     const bool inside = mouse.position.x >= rect.x && mouse.position.x < rect.x+rect.width &&
@@ -1589,9 +1586,8 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
         return true;
     }
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
-        scrollbarPress(mouse.position,dialog_scroll_grab_offset_))
+        beginScrollbarDrag(mouse.position))
     {
-        dialog_scroll_dragging_ = true;
         dialog_pressed_child_ = 0;
         return true;
     }
@@ -1671,7 +1667,7 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
             for (const auto& child : children_) child->paint(painter,focused_id,{},palette.surface,&local_theme);
         }
         paintScrollbar(painter,scrollbarTrack(),scrollbarThumb(),local_theme,palette.surface,true,
-            dialog_scroll_dragging_);
+            scrollbar_drag_.active());
         if (!dialog_show_actions_) return;
         const int row = rect.y+rect.height-2;
         const int confirm_x = rect.x+std::max(1,rect.width-static_cast<int>(dialog_confirm_text_.size())-3);
@@ -1747,29 +1743,46 @@ bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
     const ScrollController scroll = scrollController();
     if (!scroll.scrollable() || track.height <= 0) return false;
     const int target = scroll.offsetAt(track,y,grab_offset);
+    applyScrollOffset(target);
+    return true;
+}
+
+void RenderNode::applyScrollOffset(const int target)
+{
+    const ScrollController scroll = scrollController();
     if (type_ == Component::Type::Dialog)
         (void)scrollDialog(target-dialog_scroll_offset_,dialog_screen_);
     else if (type_ == Component::Type::Table) table_scroll_ = target;
     else if (type_ == Component::Type::TreeView) tree_scroll_ = target;
-    else if (target != scroll.offset()) on_scroll_(target);
-    return true;
+    else if (on_scroll_ && target != scroll.offset()) on_scroll_(target);
 }
 
 bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
 {
     const Rect track = scrollbarTrack();
     if ((type_ != Component::Type::Dialog && type_ != Component::Type::Table &&
-        type_ != Component::Type::TreeView && !on_scroll_) ||
-        position.x != track.x || position.y < track.y ||
-        position.y >= track.y + track.height) return false;
-    const Rect thumb = scrollbarThumb();
-    if (position.y >= thumb.y && position.y < thumb.y + thumb.height)
-        grab_offset = position.y - thumb.y;
-    else
-    {
-        grab_offset = thumb.height / 2;
-        scrollbarDrag(position.y,grab_offset);
-    }
+        type_ != Component::Type::TreeView && !on_scroll_)) return false;
+    int target = 0;
+    if (!scrollController().press(track,position,grab_offset,target)) return false;
+    applyScrollOffset(target);
+    return true;
+}
+
+bool RenderNode::beginScrollbarDrag(const Point position)
+{
+    if (type_ != Component::Type::Dialog && type_ != Component::Type::Table &&
+        type_ != Component::Type::TreeView && !on_scroll_) return false;
+    int target = 0;
+    if (!scrollbar_drag_.begin(scrollController(),scrollbarTrack(),position,target)) return false;
+    applyScrollOffset(target);
+    return true;
+}
+
+bool RenderNode::moveScrollbarDrag(const int y)
+{
+    if (!scrollbar_drag_.active()) return false;
+    const int target = scrollbar_drag_.move(scrollController(),scrollbarTrack(),y);
+    applyScrollOffset(target);
     return true;
 }
 

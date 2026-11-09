@@ -316,6 +316,9 @@ bool Application::handleMouse(const MouseEvent& mouse)
     {
         if (mouse.action == MouseAction::Release)
         {
+            if (component_ && reconciler_.root())
+                if (auto* target = reconciler_.root()->findById(scrollbar_drag_id_))
+                    target->endScrollbarDrag();
             scrollbar_drag_id_ = 0;
             updateHover(mouse);
             updateMousePointer(mouse);
@@ -331,7 +334,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
             };
             if (component_ && reconciler_.root())
                 if (auto* target = find(find,*reconciler_.root()))
-                    return target->scrollbarDrag(mouse.position.y,scrollbar_grab_offset_);
+                    return target->moveScrollbarDrag(mouse.position.y);
             scrollbar_drag_id_ = 0;
         }
     }
@@ -388,11 +391,9 @@ bool Application::handleMouse(const MouseEvent& mouse)
     {
         if (auto* target = reconciler_.root()->scrollTarget(mouse.position))
         {
-            int grab_offset = 0;
-            if (target->scrollbarPress(mouse.position,grab_offset))
+            if (target->beginScrollbarDrag(mouse.position))
             {
                 scrollbar_drag_id_ = target->id();
-                scrollbar_grab_offset_ = grab_offset;
                 updateHover(mouse);
                 updateMousePointer(mouse);
                 pressed_button_id_.clear();

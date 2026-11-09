@@ -54,3 +54,30 @@ TEST(ScrollController, HandlesSingleCellTrack)
     EXPECT_EQ(scroll.thumb(track).height,1);
     EXPECT_EQ(scroll.offsetAt(track,1,0),0);
 }
+
+TEST(ScrollController, DragCapturePreservesOffsetUntilPointerMoves)
+{
+    const ScrollController scroll(12,4,4);
+    const Rect track{.x = 7,.y = 3,.width = 1,.height = 4};
+    ScrollController::DragState drag;
+    int target = -1;
+    EXPECT_FALSE(drag.begin(scroll,track,{.x = 6,.y = 4},target));
+    EXPECT_FALSE(drag.active());
+    EXPECT_TRUE(drag.begin(scroll,track,{.x = 7,.y = 4},target));
+    EXPECT_EQ(target,4);
+    EXPECT_TRUE(drag.active());
+    EXPECT_EQ(drag.move(scroll,track,track.y+track.height),8);
+    drag.end();
+    EXPECT_FALSE(drag.active());
+    EXPECT_EQ(drag.move(scroll,track,track.y),4);
+}
+
+TEST(ScrollController, PressingTrackMovesThumb)
+{
+    const ScrollController scroll(20,4,0);
+    const Rect track{.x = 1,.y = 5,.width = 1,.height = 4};
+    ScrollController::DragState drag;
+    int target = 0;
+    EXPECT_TRUE(drag.begin(scroll,track,{.x = 1,.y = 8},target));
+    EXPECT_EQ(target,16);
+}

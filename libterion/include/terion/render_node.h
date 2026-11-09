@@ -51,6 +51,9 @@ public:
     [[nodiscard]] Rect scrollbarThumb() const;
     bool scrollbarPress(Point position, int& grab_offset);
     bool scrollbarDrag(int y, int grab_offset);
+    bool beginScrollbarDrag(Point position);
+    bool moveScrollbarDrag(int y);
+    void endScrollbarDrag() noexcept { scrollbar_drag_.end(); }
     [[nodiscard]] bool scrollable() const noexcept { return static_cast<bool>(on_scroll_); }
     [[nodiscard]] bool disabled() const noexcept { return disabled_; }
     [[nodiscard]] const std::function<void()>& onClick() const noexcept { return on_click_; }
@@ -111,10 +114,10 @@ public:
     [[nodiscard]] bool selectContains(Point point, Size screen) const noexcept;
     bool handleSelectKey(const Event& event, Size screen = {.width = 80,.height = 24});
     bool handleSelectMouse(const MouseEvent& mouse, Size screen);
-    [[nodiscard]] bool selectDragging() const noexcept { return select_open_ && select_dragging_; }
+    [[nodiscard]] bool selectDragging() const noexcept { return select_open_ && select_drag_.active(); }
     [[nodiscard]] Rect selectScrollbarTrack(Size screen) const noexcept;
     [[nodiscard]] Rect selectScrollbarThumb(Size screen) const noexcept;
-    void closeSelect() noexcept { select_open_ = false; select_dragging_ = false; }
+    void closeSelect() noexcept { select_open_ = false; select_drag_.end(); }
     void paintOverlay(Painter& painter, Size screen, const Theme& theme) const;
     [[nodiscard]] bool tooltipContains(Point point) const noexcept;
     [[nodiscard]] Rect tooltipRect(Point point, Size screen) const noexcept;
@@ -224,9 +227,8 @@ private:
     bool select_open_ = false;
     int select_highlight_ = 0;
     int select_scroll_ = 0;
-    bool select_dragging_ = false;
+    ScrollController::DragState select_drag_{};
     Point context_anchor_{};
-    int select_grab_offset_ = 0;
     bool dialog_open_ = false;
     bool toast_requested_ = false;
     bool toast_visible_ = false;
@@ -248,9 +250,9 @@ private:
     int dialog_max_scroll_offset_ = 0;
     Rect dialog_content_rect_{};
     Size dialog_screen_{};
-    bool dialog_scroll_dragging_ = false;
-    int dialog_scroll_grab_offset_ = 0;
+    ScrollController::DragState scrollbar_drag_{};
     [[nodiscard]] ScrollController scrollController() const;
+    void applyScrollOffset(int target);
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
     std::optional<Theme> theme_override_ = std::nullopt;

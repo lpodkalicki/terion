@@ -68,6 +68,43 @@ public:
         return clamp((position*maximum_+travel/2)/travel);
     }
 
+    [[nodiscard]] bool press(Rect track, Point point, int& grab_offset, int& target) const noexcept
+    {
+        if (!scrollable() || track.width <= 0 || track.height <= 0 ||
+            point.x < track.x || point.x >= track.x+track.width ||
+            point.y < track.y || point.y >= track.y+track.height) return false;
+        const Rect handle = thumb(track);
+        const bool inside_handle = point.y >= handle.y && point.y < handle.y+handle.height;
+        grab_offset = inside_handle ? point.y-handle.y : handle.height/2;
+        target = inside_handle ? offset_ : offsetAt(track,point.y,grab_offset);
+        return true;
+    }
+
+    // Mouse capture belongs to the widget, independently of its scroll offset.
+    class DragState
+    {
+    public:
+        [[nodiscard]] bool begin(const ScrollController& scroll, Rect track, Point point,
+            int& target) noexcept
+        {
+            end();
+            active_ = scroll.press(track,point,grab_offset_,target);
+            return active_;
+        }
+
+        [[nodiscard]] int move(const ScrollController& scroll, Rect track, int y) const noexcept
+        {
+            return active_ ? scroll.offsetAt(track,y,grab_offset_) : scroll.offset();
+        }
+
+        void end() noexcept { active_ = false; grab_offset_ = 0; }
+        [[nodiscard]] bool active() const noexcept { return active_; }
+
+    private:
+        bool active_ = false;
+        int grab_offset_ = 0;
+    }; /* End of class DragState */
+
 private:
     int viewport_ = 0;
     int maximum_ = 0;
