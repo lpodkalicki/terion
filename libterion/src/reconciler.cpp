@@ -43,6 +43,11 @@ void Reconciler::update(const Component& component)
 {
     // Reject visible duplicate keys before running user-defined component functions.
     validateKeys(component);
+    // Stage the hook registry so an exception in any sibling function cannot
+    // leave behind partially mounted identities or altered hook counts.
+    auto saved_hooks = hooks_;
+    const auto previous_generation = generation_;
+    const auto previous_stats = stats_;
     ++generation_;
     const auto retired_before = retired_hooks_.size();
     try
@@ -67,13 +72,10 @@ void Reconciler::update(const Component& component)
                 if (effect && *effect) (*effect)->cancelPending();
             }
         }
-        // Replacements of function identities are not committed on failed frames.
-        for (std::size_t i = retired_hooks_.size(); i > retired_before; --i)
-        {
-            auto& [path,previous] = retired_hooks_[i-1];
-            hooks_[path] = std::move(previous);
-        }
+        hooks_.swap(saved_hooks);
         retired_hooks_.resize(retired_before);
+        generation_ = previous_generation;
+        stats_ = previous_stats;
         throw;
     }
     for (auto it = hooks_.begin(); it != hooks_.end();)

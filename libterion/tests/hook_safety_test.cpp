@@ -89,3 +89,29 @@ TEST(HookSafety, FailedReplacementKeepsOldComponentAndCleanup)
     EXPECT_EQ(started,1);
     EXPECT_EQ(cleaned,0);
 }
+
+TEST(HookSafety, FailedSiblingRenderRestoresPriorHookRegistry)
+{
+    std::function<void(int)> set_value;
+    const auto stable = component([&] {
+        auto [value,set] = useState(3);
+        set_value = set;
+        return Typography({.text = std::to_string(value)});
+    });
+    const auto failing = component([](bool fail) {
+        auto [value,set] = useState(11);
+        (void)set;
+        if (fail) throw std::runtime_error("sibling failed");
+        return Typography({.text = std::to_string(value)});
+    });
+    Reconciler tree;
+    tree.update(Column({.children = {stable().keyed("stable")}}));
+    const auto id = tree.root()->children()[0]->id();
+    set_value(42);
+    EXPECT_THROW(tree.update(Column({.children = {
+        stable().keyed("stable"),failing(true).keyed("new")
+    }})),std::runtime_error);
+    tree.update(Column({.children = {stable().keyed("stable")}}));
+    EXPECT_EQ(tree.root()->children()[0]->id(),id);
+    EXPECT_EQ(tree.root()->children()[0]->text(),"42");
+}
