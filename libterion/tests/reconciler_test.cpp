@@ -97,6 +97,50 @@ TEST(Reconciler, RejectedDuplicateKeysKeepExistingTree)
     EXPECT_EQ(tree.root()->children()[0]->id(),first);
 }
 
+TEST(Reconciler, ThrowingTableFilterLeavesRetainedTreeUntouched)
+{
+    Reconciler tree;
+    tree.update(Component::column({Component::text("Before","label"),
+        Table({.columns = {{"Name"}},.rows = {{"a",{"Alpha"}}},.key = "table"})}));
+    const auto root_id = tree.root()->id();
+    const auto label_id = tree.root()->children()[0]->id();
+    const auto table_id = tree.root()->children()[1]->id();
+    const auto previous_stats = tree.stats().visited;
+
+    EXPECT_THROW(tree.update(Component::column({Component::text("After","label"),
+        Table({.columns = {{"Name"}},.rows = {{"a",{"Alpha"}}, {"b",{"Beta"}}},
+            .filter = [](const TableRow& row) -> bool {
+                if (row.key == "b") throw std::runtime_error("filter failed");
+                return true;
+            },.key = "table"})})),std::runtime_error);
+
+    ASSERT_NE(tree.root(),nullptr);
+    EXPECT_EQ(tree.root()->id(),root_id);
+    EXPECT_EQ(tree.root()->children()[0]->id(),label_id);
+    EXPECT_EQ(tree.root()->children()[0]->text(),"Before");
+    EXPECT_EQ(tree.root()->children()[1]->id(),table_id);
+    EXPECT_EQ(tree.root()->children()[1]->tableOrder().size(),1u);
+    EXPECT_EQ(tree.stats().visited,previous_stats);
+
+    tree.update(Component::column({Component::text("After","label"),
+        Table({.columns = {{"Name"}},.rows = {{"a",{"Alpha"}}, {"b",{"Beta"}}},
+            .key = "table"})}));
+    EXPECT_EQ(tree.root()->children()[0]->id(),label_id);
+    EXPECT_EQ(tree.root()->children()[0]->text(),"After");
+    EXPECT_EQ(tree.root()->children()[1]->id(),table_id);
+}
+
+TEST(Reconciler, TablePredicateRunsOnceDuringUpdate)
+{
+    Reconciler tree;
+    int calls = 0;
+    tree.update(Table({.columns = {{"Name"}},.rows = {
+        {"a",{"Alpha"}}, {"b",{"Beta"}}, {"c",{"Gamma"}}},
+        .filter = [&](const TableRow&) { ++calls; return true; }}));
+    EXPECT_EQ(calls,3);
+    EXPECT_EQ(tree.root()->tableOrder().size(),3u);
+}
+
 TEST(Reconciler, ReportsCreatedReusedAndRemovedRoots)
 {
     Reconciler tree;

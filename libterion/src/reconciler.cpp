@@ -52,13 +52,10 @@ void Reconciler::update(const Component& component)
     const auto retired_before = retired_hooks_.size();
     try
     {
-        auto expanded = expand(component,"root");
-        // A root fragment has no layout box; use the existing root column as its host.
-        if (expanded.props().type == Component::Type::Fragment)
-            expanded = Component::column(expanded.props().children);
-        validateKeys(expanded);
-        stats_ = {};
-        reconcile(root_,expanded);
+        auto prepared = prepare(component);
+        TableCounts counts;
+        preflightTables(prepared,counts);
+        commit(prepared,counts);
     }
     catch (...)
     {
@@ -84,6 +81,37 @@ void Reconciler::update(const Component& component)
         retired_hooks_.emplace_back(it->first,std::move(it->second));
         it = hooks_.erase(it);
     }
+}
+
+Component Reconciler::prepare(const Component& component)
+{
+    auto expanded = expand(component,"root");
+    // A root fragment has no layout box; use the existing root column as its host.
+    if (expanded.props().type == Component::Type::Fragment)
+        expanded = Component::column(expanded.props().children);
+    validateKeys(expanded);
+    return expanded;
+}
+
+void Reconciler::preflightTables(const Component& component, TableCounts& counts)
+{
+    const auto& props = component.props();
+    if (props.type == Component::Type::Table)
+    {
+        int visible = 0;
+        for (const auto& row : props.table_rows)
+            if (!props.table_filter || props.table_filter(row)) ++visible;
+        counts.emplace(&component,visible);
+    }
+    for (const auto& child : props.children) preflightTables(child,counts);
+}
+
+void Reconciler::commit(const Component& component, const TableCounts& counts)
+{
+    // All user-supplied render functions and table predicates have completed.
+    // Allocation failures inside reconcile still require a separate rollback journal.
+    stats_ = {};
+    reconcile(root_,component,counts);
 }
 
 void Reconciler::commitEffects()
@@ -243,7 +271,8 @@ Component Reconciler::expand(const Component& component, const std::string& path
     return Component(std::move(actual));
 }
 
-void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& component)
+void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& component,
+    const TableCounts& counts)
 {
     const auto& props = component.props();
     ++stats_.visited;
@@ -337,8 +366,8 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     }
     node->tree_scroll_.configure(static_cast<int>(node->treeVisibleItems().size()),
         node->tree_scroll_.viewport());
-    node->table_scroll_.configure(static_cast<int>(node->tableOrder().size()),
-        node->table_scroll_.viewport());
+    if (props.type == Component::Type::Table)
+        node->table_scroll_.configure(counts.at(&component),node->table_scroll_.viewport());
     node->tab_panel_active_ = props.tab_panel_active;
     node->checked_ = props.checked;
     node->dialog_open_ = props.dialog_open;
@@ -396,7 +425,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         else if (i < previous.size() && previous[i] && previous[i]->key_.empty())
             matched = std::move(previous[i]);
         if (!matched) layout_dirty = paint_dirty = true;
-        reconcile(matched,child);
+        reconcile(matched,child,counts);
         if (matched->layout_dirty_) layout_dirty = true;
         if (matched->paint_dirty_) paint_dirty = true;
         next.push_back(std::move(matched));

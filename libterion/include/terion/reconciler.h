@@ -45,8 +45,14 @@ private:
         std::size_t generation = 0;
     };
 
+    using TableCounts = std::unordered_map<const Component*,int>;
+
     [[nodiscard]] Component expand(const Component& component, const std::string& path);
-    void reconcile(std::unique_ptr<RenderNode>& node, const Component& component);
+    [[nodiscard]] Component prepare(const Component& component);
+    static void preflightTables(const Component& component, TableCounts& counts);
+    void commit(const Component& component, const TableCounts& counts);
+    void reconcile(std::unique_ptr<RenderNode>& node, const Component& component,
+        const TableCounts& counts);
 
     std::unique_ptr<RenderNode> root_;
     std::uint64_t next_id_ = 1;
