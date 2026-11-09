@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 #include <terion/component.h>
+#include <terion/components/fragment.h>
 #include <terion/hooks.h>
 
 namespace terion {
@@ -64,6 +65,15 @@ template<typename T>
             it->second.pop_back();
             if (it->second.empty()) detail::context_values.erase(it);
         }});
+}
+
+// Multiple direct children share one context scope without a layout wrapper.
+template<typename T>
+[[nodiscard]] Component ContextProvider(const Context<T>& context,T value,
+    std::vector<Component> children,std::string key = {})
+{
+    return ContextProvider(context,std::move(value),
+        Fragment({.children = std::move(children)}),std::move(key));
 }
 
 } /* End of namespace terion */

@@ -80,3 +80,46 @@ TEST(Context, CallableComponentsInheritNearestProvider)
     EXPECT_EQ(children[1]->children()[0]->children()[0]->text(),"outer");
     EXPECT_EQ(children[1]->children()[1]->text(),"inner");
 }
+
+TEST(Context, MultipleDirectChildrenShareScopeWithoutLayoutNode)
+{
+    Reconciler tree;
+    tree.update(Column({.children = {
+        ContextProvider(context,std::string("shared"),std::vector<Component>{
+            Reader().keyed("a"),Reader().keyed("b")
+        })
+    }}));
+    ASSERT_EQ(tree.root()->children().size(),2u);
+    EXPECT_EQ(tree.root()->children()[0]->text(),"shared");
+    EXPECT_EQ(tree.root()->children()[1]->text(),"shared");
+}
+
+TEST(Context, StatefulProviderUpdatesDescendantsThroughContext)
+{
+    struct Model
+    {
+        bool dark;
+        std::function<void()> toggle;
+    };
+    const Context<Model> theme({false,{}});
+    const auto useTheme = [&] { return useContext(theme); };
+    const auto label = component([&] {
+        return Typography({.text = useTheme().dark ? "dark" : "light"});
+    });
+    const auto toggle = component([&] {
+        return Button({.text = "toggle",.onClick = useTheme().toggle});
+    });
+    const auto provider = component([&] {
+        auto [dark,setDark] = useState(false);
+        return ContextProvider(theme,Model{dark,[setDark] {
+            setDark([](bool previous) { return !previous; });
+        }},std::vector<Component>{label(),toggle()});
+    });
+
+    Reconciler tree;
+    tree.update(Column({.children = {provider()}}));
+    EXPECT_EQ(tree.root()->children()[0]->text(),"light");
+    tree.root()->children()[1]->onClick()();
+    tree.update(Column({.children = {provider()}}));
+    EXPECT_EQ(tree.root()->children()[0]->text(),"dark");
+}

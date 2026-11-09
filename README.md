@@ -49,6 +49,10 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   function component reads the nearest provider using `useContext(context)`; outside
   providers it receives the context's fallback. Nested providers override their
   ancestors without affecting siblings. See `examples/context.cpp`.
+- `ContextProvider(context, value, std::vector<Component>{...})` shares one context
+  across several direct children without adding a layout node. A custom hook such as
+  `useTheme()` can simply return `useContext(themeContext)`; a provider component can
+  combine `useState()` with context data and an update callback. See `examples/stateful_context.cpp`.
 - `Fragment({.children = {...}})` groups sibling declarations without introducing a
   layout node. It also works when returned from `component(lambda)`; a top-level
   fragment uses one root column host. See `examples/fragment.cpp`.
