@@ -11,10 +11,13 @@
 
 namespace terion {
 
+enum class OverlayLayer { Popup, Modal, Notification };
+
 struct Portal
 {
     RenderNode* owner = nullptr;
-    int zIndex = 0;
+    OverlayLayer layer = OverlayLayer::Popup;
+    int z_index = 0;
 }; /* End of struct Portal */
 
 // A portal renders above the retained tree without changing its layout.
@@ -36,6 +39,8 @@ public:
     [[nodiscard]] int toastOccupiedHeight(Size screen) const noexcept;
 
 private:
+    void sortPortals();
+    [[nodiscard]] bool belongsToActiveModal(const RenderNode& owner) const noexcept;
     std::vector<Portal> portals_;
     std::optional<Point> hover_position_;
 }; /* End of class OverlayManager */

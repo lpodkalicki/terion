@@ -13,40 +13,64 @@ void OverlayManager::collect(RenderNode* root)
     if (!root) return;
     const auto visit = [&](const auto& self, RenderNode& node) -> void {
         if (!node.tabPanelActive()) return;
+        const auto add = [&](const OverlayLayer layer, const int z_index) {
+            portals_.push_back(Portal{.owner = &node,.layer = layer,.z_index = z_index});
+        };
         if (node.type() == Component::Type::Select || node.type() == Component::Type::DropdownMenu ||
             node.type() == Component::Type::ContextMenu || node.type() == Component::Type::Tooltip)
-            addPortal(node);
-        if (node.type() == Component::Type::Dialog) addPortal(node,100);
-        if (node.type() == Component::Type::Toast) addPortal(node,200);
+            add(OverlayLayer::Popup,0);
+        if (node.type() == Component::Type::Dialog) add(OverlayLayer::Modal,100);
+        if (node.type() == Component::Type::Toast) add(OverlayLayer::Notification,200);
         for (const auto& child : node.children()) self(self,*child);
     };
     visit(visit,*root);
+    sortPortals();
+    if (auto* modal = activeDialog())
+        for (const auto& portal : portals_)
+            if (portal.owner->selectOpen() && !modal->findById(portal.owner->id()))
+                portal.owner->closeSelect();
 }
 
 void OverlayManager::addPortal(RenderNode& owner, const int z_index)
 {
-    portals_.push_back(Portal{.owner = &owner,.zIndex = z_index});
+    const OverlayLayer layer = owner.type() == Component::Type::Dialog ? OverlayLayer::Modal :
+        owner.type() == Component::Type::Toast ? OverlayLayer::Notification : OverlayLayer::Popup;
+    portals_.push_back(Portal{.owner = &owner,.layer = layer,.z_index = z_index});
+    sortPortals();
+}
+
+void OverlayManager::sortPortals()
+{
     std::stable_sort(portals_.begin(),portals_.end(),[](const Portal& a, const Portal& b) {
-        return a.zIndex < b.zIndex;
+        if (a.layer != b.layer) return a.layer < b.layer;
+        return a.z_index < b.z_index;
     });
+}
+
+bool OverlayManager::belongsToActiveModal(const RenderNode& owner) const noexcept
+{
+    const auto* modal = activeDialog();
+    return !modal || modal->findById(owner.id());
 }
 
 void OverlayManager::paint(Painter& painter, const Size screen, const Theme& theme,
     const std::string_view focused_id) const
 {
     const auto* modal = activeDialog();
-    for (const auto& portal : portals_)
-    {
-        if (portal.owner->selectOpen() && (!modal || !modal->findById(portal.owner->id())))
-            portal.owner->paintOverlay(painter,screen,portal.owner->resolvedTheme(theme));
-        if (portal.owner->dialogOpen())
-            portal.owner->paintDialog(painter,screen,portal.owner->resolvedTheme(theme),focused_id);
-    }
     if (modal)
+    {
+        modal->paintDialog(painter,screen,modal->resolvedTheme(theme),focused_id);
         for (const auto& portal : portals_)
-            if (portal.owner->selectOpen() && modal->findById(portal.owner->id()))
+            if (portal.owner->selectOpen() && belongsToActiveModal(*portal.owner))
                 portal.owner->paintOverlay(painter,screen,portal.owner->resolvedTheme(theme));
-    if (hover_position_ && !modal)
+        return;
+    }
+
+    for (const auto& portal : portals_)
+        if (portal.owner->selectOpen())
+            portal.owner->paintOverlay(painter,screen,portal.owner->resolvedTheme(theme));
+
+    if (hover_position_)
     {
         const Point point = *hover_position_;
         const bool menu_open = std::any_of(portals_.begin(),portals_.end(),
@@ -106,8 +130,7 @@ RenderNode* OverlayManager::activeDialog() const noexcept
 
 bool OverlayManager::handleKey(const Event& event)
 {
-    for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
-        if (it->owner->dialogOpen()) return it->owner->handleDialogKey(event);
+    if (auto* modal = activeDialog()) return modal->handleDialogKey(event);
     for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
         if (it->owner->type() == Component::Type::ContextMenu && it->owner->selectOpen())
         {
@@ -119,7 +142,21 @@ bool OverlayManager::handleKey(const Event& event)
 
 RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size screen)
 {
-    if (!activeDialog() && mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
+    if (auto* modal = activeDialog())
+    {
+        for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
+            if (it->owner->selectOpen() && belongsToActiveModal(*it->owner) &&
+                (it->owner->selectContains(mouse.position,screen) || it->owner->selectDragging()) &&
+                it->owner->handleSelectMouse(mouse,screen)) return it->owner;
+        if (mouse.action == MouseAction::Press &&
+            (mouse.button == MouseButton::Left || mouse.button == MouseButton::Right))
+            for (const auto& portal : portals_)
+                if (portal.owner->selectOpen() && belongsToActiveModal(*portal.owner))
+                    portal.owner->closeSelect();
+        (void)modal->handleDialogMouse(mouse,screen);
+        return modal;
+    }
+    if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
     {
         int offset = 0;
         for (const auto& portal : portals_)
@@ -135,19 +172,9 @@ RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size scre
                 if (popup.height > 0) offset += popup.height+1;
             }
     }
-    if (const auto* modal = activeDialog())
-        for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
-            if (it->owner->selectOpen() && modal->findById(it->owner->id()) &&
-                (it->owner->selectContains(mouse.position,screen) || it->owner->selectDragging()) &&
-                it->owner->handleSelectMouse(mouse,screen)) return it->owner;
     for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
     {
         auto* portal = it->owner;
-        if (portal->dialogOpen())
-        {
-            portal->handleDialogMouse(mouse,screen);
-            return portal;
-        }
         if (portal->selectOpen() && (portal->selectContains(mouse.position,screen) || portal->selectDragging()) &&
             portal->handleSelectMouse(mouse,screen)) return portal;
     }
@@ -156,6 +183,7 @@ RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size scre
 
 void OverlayManager::dismissOutside(const MouseEvent& mouse, const Size screen)
 {
+    if (modalOpen()) return;
     if (mouse.action != MouseAction::Press ||
         (mouse.button != MouseButton::Left && mouse.button != MouseButton::Right)) return;
     for (const auto& entry : portals_)
