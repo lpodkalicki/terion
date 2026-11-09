@@ -36,6 +36,9 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `useReducer(reducer, initial)` returns `[state, dispatch]` for state transitions based on
   actions. `dispatch(action)` computes from the latest state; reducer slots follow the same
   keyed lifecycle as `useState`. See `examples/reducer.cpp`.
+- `useId()` produces a unique, stable string for a mounted component's hook slot.
+  It survives rerenders and keyed reordering, and changes after unmount/remount.
+  These are runtime ids (not deterministic across program runs). See `examples/use_id.cpp`.
   `useMemo(factory, deps...)` and `useCallback(callback, deps...)` cache their results
   while dependencies compare equal. `useEffect(effect, deps...)` runs after the frame;
   a returned cleanup callback runs before a changed effect and on unmount. With no

@@ -5,8 +5,10 @@
 #ifndef TERION_HOOKS_H
 #define TERION_HOOKS_H
 
+#include <atomic>
 #include <any>
 #include <concepts>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -91,6 +93,13 @@ struct ReducerSlot
 {
     State<T> state;
 };
+
+struct IdSlot
+{
+    std::string value;
+};
+
+inline std::atomic<std::uint64_t> next_component_id{1};
 
 struct HookContext
 {
@@ -193,6 +202,20 @@ template<typename Reducer,typename T>
     if (!slot) throw std::logic_error("useReducer() hook type/order changed between renders");
     return std::pair<T,ReducerDispatch<T,Reducer>>{
         slot->state.get(),ReducerDispatch<T,Reducer>(slot->state,std::move(reducer))};
+}
+
+// Each hook position receives one process-unique id for its mounted lifetime.
+[[nodiscard]] inline std::string useId()
+{
+    auto* context = detail::current_hook_context;
+    if (!context) throw std::logic_error("useId() requires a mounted function component");
+    const auto index = context->position++;
+    if (index == context->slots.size())
+        context->slots.emplace_back(detail::IdSlot{
+            "terion-" + std::to_string(detail::next_component_id.fetch_add(1,std::memory_order_relaxed))});
+    const auto* slot = std::any_cast<detail::IdSlot>(&context->slots.at(index));
+    if (!slot) throw std::logic_error("useId() hook type/order changed between renders");
+    return slot->value;
 }
 
 template<typename T>
