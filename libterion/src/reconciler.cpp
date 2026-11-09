@@ -48,6 +48,9 @@ void Reconciler::update(const Component& component)
     try
     {
         auto expanded = expand(component,"root");
+        // A root fragment has no layout box; use the existing root column as its host.
+        if (expanded.props().type == Component::Type::Fragment)
+            expanded = Component::column(expanded.props().children);
         validateKeys(expanded);
         stats_ = {};
         reconcile(root_,expanded);
@@ -157,7 +160,14 @@ Component Reconciler::expand(const Component& component, const std::string& path
         const auto child_path = path + "/t" + std::to_string(static_cast<int>(props.type)) +
             (key.empty() ? "/i" + std::to_string(i) :
             "/k" + std::to_string(key.size()) + ":" + key);
-        actual.children.push_back(expand(child,child_path));
+        auto expanded_child = expand(child,child_path);
+        if (expanded_child.props().type == Component::Type::Fragment)
+        {
+            // Splice descendants into the parent's layout without an extra RenderNode.
+            for (const auto& grandchild : expanded_child.props().children)
+                actual.children.push_back(grandchild);
+        }
+        else actual.children.push_back(std::move(expanded_child));
     }
     return Component(std::move(actual));
 }

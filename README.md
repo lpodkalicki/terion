@@ -39,6 +39,9 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   function component reads the nearest provider using `useContext(context)`; outside
   providers it receives the context's fallback. Nested providers override their
   ancestors without affecting siblings. See `examples/context.cpp`.
+- `Fragment({.children = {...}})` groups sibling declarations without introducing a
+  layout node. It also works when returned from `component(lambda)`; a top-level
+  fragment uses one root column host. See `examples/fragment.cpp`.
 - Initial constraints-based layout supports text, `Row`, `Column`, `Box`, padding, gap and fixed dimensions.
 - Reactive `State<T>` automatically tracks dependencies in render callbacks; unchanged state does not trigger redraw.
 - MUI-inspired components in `<terion/components/>`: `Typography`, `Box`, `Row`, `Column` and interactive `Button`.

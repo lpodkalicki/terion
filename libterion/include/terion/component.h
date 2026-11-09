@@ -155,7 +155,8 @@ public:
         Progress,
         Slider,
         Function,
-        ContextProvider
+        ContextProvider,
+        Fragment
     }; /* End of enum Type */
 
     struct Props
