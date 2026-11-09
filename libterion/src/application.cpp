@@ -260,6 +260,14 @@ void Application::syncFocusTargets()
         focus_.focus(background_focus_id_);
         background_focus_id_.clear();
     }
+    if (auto* active = overlays_.activeDialog(); active && !focus_.current().empty())
+    {
+        std::uint64_t id = 0;
+        const auto focused = focus_.current();
+        const auto [end,error] = std::from_chars(focused.data(),focused.data()+focused.size(),id);
+        if (error == std::errc{} && end == focused.data()+focused.size())
+            (void)active->revealDialogFocus(id,backend_->size());
+    }
     if (std::ranges::find(component_focus_ids_,hovered_component_id_) == component_focus_ids_.end()) hovered_component_id_.clear();
     if (std::ranges::find(component_focus_ids_,pressed_button_id_) == component_focus_ids_.end()) pressed_button_id_.clear();
 }
@@ -573,6 +581,9 @@ bool Application::dispatchEvent(const Event& event)
     {
         if (event.key == Key::Escape || !focus_.hasTargetsInActiveScope()) return dialog->handleDialogKey(event);
         if (focus_.dispatch(event)) return true;
+        if (event.key == Key::PageUp || event.key == Key::PageDown ||
+            event.key == Key::Home || event.key == Key::End)
+            return dialog->handleDialogKey(event);
         return true;
     }
     if (event.key != Key::Resize && event.key != Key::Mouse && overlays_.handleKey(event)) return true;

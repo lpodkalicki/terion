@@ -127,6 +127,8 @@ public:
     }
     [[nodiscard]] Rect dialogRect(Size screen) const;
     void layoutDialogChildren(Size screen);
+    bool scrollDialog(int delta, Size screen);
+    bool revealDialogFocus(std::uint64_t id, Size screen);
     [[nodiscard]] RenderNode* dialogChildAt(Point point) noexcept;
     bool handleDialogKey(const Event& event);
     bool handleDialogMouse(const MouseEvent& mouse, Size screen);
@@ -228,6 +230,7 @@ private:
     std::chrono::steady_clock::time_point toast_started_{};
     bool focus_scope_active_ = false;
     bool dialog_close_on_backdrop_ = true;
+    bool dialog_show_actions_ = true;
     bool dialog_confirm_focused_ = false;
     int dialog_width_ = 48;
     std::string dialog_title_;
@@ -235,6 +238,10 @@ private:
     std::string dialog_cancel_text_;
     std::function<void()> dialog_on_close_;
     std::uint64_t dialog_pressed_child_ = 0;
+    int dialog_scroll_offset_ = 0;
+    int dialog_max_scroll_offset_ = 0;
+    Rect dialog_content_rect_{};
+    Size dialog_screen_{};
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
 }; /* End of class RenderNode */

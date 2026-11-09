@@ -343,6 +343,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->dialog_cancel_text_ = props.dialog_cancel_text;
     node->dialog_width_ = props.dialog_width;
     node->dialog_close_on_backdrop_ = props.dialog_close_on_backdrop;
+    node->dialog_show_actions_ = props.dialog_show_actions;
     node->dialog_on_close_ = props.dialog_on_close;
     if (node->select_options_.empty() || node->disabled_) node->select_open_ = false;
     if (!node->select_options_.empty())

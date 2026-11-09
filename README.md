@@ -61,6 +61,15 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   expanding its descendant components and displays a fallback instead. A subsequent
   update retries the child. Errors raised by the fallback itself still propagate.
   See `examples/error_boundary.cpp`.
+- `Dialog({.open = visible,.title = "Settings",.children = {SettingsForm()}})`
+  renders arbitrary nested components in a modal overlay with scoped keyboard focus.
+  Dialogs with custom children omit the built-in Confirm/Cancel footer by default;
+  set `.showActions = true` to retain it. Dialogs without children preserve their
+  built-in actions. See `examples/dialog_form.cpp`.
+- Long dialog content scrolls within a clipped viewport using the mouse wheel,
+  PageUp/PageDown, Home/End, or Up/Down when no child handles the key. Focused
+  controls are automatically scrolled into view; the header and action footer
+  remain fixed.
 - `When(visible, Widget())` conditionally includes a component without mounting its
   hooks when hidden. `ForEach(items, [](const auto& item) { return RowWidget(item).keyed(item.id); })`
   expands a range into siblings and requires unique nonempty keys for reliable state retention.

@@ -1491,8 +1491,13 @@ Rect RenderNode::dialogRect(const Size screen) const
     int contents_height = 0;
     for (const auto& child : children_)
         contents_height += child->measure(Constraints{.maximum = {.width = std::max(0,width-4),
-            .height = std::max(0,screen.height-8)}}).height + 1;
-    const int height = std::min(screen.height,std::max(9,8+contents_height));
+            .height = 10000}}).height + 1;
+    if (!children_.empty()) --contents_height;
+    const int header_height = text_.empty() ? 3 : 5;
+    const int footer_height = dialog_show_actions_ ? 3 : 1;
+    const int minimum_height = dialog_show_actions_ ? 9 : 5;
+    const int height = std::min(screen.height,std::max(minimum_height,
+        header_height+contents_height+footer_height));
     return {.x = (screen.width-width)/2,.y = (screen.height-height)/2,
         .width = width,.height = height};
 }
@@ -1500,20 +1505,66 @@ Rect RenderNode::dialogRect(const Size screen) const
 void RenderNode::layoutDialogChildren(const Size screen)
 {
     if (!dialogOpen()) return;
+    dialog_screen_ = screen;
     const Rect rect = dialogRect(screen);
-    int y = rect.y + (text_.empty() ? 3 : 5);
+    const int top = rect.y + (text_.empty() ? 3 : 5);
     const int available_width = std::max(0,rect.width-4);
+    const int content_bottom = rect.y+rect.height-(dialog_show_actions_ ? 3 : 1);
+    dialog_content_rect_ = {.x = rect.x+2,.y = top,.width = available_width,
+        .height = std::max(0,content_bottom-top)};
+    int total_height = 0;
+    for (const auto& child : children_)
+        total_height += child->measure(Constraints{.maximum = {.width = available_width,
+            .height = 10000}}).height+1;
+    if (!children_.empty()) --total_height;
+    dialog_max_scroll_offset_ = std::max(0,total_height-dialog_content_rect_.height);
+    dialog_scroll_offset_ = std::clamp(dialog_scroll_offset_,0,dialog_max_scroll_offset_);
+    int y = top-dialog_scroll_offset_;
     for (auto& child : children_)
     {
-        const int available_height = std::max(0,rect.y+rect.height-3-y);
-        child->layout(Constraints{.maximum = {.width = available_width,.height = available_height}},
+        child->layout(Constraints{.maximum = {.width = available_width,.height = 10000}},
             {.x = rect.x+2,.y = y});
         y += child->bounds().height + 1;
     }
 }
 
+bool RenderNode::scrollDialog(const int delta, const Size screen)
+{
+    if (!dialogOpen()) return false;
+    const int next = static_cast<int>(std::clamp(
+        static_cast<long long>(dialog_scroll_offset_)+delta,0LL,
+        static_cast<long long>(dialog_max_scroll_offset_)));
+    if (next == dialog_scroll_offset_) return false;
+    dialog_scroll_offset_ = next;
+    layoutDialogChildren(screen);
+    return true;
+}
+
+bool RenderNode::revealDialogFocus(const std::uint64_t id, const Size screen)
+{
+    if (!dialogOpen() || dialog_content_rect_.height <= 0) return false;
+    const auto find = [&](const auto& self, const RenderNode& node) -> const RenderNode* {
+        if (node.id() == id) return &node;
+        for (const auto& child : node.children())
+            if (const auto* found = self(self,*child)) return found;
+        return nullptr;
+    };
+    if (const auto* target = find(find,*this))
+    {
+        if (target->bounds().y < dialog_content_rect_.y)
+            return scrollDialog(target->bounds().y-dialog_content_rect_.y,screen);
+        const int bottom = dialog_content_rect_.y+dialog_content_rect_.height;
+        if (target->bounds().y+target->bounds().height > bottom)
+            return scrollDialog(target->bounds().y+target->bounds().height-bottom,screen);
+    }
+    return false;
+}
+
 RenderNode* RenderNode::dialogChildAt(const Point point) noexcept
 {
+    if (point.x < dialog_content_rect_.x || point.x >= dialog_content_rect_.x+dialog_content_rect_.width ||
+        point.y < dialog_content_rect_.y || point.y >= dialog_content_rect_.y+dialog_content_rect_.height)
+        return nullptr;
     for (auto it = children_.rbegin(); it != children_.rend(); ++it)
         if (auto* hit = (*it)->hitTest(point)) return hit;
     return nullptr;
@@ -1526,9 +1577,18 @@ bool RenderNode::handleDialogKey(const Event& event)
     {
         if (dialog_on_close_) dialog_on_close_();
     }
-    else if (event.key == Key::Tab || event.key == Key::Left || event.key == Key::Right)
+    else if (event.key == Key::Up || event.key == Key::Down || event.key == Key::PageUp ||
+        event.key == Key::PageDown || event.key == Key::Home || event.key == Key::End)
+    {
+        const int page = std::max(1,dialog_content_rect_.height-1);
+        const int delta = event.key == Key::Up ? -1 : event.key == Key::Down ? 1 :
+            event.key == Key::PageUp ? -page : event.key == Key::PageDown ? page :
+            event.key == Key::Home ? -dialog_max_scroll_offset_ : dialog_max_scroll_offset_;
+        (void)scrollDialog(delta,dialog_screen_);
+    }
+    else if (dialog_show_actions_ && (event.key == Key::Tab || event.key == Key::Left || event.key == Key::Right))
         dialog_confirm_focused_ = !dialog_confirm_focused_;
-    else if (event.key == Key::Enter || (event.key == Key::Character && event.character == U' '))
+    else if (dialog_show_actions_ && (event.key == Key::Enter || (event.key == Key::Character && event.character == U' ')))
     {
         const auto& action = dialog_confirm_focused_ ? on_click_ : dialog_on_close_;
         if (action) action();
@@ -1542,6 +1602,11 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
     const Rect rect = dialogRect(screen);
     const bool inside = mouse.position.x >= rect.x && mouse.position.x < rect.x+rect.width &&
         mouse.position.y >= rect.y && mouse.position.y < rect.y+rect.height;
+    if (mouse.action == MouseAction::Scroll)
+    {
+        if (inside) (void)scrollDialog(-mouse.scrollY*3,screen);
+        return true;
+    }
     if (auto* child = dialogChildAt(mouse.position))
     {
         if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
@@ -1569,7 +1634,7 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
         if (dialog_close_on_backdrop_ && dialog_on_close_) dialog_on_close_();
         return true;
     }
-    if (rect.height >= 5 && mouse.position.y == rect.y+rect.height-2)
+    if (dialog_show_actions_ && rect.height >= 5 && mouse.position.y == rect.y+rect.height-2)
     {
         const int confirm_x = rect.x+std::max(1,rect.width-static_cast<int>(dialog_confirm_text_.size())-3);
         const int cancel_x = rect.x+2;
@@ -1608,12 +1673,26 @@ void RenderNode::paintDialog(Painter& painter, const Size screen, const Theme& t
     }
     if (rect.height >= 5)
     {
-        painter.text(rect.x+2,rect.y+3,clipText(text_,std::max(0,rect.width-4)),style);
+        if (!text_.empty()) painter.text(rect.x+2,rect.y+3,clipText(text_,std::max(0,rect.width-4)),style);
         {
-            Painter::ClipScope clip(painter,{.x = rect.x+1,.y = rect.y+2,
-                .width = std::max(0,rect.width-2),.height = std::max(0,rect.height-4)});
+            const int top = rect.y+(text_.empty() ? 3 : 5);
+            const int bottom = rect.y+rect.height-(dialog_show_actions_ ? 3 : 1);
+            Painter::ClipScope clip(painter,{.x = rect.x+1,.y = top,
+                .width = std::max(0,rect.width-2),.height = std::max(0,bottom-top)});
             for (const auto& child : children_) child->paint(painter,focused_id,{},palette.surface,&theme);
         }
+        if (dialog_max_scroll_offset_ > 0 && dialog_content_rect_.height > 0)
+        {
+            const int x = rect.x+rect.width-2;
+            const int h = dialog_content_rect_.height;
+            const int thumb = std::max(1,h*h/(h+dialog_max_scroll_offset_));
+            const int position = static_cast<int>(static_cast<long long>(dialog_scroll_offset_)*
+                (h-thumb)/dialog_max_scroll_offset_);
+            for (int i = 0; i < h; ++i)
+                painter.put(x,dialog_content_rect_.y+i,
+                    i >= position && i < position+thumb ? "#" : "|",style);
+        }
+        if (!dialog_show_actions_) return;
         const int row = rect.y+rect.height-2;
         const int confirm_x = rect.x+std::max(1,rect.width-static_cast<int>(dialog_confirm_text_.size())-3);
         TextStyle cancel_style = style;

@@ -216,6 +216,7 @@ public:
         int dialog_width = 48;
         bool dialog_close_on_backdrop = true;
         std::function<void()> dialog_on_close = {};
+        bool dialog_show_actions = true;
         bool focus_scope_active = false;
         bool toast_open = false;
         int toast_duration_ms = 3500;
