@@ -23,6 +23,7 @@ public:
     // Reorders managed targets without recreating handlers or changing focus identity.
     void reorder(const std::vector<std::string>& ids);
     bool focus(std::string_view id);
+    bool focusFirstInScope();
     void blur() noexcept { focused_ = entries_.size(); }
     bool next();
     bool previous();

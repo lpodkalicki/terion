@@ -69,6 +69,18 @@ bool FocusManager::focus(const std::string_view id)
     return false;
 }
 
+bool FocusManager::focusFirstInScope()
+{
+    for (std::size_t i = 0; i < entries_.size(); ++i)
+        if (entries_[i].scope == active_scope_)
+        {
+            focused_ = i;
+            return true;
+        }
+    focused_ = entries_.size();
+    return false;
+}
+
 bool FocusManager::next()
 {
     if (entries_.empty()) return false;

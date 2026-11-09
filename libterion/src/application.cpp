@@ -270,8 +270,15 @@ void Application::syncFocusTargets()
     if (previous_scope == next_scope && !previous_focus.empty()) focus_.focus(previous_focus);
     if (previous_scope == next_scope && previous_focus.empty() && previous_targets) focus_.blur();
     if (previous_scope != next_scope)
+    {
+        bool restored = false;
         if (auto it = scope_focus_history_.find(next_scope); it != scope_focus_history_.end())
-            if (focus_.focus(it->second)) scope_focus_history_.erase(it);
+        {
+            restored = focus_.focus(it->second);
+            if (restored) scope_focus_history_.erase(it);
+        }
+        if (!restored) (void)focus_.focusFirstInScope();
+    }
     if (auto* active = overlays_.activeDialog(); active && !focus_.current().empty())
     {
         std::uint64_t id = 0;

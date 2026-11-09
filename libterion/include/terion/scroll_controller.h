@@ -71,7 +71,11 @@ public:
         const int height = std::max(1,static_cast<int>(static_cast<long long>(track.height)*
             viewport_/extent));
         const int travel = std::max(0,track.height-height);
-        const int top = static_cast<int>(static_cast<long long>(offset_)*travel/maximum_);
+        // With only two positions, show progress as soon as half the content
+        // has been traversed. Larger tracks retain the stable floor mapping.
+        const long long numerator = static_cast<long long>(offset_)*travel +
+            (travel == 1 ? maximum_/2 : 0);
+        const int top = static_cast<int>(numerator/maximum_);
         return {.x = track.x,.y = track.y+top,.width = track.width,.height = height};
     }
 
