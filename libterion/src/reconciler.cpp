@@ -292,7 +292,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->button_size_ = props.button_size;
     node->checkbox_variant_ = props.checkbox_variant;
     node->text_field_variant_ = props.text_field_variant;
-    node->scroll_offset_ = std::max(0,props.scroll_offset);
+    node->scroll_.setRequestedOffset(props.scroll_offset);
     node->on_scroll_ = props.on_scroll;
     node->scrollbar_visible_ = props.scrollbar_visible;
     node->value_ = props.value;
@@ -333,10 +333,10 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         node->tree_last_selected_ = props.text;
         node->tree_pending_reveal_ = !props.text.empty();
     }
-    node->tree_scroll_ = std::clamp(node->tree_scroll_,0,
-        std::max(0,static_cast<int>(node->treeVisibleItems().size())-1));
-    node->table_scroll_ = std::clamp(node->table_scroll_,0,
-        std::max(0,static_cast<int>(node->tableOrder().size())-1));
+    node->tree_scroll_.configure(static_cast<int>(node->treeVisibleItems().size()),
+        node->tree_scroll_.viewport());
+    node->table_scroll_.configure(static_cast<int>(node->tableOrder().size()),
+        node->table_scroll_.viewport());
     node->tab_panel_active_ = props.tab_panel_active;
     node->checked_ = props.checked;
     node->dialog_open_ = props.dialog_open;

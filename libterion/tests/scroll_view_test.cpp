@@ -103,6 +103,51 @@ TEST(ScrollView, UsesThemeScrollbarGlyphsAndAsciiFallback)
     EXPECT_EQ(ascii_buffer.at(4,1).grapheme,"#");
 }
 
+TEST(ScrollView, UsesIndependentScrollbarColorsForTrackThumbHoverAndDrag)
+{
+    Reconciler scrolling;
+    scrolling.update(ScrollView({.children = {
+        Typography({.text = "0"}),Typography({.text = "1"}),Typography({.text = "2"}),
+        Typography({.text = "3"}),Typography({.text = "4"}),Typography({.text = "5"})
+    },.layout = {.width = 5,.height = 3},.scrollOffset = 2,.onScroll = [](int) {}}));
+    auto* node = scrolling.root();
+    node->layout(Constraints{.maximum = {.width = 5,.height = 3}});
+
+    Theme theme = Theme::dark();
+    theme.scrollbar.track_color = Color::rgb(11,22,33);
+    theme.scrollbar.thumb_color = Color::rgb(44,55,66);
+    theme.scrollbar.hover_color = Color::rgb(77,88,99);
+    theme.scrollbar.active_color = Color::rgb(100,111,122);
+
+    const auto paint = [&](const std::string_view hovered = {}) {
+        ScreenBuffer screen({.width = 5,.height = 3});
+        Painter painter(screen);
+        node->paint(painter,{},hovered,std::nullopt,&theme);
+        return screen;
+    };
+    EXPECT_EQ(paint().at(4,0).style.foreground,theme.scrollbar.track_color);
+    EXPECT_EQ(paint().at(4,1).style.foreground,theme.scrollbar.thumb_color);
+    EXPECT_EQ(paint(std::to_string(node->id())).at(4,1).style.foreground,
+        theme.scrollbar.hover_color);
+
+    EXPECT_TRUE(node->beginScrollbarDrag({.x = 4,.y = 1}));
+    EXPECT_EQ(paint().at(4,1).style.foreground,theme.scrollbar.active_color);
+    node->endScrollbarDrag();
+    EXPECT_EQ(paint().at(4,1).style.foreground,theme.scrollbar.thumb_color);
+}
+
+TEST(ScrollView, PresetScrollbarColorsMatchTheirPalettes)
+{
+    for (const Theme& theme : {Theme::dark(),Theme::light(),Theme::ocean(),Theme::forest(),
+        Theme::sunset(),Theme::violet(),Theme::nord(),Theme::dracula(),Theme::solarized()})
+    {
+        EXPECT_EQ(theme.scrollbar.track_color,theme.palette.muted);
+        EXPECT_EQ(theme.scrollbar.thumb_color,theme.palette.foreground);
+        EXPECT_EQ(theme.scrollbar.hover_color,theme.palette.primary);
+        EXPECT_EQ(theme.scrollbar.active_color,theme.palette.primary);
+    }
+}
+
 TEST(ScrollView, HandlesWheelAndScrollbarMouseDragging)
 {
     State<int> wheel_offset{0};

@@ -81,3 +81,25 @@ TEST(ScrollController, PressingTrackMovesThumb)
     EXPECT_TRUE(drag.begin(scroll,track,{.x = 1,.y = 8},target));
     EXPECT_EQ(target,16);
 }
+
+TEST(ScrollController, RetainsOffsetAcrossViewportChanges)
+{
+    ScrollController scroll;
+    EXPECT_EQ(scroll.offset(),0);
+    scroll.setRequestedOffset(25);
+    EXPECT_EQ(scroll.offset(),25);
+    scroll.configure(100,10);
+    EXPECT_EQ(scroll.offset(),25);
+    EXPECT_EQ(scroll.maximum(),90);
+    scroll.advance(12);
+    EXPECT_EQ(scroll.offset(),37);
+    scroll.configure(30,10);
+    EXPECT_EQ(scroll.offset(),20);
+    scroll.setOffset(-10);
+    EXPECT_EQ(scroll.offset(),0);
+    scroll.revealItem(29);
+    EXPECT_EQ(scroll.offset(),20);
+    scroll.configure(5,10);
+    EXPECT_EQ(scroll.offset(),0);
+    EXPECT_FALSE(scroll.scrollable());
+}

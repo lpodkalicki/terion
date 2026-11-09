@@ -16,11 +16,24 @@ namespace terion {
 class ScrollController
 {
 public:
+    ScrollController() noexcept = default;
     ScrollController(int content, int viewport, int offset = 0) noexcept :
         viewport_(std::max(0,viewport)),
         maximum_(static_cast<int>(std::max(0LL,static_cast<long long>(content)-viewport_))),
         offset_(clamp(offset))
     {}
+
+    void configure(int content, int viewport) noexcept
+    {
+        viewport_ = std::max(0,viewport);
+        maximum_ = static_cast<int>(std::max(0LL,static_cast<long long>(content)-viewport_));
+        offset_ = clamp(offset_);
+    }
+
+    void setOffset(int offset) noexcept { offset_ = clamp(offset); }
+
+    // Used by controlled components before their next layout measures content.
+    void setRequestedOffset(int offset) noexcept { offset_ = std::max(0,offset); }
 
     [[nodiscard]] int offset() const noexcept { return offset_; }
     [[nodiscard]] int maximum() const noexcept { return maximum_; }
@@ -36,6 +49,10 @@ public:
     {
         return clamp(static_cast<long long>(offset_)+delta);
     }
+
+    void advance(int delta) noexcept { offset_ = scrollBy(delta); }
+
+    void revealItem(int first, int length = 1) noexcept { offset_ = reveal(first,length); }
 
     [[nodiscard]] int reveal(int first, int length = 1) const noexcept
     {
