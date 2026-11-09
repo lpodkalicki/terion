@@ -48,6 +48,7 @@
 #include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/layout.h>
+#include <terion/scroll_controller.h>
 #include <terion/overlay.h>
 #include <terion/toast_manager.h>
 #include <terion/reconciler.h>

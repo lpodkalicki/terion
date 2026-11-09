@@ -14,6 +14,7 @@
 #include <vector>
 #include <terion/component.h>
 #include <terion/layout.h>
+#include <terion/scroll_controller.h>
 #include <terion/render/painter.h>
 #include <terion/terminal.h>
 #include <terion/theme.h>
@@ -249,6 +250,7 @@ private:
     Size dialog_screen_{};
     bool dialog_scroll_dragging_ = false;
     int dialog_scroll_grab_offset_ = 0;
+    [[nodiscard]] ScrollController scrollController() const;
     Rect bounds_{};
     std::vector<std::unique_ptr<RenderNode>> children_;
     std::optional<Theme> theme_override_ = std::nullopt;
