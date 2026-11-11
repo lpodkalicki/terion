@@ -19,7 +19,7 @@ int main()
 
     app.render([&] {
         return Column({.children = {
-            Button({.text = "Toggle failure",.onClick = [&] { failing.set(!failing.get()); }}),
+            Button({.text = "Toggle failure",.on_click = [&] { failing.set(!failing.get()); }}),
             ErrorBoundary({.child = Panel(),
                 .fallback = [](const std::string& message) {
                     return Typography({.text = "Fallback: " + message});

@@ -65,7 +65,7 @@ std::string mouseName(const Event& event)
         case MouseAction::Scroll: action = "wheel"; break;
     }
     return action + " (" + std::to_string(mouse.position.x) + "," +
-        std::to_string(mouse.position.y) + ") wheel=" + std::to_string(mouse.scrollY);
+        std::to_string(mouse.position.y) + ") wheel=" + std::to_string(mouse.scroll_y);
 }
 
 std::string yesNo(bool value)
@@ -91,9 +91,9 @@ void draw(AnsiTerminalBackend& backend, const TerminalCapabilities& caps,
     print("TERM=" + getenvOr("TERM") + "  TERM_PROGRAM=" + getenvOr("TERM_PROGRAM"));
     print("COLORTERM=" + getenvOr("COLORTERM") + "  LANG=" + getenvOr("LANG"));
     print("Size: " + std::to_string(size.width) + "x" + std::to_string(size.height));
-    print("Probe replied: " + yesNo(caps.activelyProbed) + " (no means fallback values)");
-    print("Reported: RGB=" + yesNo(caps.trueColor) + " Unicode=" + yesNo(caps.unicode) +
-        " mouse=" + yesNo(caps.mouse) + " pointer-shape=" + yesNo(caps.mousePointerShape));
+    print("Probe replied: " + yesNo(caps.actively_probed) + " (no means fallback values)");
+    print("Reported: RGB=" + yesNo(caps.true_color) + " Unicode=" + yesNo(caps.unicode) +
+        " mouse=" + yesNo(caps.mouse) + " pointer-shape=" + yesNo(caps.mouse_pointer_shape));
     print("\033[2mNote: booleans may be fallback guesses, not confirmed support.\033[0m");
     print("");
     print("Visual check (look for distinct colors, aligned symbols):");

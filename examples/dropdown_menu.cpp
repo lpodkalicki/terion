@@ -20,16 +20,16 @@ int main()
                     {"New", "new"}, {"Open", "open"}, {"Save", "save"},
                     {"Export", "export"}, {"Unavailable", "disabled",true}, {"Exit", "exit"}},
                     .key = "file",
-                    .onSelect = [&](std::string action) { selected.set("File: " + action); }}),
+                    .on_select = [&](std::string action) { selected.set("File: " + action); }}),
                 DropdownMenu({.label = "Edit",.options = {
                     {"Copy", "copy"}, {"Paste", "paste"}, {"Find", "find"}},
                     .key = "edit",
                     .variant = ButtonVariant::Outlined,
-                    .onSelect = [&](std::string action) { selected.set("Edit: " + action); }}),
+                    .on_select = [&](std::string action) { selected.set("Edit: " + action); }}),
                 DropdownMenu({.label = "View",.options = {
                     {"Zoom in", "zoom-in"}, {"Zoom out", "zoom-out"}},
                     .key = "view",.variant = ButtonVariant::Contained,
-                    .onSelect = [&](std::string action) { selected.set("View: " + action); }}),
+                    .on_select = [&](std::string action) { selected.set("View: " + action); }}),
                 DropdownMenu({.label = "Disabled",.key = "disabled",.disabled = true})
             },.layout = {.gap = 2}}),
             Typography({.text = "Last action: " + selected.get()}),

@@ -24,7 +24,7 @@ int main()
                 {.label = "Português",.value = "pt"},
                 {.label = "Unavailable",.value = "disabled",.disabled = true}
             },.value = selected.get(),.placeholder = "Select language",.key = "language",
-                .layout = {.width = 28},.onChange = [&](std::string value) { selected.set(std::move(value)); }}),
+                .layout = {.width = 28},.on_change = [&](std::string value) { selected.set(std::move(value)); }}),
             Select({.options = {
                 {.label = "Warszawa",.value = "warsaw"},
                 {.label = "Kraków",.value = "krakow"},
@@ -39,7 +39,7 @@ int main()
                 {.label = "Białystok",.value = "bialystok"},
                 {.label = "Olsztyn",.value = "olsztyn"}
             },.value = city.get(),.placeholder = "Select city",.key = "city",
-                .layout = {.width = 28},.onChange = [&](std::string value) { city.set(std::move(value)); }}),
+                .layout = {.width = 28},.on_change = [&](std::string value) { city.set(std::move(value)); }}),
             Typography({.text = "Language: " + selected.get() + " | City: " + city.get()}),
             Typography({.text = "Open each Select to verify OverlayManager closes the other."})
         },.layout = {.padding = 2,.gap = 1}});

@@ -13,7 +13,7 @@ TEST(DropdownMenu, OpensAndInvokesActionWithKeyboard)
     Reconciler tree;
     tree.update(DropdownMenu({.label = "Actions",.options = {
         {"New", "new"}, {"Disabled", "disabled",true}, {"Open", "open"}},
-        .onSelect = [&](std::string value) { action = std::move(value); }}));
+        .on_select = [&](std::string value) { action = std::move(value); }}));
     const Size screen {.width = 40,.height = 15};
     tree.root()->layout({.maximum = screen});
     EXPECT_TRUE(tree.root()->handleSelectKey({.key = Key::Enter},screen));
@@ -29,7 +29,7 @@ TEST(DropdownMenu, MouseSelectionAndEscape)
     std::string action;
     Reconciler tree;
     tree.update(DropdownMenu({.label = "File",.options = {{"New","new"},{"Open","open"}},
-        .onSelect = [&](std::string value) { action = std::move(value); }}));
+        .on_select = [&](std::string value) { action = std::move(value); }}));
     const Size screen {.width = 40,.height = 15};
     tree.root()->layout({.maximum = screen});
     EXPECT_TRUE(tree.root()->handleSelectMouse({.position = {.x = 1,.y = 1},

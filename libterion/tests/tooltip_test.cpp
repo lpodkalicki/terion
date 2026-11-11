@@ -47,18 +47,18 @@ TEST(Tooltip, RendersOnlyWhileHoveredAndHonorsDisabled)
         return buffer;
     };
     const auto before = paint();
-    overlays.setHover(Point{.x = 0,.y = 0});
+    overlays.set_hover(Point{.x = 0,.y = 0});
     const auto after = paint();
     const Rect popup = tree.root()->tooltipRect({.x = 0,.y = 0},screen);
     EXPECT_NE(before.at(popup.x,popup.y).grapheme,after.at(popup.x,popup.y).grapheme);
-    overlays.setHover(std::nullopt);
+    overlays.set_hover(std::nullopt);
     const auto hidden = paint();
     EXPECT_EQ(hidden.at(popup.x,popup.y).grapheme,before.at(popup.x,popup.y).grapheme);
 
     tree.update(Tooltip({.child = Typography({.text = "Target"}),.text = "Tip",.disabled = true}));
     tree.root()->layout({.maximum = screen});
     overlays.collect(tree.root());
-    overlays.setHover(Point{.x = 0,.y = 0});
+    overlays.set_hover(Point{.x = 0,.y = 0});
     const auto disabled = paint();
     EXPECT_EQ(disabled.at(popup.x,popup.y).grapheme,before.at(popup.x,popup.y).grapheme);
 }

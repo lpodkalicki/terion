@@ -35,12 +35,12 @@ int main()
                         Typography({.text = "Status: READY"})
                     },.layout = {.padding = 1,.gap = 1}})
                 },.direction = SplitDirection::Vertical,.position = editor_height.get(),
-                    .minFirst = 4,.minSecond = 3,.key = "vertical-split",
-                    .onChange = [&](int value) { editor_height.set(value); }})
+                    .min_first = 4,.min_second = 3,.key = "vertical-split",
+                    .on_change = [&](int value) { editor_height.set(value); }})
             },.direction = SplitDirection::Horizontal,.position = sidebar_width.get(),
-                .minFirst = 12,.minSecond = 18,.key = "horizontal-split",
+                .min_first = 12,.min_second = 18,.key = "horizontal-split",
                 .layout = {.width = std::max(0,screen.width-4),.height = std::max(0,screen.height-5)},
-                .onChange = [&](int value) { sidebar_width.set(value); }}),
+                .on_change = [&](int value) { sidebar_width.set(value); }}),
             Typography({.text = "Left: " + std::to_string(sidebar_width.get()) +
                 " | Top: " + std::to_string(editor_height.get())})
         },.layout = {.padding = 1,.gap = 1}});

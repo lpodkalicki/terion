@@ -10,7 +10,7 @@ namespace {
 
 const auto OpenDocument = component([] {
     auto dialogs = useDialogManager();
-    return Button({.text = "Read document",.onClick = [dialogs] {
+    return Button({.text = "Read document",.on_click = [dialogs] {
         std::vector<Component> paragraphs;
         for (int i = 1; i <= 60; ++i)
             paragraphs.push_back(Typography({.text = "Paragraph " + std::to_string(i) +

@@ -26,17 +26,17 @@ public:
         bool open = false;
         std::string message = {};
         ToastSeverity severity = ToastSeverity::Info;
-        int durationMs = 3500;
+        int duration_ms = 3500;
         std::string key = {};
-        std::function<void()> onClose = {};
+        std::function<void()> on_close = {};
     }; /* End of struct Props */
 
     explicit Toast(Props props) :
         Component({.type = Type::Toast,.key = std::move(props.key),
             .text = std::move(props.message),.toast_open = props.open,
-            .toast_duration_ms = props.durationMs,
+            .toast_duration_ms = props.duration_ms,
             .toast_severity = static_cast<int>(props.severity),
-            .toast_on_close = std::move(props.onClose)})
+            .toast_on_close = std::move(props.on_close)})
     {}
 }; /* End of class Toast */
 

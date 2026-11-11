@@ -12,7 +12,7 @@ TEST(DialogManager, OpensAndClosesFromDescendantComponent)
     auto dialogs = std::make_shared<DialogManager>();
     const auto trigger = component([] {
         auto manager = useDialogManager();
-        return Button({.text = "Open",.onClick = [manager] {
+        return Button({.text = "Open",.on_click = [manager] {
             manager->open({.title = "Managed",.message = "Hello"});
         }});
     });
@@ -33,10 +33,10 @@ TEST(DialogManager, CloseInvokesCustomCallback)
 {
     auto dialogs = std::make_shared<DialogManager>();
     int callback_count = 0;
-    dialogs->open({.title = "Example",.onClose = [&] { ++callback_count; }});
+    dialogs->open({.title = "Example",.on_close = [&] { ++callback_count; }});
     Reconciler reconciler;
     reconciler.update(dialogs->render());
-    ASSERT_TRUE(reconciler.root()->dialogOpen());
+    ASSERT_TRUE(reconciler.root()->dialog_open());
     EXPECT_TRUE(reconciler.root()->handleDialogKey(Event{.key = Key::Escape}));
     EXPECT_EQ(callback_count,1);
     EXPECT_FALSE(dialogs->isOpen());

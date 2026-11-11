@@ -11,9 +11,9 @@ using namespace terion;
 namespace {
 
 const auto Counter = component([] {
-    auto [count,setCount] = useState(0);
+    auto [count,set_count] = useState(0);
     return Button({.text = std::to_string(count),
-        .onClick = [setCount] { setCount([](int n) { return n+1; }); }});
+        .on_click = [set_count] { set_count([](int n) { return n+1; }); }});
 });
 
 const auto FailingPanel = component([](bool fail) {

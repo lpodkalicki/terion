@@ -46,7 +46,7 @@ TEST(TextField, RendersCursorAndEditsUtf8Text)
 
     std::string edited;
     fields.update(TextField({.value = "123456789",.key = "long",.layout = {.width = 8},
-        .onChange = [&](std::string value) { edited = std::move(value); }}));
+        .on_change = [&](std::string value) { edited = std::move(value); }}));
     fields.root()->layout(Constraints{.maximum = {.width = 8,.height = 3}});
     fields_buffer.clear();
     fields.root()->paint(fields_painter,std::to_string(fields.root()->id()),{},std::nullopt,&field_theme);

@@ -33,9 +33,9 @@ public:
         auto current = current_.get();
         if (!current) return Fragment({});
         auto props = *current;
-        const auto original_close = props.onClose;
+        const auto original_close = props.on_close;
         const auto weak = weak_from_this();
-        props.onClose = [weak,original_close] {
+        props.on_close = [weak,original_close] {
             if (auto manager = weak.lock()) manager->close();
             if (original_close) original_close();
         };

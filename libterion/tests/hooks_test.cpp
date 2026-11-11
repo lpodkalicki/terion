@@ -10,14 +10,14 @@ using namespace terion;
 namespace {
 
 const auto Counter = component([] {
-    auto [count,setCount] = useState(0);
+    auto [count,set_count] = useState(0);
     return Button({.text = std::to_string(count),
-        .onClick = [setCount] { setCount([](int previous) { return previous + 1; }); }});
+        .on_click = [set_count] { set_count([](int previous) { return previous + 1; }); }});
 });
 
 const auto BadHookOrder = component([](bool second) {
-    auto [count,setCount] = useState(0);
-    (void)setCount;
+    auto [count,set_count] = useState(0);
+    (void)set_count;
     if (second) (void)useState(std::string("extra"));
     return Typography({.text = std::to_string(count)});
 });
@@ -71,9 +71,9 @@ TEST(Hooks, RequiresMountAndStableHookOrder)
 TEST(Hooks, CallableComponentsPreserveKeyedState)
 {
     const auto counter = component([] {
-        auto [count,setCount] = useState(0);
+        auto [count,set_count] = useState(0);
         return Button({.text = std::to_string(count),
-            .onClick = [setCount] { setCount([](int value) { return value + 1; }); }});
+            .on_click = [set_count] { set_count([](int value) { return value + 1; }); }});
     });
 
     Reconciler reconciler;

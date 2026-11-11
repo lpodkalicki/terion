@@ -20,9 +20,9 @@ TerminalCapabilities AnsiTerminalBackend::detectCapabilities(const std::string_v
     const std::string_view pointer_override)
 {
     TerminalCapabilities capabilities;
-    capabilities.mousePointerShape = terminal_program == "kitty" || terminal_program == "ghostty";
-    if (pointer_override == "1") capabilities.mousePointerShape = true;
-    if (pointer_override == "0") capabilities.mousePointerShape = false;
+    capabilities.mouse_pointer_shape = terminal_program == "kitty" || terminal_program == "ghostty";
+    if (pointer_override == "1") capabilities.mouse_pointer_shape = true;
+    if (pointer_override == "0") capabilities.mouse_pointer_shape = false;
     return capabilities;
 }
 
@@ -38,9 +38,9 @@ void TerminalCapabilityProbe::process(const std::string_view sequence)
         const auto name = payload.substr(0,payload.find('='));
         if (name == "5463" || name == "524742") // Tc and RGB
         {
-            capabilities_.activelyProbed = true;
-            if (supported) capabilities_.trueColor = true;
-            else if (++rejected_colors_ >= 2) capabilities_.trueColor = false;
+            capabilities_.actively_probed = true;
+            if (supported) capabilities_.true_color = true;
+            else if (++rejected_colors_ >= 2) capabilities_.true_color = false;
         }
     }
     else if (sequence.starts_with("\033[?") && sequence.ends_with("$y"))
@@ -54,7 +54,7 @@ void TerminalCapabilityProbe::process(const std::string_view sequence)
         {
             if (status == "0") capabilities_.mouse = false;
             if (status == "0" || status == "1" || status == "2" || status == "3" || status == "4")
-                capabilities_.activelyProbed = true;
+                capabilities_.actively_probed = true;
         }
     }
 }
@@ -171,7 +171,7 @@ void AnsiTerminalBackend::probeCapabilities()
 
 void AnsiTerminalBackend::setMousePointerShape(const MousePointerShape shape)
 {
-    if (!capabilities_.mousePointerShape) return;
+    if (!capabilities_.mouse_pointer_shape) return;
     TerminalBackend::setMousePointerShape(shape);
 }
 
@@ -203,7 +203,7 @@ AnsiTerminalBackend::~AnsiTerminalBackend()
     {
         try
         {
-            if (capabilities_.mousePointerShape) write("\033]22;\033\\");
+            if (capabilities_.mouse_pointer_shape) write("\033]22;\033\\");
             write("\033[?2004l\033[?1006l\033[?1003l\033[0m\033[?25h\033[?1049l");
         }
         catch (...)

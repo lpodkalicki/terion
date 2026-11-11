@@ -19,21 +19,21 @@ Rect RenderNode::scrollbarTrack() const
 {
     if (type_ == Component::Type::Dialog)
     {
-        if (!dialogOpen() || !dialog_scroll_.scrollable()) return {};
+        if (!dialog_open() || !dialog_scroll_.scrollable()) return {};
         return {.x = dialog_content_rect_.x+dialog_content_rect_.width,
             .y = dialog_content_rect_.y,.width = 1,.height = dialog_content_rect_.height};
     }
     if (type_ == Component::Type::TreeView)
     {
         if (bounds_.width <= 0 || bounds_.height <= 0 ||
-            static_cast<int>(treeVisibleItems().size()) <= bounds_.height) return {};
+            static_cast<int>(tree_visible_items().size()) <= bounds_.height) return {};
         return {.x = bounds_.x+bounds_.width-1,.y = bounds_.y,.width = 1,.height = bounds_.height};
     }
     if (type_ == Component::Type::Table)
     {
         const int height = std::max(0,bounds_.height-2);
         if (bounds_.width <= 0 || height <= 0 ||
-            static_cast<int>(tableOrder().size()) <= height) return {};
+            static_cast<int>(table_order().size()) <= height) return {};
         return {.x = bounds_.x+bounds_.width-1,.y = bounds_.y+2,.width = 1,.height = height};
     }
     if (type_ != Component::Type::ScrollView || !scrollbar_visible_ || !scroll_.scrollable() ||
@@ -48,7 +48,7 @@ Rect RenderNode::scrollbarThumb() const
     return scrollController().thumb(scrollbarTrack());
 }
 
-bool RenderNode::scrollbarDrag(const int y, const int grab_offset)
+bool RenderNode::scrollbar_drag(const int y, const int grab_offset)
 {
     if (type_ != Component::Type::Dialog && type_ != Component::Type::Table &&
         type_ != Component::Type::TreeView && !on_scroll_) return false;

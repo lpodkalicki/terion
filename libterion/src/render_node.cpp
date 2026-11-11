@@ -191,11 +191,11 @@ Size RenderNode::measure(const Constraints& constraints) const
             width = addBounded(width,std::max(1,table_columns_[i].width > 0 ?
                 table_columns_[i].width : column_width+2)+1);
         }
-        content = {.width = width,.height = addBounded(static_cast<int>(tableOrder().size()),2)};
+        content = {.width = width,.height = addBounded(static_cast<int>(table_order().size()),2)};
     }
     else if (type_ == Component::Type::TreeView)
     {
-        const auto visible = treeVisibleItems();
+        const auto visible = tree_visible_items();
         int width = 0;
         for (const auto& entry : visible)
             width = std::max(width,entry.depth*2+4+textWidth(entry.item->icon)+
@@ -296,10 +296,10 @@ Size RenderNode::measure(const Constraints& constraints) const
 
     if (style_.width) content.width = std::max(0,*style_.width);
     if (style_.height) content.height = std::max(0,*style_.height);
-    if (style_.minWidth) content.width = std::max(content.width,std::max(0,*style_.minWidth));
-    if (style_.maxWidth) content.width = std::min(content.width,std::max(0,*style_.maxWidth));
-    if (style_.minHeight) content.height = std::max(content.height,std::max(0,*style_.minHeight));
-    if (style_.maxHeight) content.height = std::min(content.height,std::max(0,*style_.maxHeight));
+    if (style_.min_width) content.width = std::max(content.width,std::max(0,*style_.min_width));
+    if (style_.max_width) content.width = std::min(content.width,std::max(0,*style_.max_width));
+    if (style_.min_height) content.height = std::max(content.height,std::max(0,*style_.min_height));
+    if (style_.max_height) content.height = std::min(content.height,std::max(0,*style_.max_height));
     return constraints.constrain(content);
 }
 
@@ -308,10 +308,10 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
     if (type_ == Component::Type::Table)
-        table_scroll_.configure(static_cast<int>(tableOrder().size()),std::max(0,size.height-2));
+        table_scroll_.configure(static_cast<int>(table_order().size()),std::max(0,size.height-2));
     if (type_ == Component::Type::TreeView)
     {
-        const auto visible = treeVisibleItems();
+        const auto visible = tree_visible_items();
         tree_scroll_.configure(static_cast<int>(visible.size()),size.height);
         if (tree_pending_reveal_)
         {
@@ -485,10 +485,10 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         for (int extent : sizes) occupied = addBounded(occupied,extent);
         const int extra = std::max(0,main_extent - occupied);
         int cursor = horizontal ? origin.x + padding : origin.y + padding;
-        if (style_.justifyContent == JustifyContent::Center) cursor += extra / 2;
-        if (style_.justifyContent == JustifyContent::End) cursor += extra;
-        const int between = style_.justifyContent == JustifyContent::SpaceBetween && gaps > 0 ? extra / gaps : 0;
-        int remainder = style_.justifyContent == JustifyContent::SpaceBetween && gaps > 0 ? extra % gaps : 0;
+        if (style_.justify_content == JustifyContent::Center) cursor += extra / 2;
+        if (style_.justify_content == JustifyContent::End) cursor += extra;
+        const int between = style_.justify_content == JustifyContent::SpaceBetween && gaps > 0 ? extra / gaps : 0;
+        int remainder = style_.justify_content == JustifyContent::SpaceBetween && gaps > 0 ? extra % gaps : 0;
         int placed_children = 0;
         for (std::size_t i = 0; i < children_.size(); ++i)
         {
@@ -505,10 +505,10 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
             const int cross_natural = horizontal ?
                 children_[i]->measure(Constraints{.maximum = {.width = sizes[i],.height = cross_extent}}).height :
                 children_[i]->measure(Constraints{.maximum = {.width = cross_extent,.height = sizes[i]}}).width;
-            const int cross_size = style_.alignItems == AlignItems::Stretch ? cross_extent : cross_natural;
+            const int cross_size = style_.align_items == AlignItems::Stretch ? cross_extent : cross_natural;
             int cross_position = horizontal ? origin.y + padding : origin.x + padding;
-            if (style_.alignItems == AlignItems::Center) cross_position += (cross_extent - cross_size) / 2;
-            if (style_.alignItems == AlignItems::End) cross_position += cross_extent - cross_size;
+            if (style_.align_items == AlignItems::Center) cross_position += (cross_extent - cross_size) / 2;
+            if (style_.align_items == AlignItems::End) cross_position += cross_extent - cross_size;
             const Size slot = horizontal ? Size{.width = sizes[i],.height = cross_size} :
                 Size{.width = cross_size,.height = sizes[i]};
             children_[i]->layout(Constraints{.minimum = slot,.maximum = slot},
@@ -723,7 +723,7 @@ bool RenderNode::updateTabsHover(const Point position)
     return true;
 }
 
-std::vector<RenderNode::TreeVisibleItem> RenderNode::treeVisibleItems() const
+std::vector<RenderNode::TreeVisibleItem> RenderNode::tree_visible_items() const
 {
     std::vector<TreeVisibleItem> result;
     const auto visit = [&](const auto& self, const std::vector<TreeItem>& items,
@@ -748,7 +748,7 @@ std::vector<RenderNode::TreeVisibleItem> RenderNode::treeVisibleItems() const
     return result;
 }
 
-Rect RenderNode::splitHandle() const noexcept
+Rect RenderNode::split_handle() const noexcept
 {
     if (type_ != Component::Type::ResizableSplit || children_.size() != 2) return {};
     const auto first = children_[0]->bounds_;
@@ -757,18 +757,18 @@ Rect RenderNode::splitHandle() const noexcept
         Rect{.x = bounds_.x,.y = first.y+first.height,.width = bounds_.width,.height = 1};
 }
 
-RenderNode* RenderNode::splitTarget(const Point position) noexcept
+RenderNode* RenderNode::split_target(const Point position) noexcept
 {
     if (position.x < bounds_.x || position.y < bounds_.y ||
         position.x >= bounds_.x+bounds_.width || position.y >= bounds_.y+bounds_.height) return nullptr;
     if (type_ == Component::Type::ResizableSplit)
     {
-        const auto handle = splitHandle();
+        const auto handle = split_handle();
         if (position.x >= handle.x && position.x < handle.x+handle.width &&
             position.y >= handle.y && position.y < handle.y+handle.height) return this;
     }
     for (auto it = children_.rbegin(); it != children_.rend(); ++it)
-        if (auto* target = (*it)->splitTarget(position)) return target;
+        if (auto* target = (*it)->split_target(position)) return target;
     return nullptr;
 }
 
@@ -804,7 +804,7 @@ bool RenderNode::handleSplitKey(const Event& event)
 bool RenderNode::handleTreeKey(const Event& event)
 {
     if (type_ != Component::Type::TreeView || disabled_) return false;
-    const auto visible = treeVisibleItems();
+    const auto visible = tree_visible_items();
     if (visible.empty()) return false;
     const int count = static_cast<int>(visible.size());
     int selected = -1;
@@ -862,7 +862,7 @@ bool RenderNode::handleTreeClick(const Point position)
     if (type_ != Component::Type::TreeView || disabled_ || position.x < bounds_.x ||
         position.x >= bounds_.x+bounds_.width || position.y < bounds_.y ||
         position.y >= bounds_.y+bounds_.height) return false;
-    const auto visible = treeVisibleItems();
+    const auto visible = tree_visible_items();
     const int scroll = tree_scroll_.offset();
     const int index = scroll+position.y-bounds_.y;
     if (index < 0 || index >= static_cast<int>(visible.size())) return false;
@@ -886,7 +886,7 @@ bool RenderNode::handleTreeClick(const Point position)
     return true;
 }
 
-std::vector<std::size_t> RenderNode::tableOrder() const
+std::vector<std::size_t> RenderNode::table_order() const
 {
     std::vector<std::size_t> order;
     order.reserve(table_rows_.size());
@@ -909,7 +909,7 @@ std::vector<std::size_t> RenderNode::tableOrder() const
 bool RenderNode::handleTableKey(const Event& event)
 {
     if (type_ != Component::Type::Table || disabled_) return false;
-    const auto order = tableOrder();
+    const auto order = table_order();
     if (order.empty()) return false;
     int selected = -1;
     for (std::size_t i = 0; i < order.size(); ++i)
@@ -963,7 +963,7 @@ bool RenderNode::handleTableClick(const Point position)
         return false;
     }
     if (position.y < bounds_.y+2 || position.x == scrollbarTrack().x) return false;
-    const auto order = tableOrder();
+    const auto order = table_order();
     const int scroll = table_scroll_.offset();
     const int index = scroll+position.y-bounds_.y-2;
     if (index < 0 || index >= static_cast<int>(order.size())) return false;
@@ -1027,13 +1027,13 @@ bool RenderNode::handleScrollKey(const Event& event)
     }
 }
 
-RenderNode* RenderNode::contextTarget(const Point position) noexcept
+RenderNode* RenderNode::context_target(const Point position) noexcept
 {
     if (position.x < bounds_.x || position.y < bounds_.y ||
         position.x >= bounds_.x+bounds_.width || position.y >= bounds_.y+bounds_.height ||
         !tabPanelActive()) return nullptr;
     for (auto it = children_.rbegin(); it != children_.rend(); ++it)
-        if (auto* child = (*it)->contextTarget(position)) return child;
+        if (auto* child = (*it)->context_target(position)) return child;
     return type_ == Component::Type::ContextMenu && !disabled_ && !select_options_.empty() ? this : nullptr;
 }
 
@@ -1078,16 +1078,16 @@ Rect RenderNode::selectPopupRect(const Size screen) const noexcept
     return {.x = std::clamp(bounds_.x,0,screen.width-width),.y = y,.width = width,.height = height};
 }
 
-Rect RenderNode::selectScrollbarTrack(const Size screen) const noexcept
+Rect RenderNode::select_scrollbar_track(const Size screen) const noexcept
 {
     const Rect popup = selectPopupRect(screen);
     if (popup.width < 3 || popup.height <= 0 || static_cast<int>(select_options_.size()) <= popup.height) return {};
     return {.x = popup.x+popup.width-1,.y = popup.y,.width = 1,.height = popup.height};
 }
 
-Rect RenderNode::selectScrollbarThumb(const Size screen) const noexcept
+Rect RenderNode::select_scrollbar_thumb(const Size screen) const noexcept
 {
-    const Rect track = selectScrollbarTrack(screen);
+    const Rect track = select_scrollbar_track(screen);
     return select_scroll_.thumb(track);
 }
 
@@ -1167,7 +1167,7 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
         if (mouse.action == MouseAction::Release) { select_drag_.end(); return true; }
         if (mouse.action == MouseAction::Move)
         {
-            const Rect track = selectScrollbarTrack(screen);
+            const Rect track = select_scrollbar_track(screen);
             select_scroll_.setOffset(select_drag_.move(select_scroll_,track,mouse.position.y));
             return true;
         }
@@ -1175,7 +1175,7 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
     if (selectContains(mouse.position,screen) && select_open_)
     {
         const Rect popup = selectPopupRect(screen);
-        const Rect track = selectScrollbarTrack(screen);
+        const Rect track = select_scrollbar_track(screen);
         if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
             track.width > 0 && mouse.position.x == track.x)
         {
@@ -1185,7 +1185,7 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
         }
         if (mouse.action == MouseAction::Scroll)
         {
-            select_scroll_.advance(-mouse.scrollY);
+            select_scroll_.advance(-mouse.scroll_y);
             return true;
         }
         if (mouse.action == MouseAction::Move)
@@ -1278,7 +1278,7 @@ void RenderNode::paintTooltip(Painter& painter, const Point point, const Size sc
 
 Rect RenderNode::toastRect(const Size screen, const int bottom_offset) const noexcept
 {
-    if (!toastOpen() || screen.width <= 0 || screen.height <= bottom_offset) return {};
+    if (!toast_open() || screen.width <= 0 || screen.height <= bottom_offset) return {};
     const int height = screen.height-bottom_offset >= 3 ? 3 : 1;
     const int width = std::min(std::max(1,screen.width-2),std::max(12,textWidth(text_)+7));
     return {.x = std::max(0,screen.width-width-1),
@@ -1310,14 +1310,14 @@ void RenderNode::paintToast(Painter& painter, const Size screen, const Theme& th
 
 void RenderNode::closeToast()
 {
-    if (!toastOpen()) return;
+    if (!toast_open()) return;
     toast_visible_ = false;
     if (toast_on_close_) toast_on_close_();
 }
 
 bool RenderNode::expireToast(const std::chrono::steady_clock::time_point now)
 {
-    if (!toastOpen() || toast_duration_ms_ == 0 ||
+    if (!toast_open() || toast_duration_ms_ == 0 ||
         now-toast_started_ < std::chrono::milliseconds(toast_duration_ms_)) return false;
     closeToast();
     return true;
@@ -1328,8 +1328,8 @@ void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& 
     const Rect popup = selectPopupRect(screen);
     if (popup.width <= 0 || popup.height <= 0) return;
     const Palette palette = theme.palette;
-    const Rect track = selectScrollbarTrack(screen);
-    const Rect thumb = selectScrollbarThumb(screen);
+    const Rect track = select_scrollbar_track(screen);
+    const Rect thumb = select_scrollbar_thumb(screen);
     painter.fill(popup,Cell{.grapheme = " ",.style = {.background = palette.surface}});
     for (int i = 0; i < popup.height; ++i)
     {
@@ -1376,30 +1376,30 @@ bool RenderNode::propagateEvent(const Event& event, const std::uint64_t target) 
     ComponentEvent propagated(event,target);
     for (std::size_t i = 0; i + 1 < path.size(); ++i)
     {
-        propagated.currentTarget = path[i]->id_;
+        propagated.current_target = path[i]->id_;
         propagated.phase = EventPhase::Capture;
         if (path[i]->on_event_capture_) path[i]->on_event_capture_(propagated);
-        if (propagated.propagationStopped()) return propagated.defaultPrevented();
+        if (propagated.propagation_stopped()) return propagated.default_prevented();
     }
-    propagated.currentTarget = target;
+    propagated.current_target = target;
     propagated.phase = EventPhase::Target;
     if (path.back()->on_event_capture_) path.back()->on_event_capture_(propagated);
-    if (!propagated.propagationStopped() && path.back()->on_event_)
+    if (!propagated.propagation_stopped() && path.back()->on_event_)
         path.back()->on_event_(propagated);
-    if (propagated.propagationStopped()) return propagated.defaultPrevented();
+    if (propagated.propagation_stopped()) return propagated.default_prevented();
     for (std::size_t i = path.size() - 1; i > 0; --i)
     {
-        propagated.currentTarget = path[i-1]->id_;
+        propagated.current_target = path[i-1]->id_;
         propagated.phase = EventPhase::Bubble;
         if (path[i-1]->on_event_) path[i-1]->on_event_(propagated);
-        if (propagated.propagationStopped()) break;
+        if (propagated.propagation_stopped()) break;
     }
-    return propagated.defaultPrevented();
+    return propagated.default_prevented();
 }
 
 Rect RenderNode::dialogRect(const Size screen) const
 {
-    if (!dialogOpen() || screen.width <= 0 || screen.height <= 0) return {};
+    if (!dialog_open() || screen.width <= 0 || screen.height <= 0) return {};
     const int width = std::min(screen.width,std::max(20,dialog_width_));
     int contents_height = 0;
     for (const auto& child : children_)
@@ -1417,7 +1417,7 @@ Rect RenderNode::dialogRect(const Size screen) const
 
 void RenderNode::layoutDialogChildren(const Size screen)
 {
-    if (!dialogOpen()) return;
+    if (!dialog_open()) return;
     dialog_screen_ = screen;
     const Rect rect = dialogRect(screen);
     const int top = rect.y + (text_.empty() ? 3 : 5);
@@ -1442,7 +1442,7 @@ void RenderNode::layoutDialogChildren(const Size screen)
 
 bool RenderNode::scrollDialog(const int delta, const Size screen)
 {
-    if (!dialogOpen()) return false;
+    if (!dialog_open()) return false;
     const int next = scrollController().scrollBy(delta);
     if (next == dialog_scroll_.offset()) return false;
     dialog_scroll_.setOffset(next);
@@ -1452,7 +1452,7 @@ bool RenderNode::scrollDialog(const int delta, const Size screen)
 
 bool RenderNode::revealDialogFocus(const std::uint64_t id, const Size screen)
 {
-    if (!dialogOpen() || dialog_content_rect_.height <= 0) return false;
+    if (!dialog_open() || dialog_content_rect_.height <= 0) return false;
     const auto find = [&](const auto& self, const RenderNode& node) -> const RenderNode* {
         if (node.id() == id) return &node;
         for (const auto& child : node.children())
@@ -1482,7 +1482,7 @@ RenderNode* RenderNode::dialogChildAt(const Point point) noexcept
 
 bool RenderNode::handleDialogKey(const Event& event)
 {
-    if (!dialogOpen()) return false;
+    if (!dialog_open()) return false;
     if (event.key == Key::Escape)
     {
         if (dialog_on_close_) dialog_on_close_();
@@ -1508,7 +1508,7 @@ bool RenderNode::handleDialogKey(const Event& event)
 
 bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
 {
-    if (!dialogOpen()) return false;
+    if (!dialog_open()) return false;
     if (scrollbar_drag_.active())
     {
         if (mouse.action == MouseAction::Release) { scrollbar_drag_.end(); return true; }
@@ -1520,7 +1520,7 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
         mouse.position.y >= rect.y && mouse.position.y < rect.y+rect.height;
     if (mouse.action == MouseAction::Scroll)
     {
-        if (inside) (void)scrollDialog(-mouse.scrollY*3,screen);
+        if (inside) (void)scrollDialog(-mouse.scroll_y*3,screen);
         return true;
     }
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
@@ -1725,7 +1725,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const Color base = effective_background.value_or(palette.background);
         painter.fillBackground(bounds_,base);
         Painter::ClipScope clip(painter,bounds_);
-        const auto items = treeVisibleItems();
+        const auto items = tree_visible_items();
         const int scroll = tree_scroll_.offset();
         const int available_width = bounds_.width-(scrollbarTrack().height > 0 ? 1 : 0);
         for (int i = 0; i < bounds_.height && scroll+i < static_cast<int>(items.size()); ++i)
@@ -1783,7 +1783,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             }
             widths.push_back(std::max(1,table_columns_[i].width > 0 ? table_columns_[i].width : width+2));
         }
-        const auto alignedX = [&](const int x, const int width, const int content_width,
+        const auto aligned_x = [&](const int x, const int width, const int content_width,
             const TableAlignment alignment) {
             const int space = std::max(0,width-content_width);
             return x+(alignment == TableAlignment::Right ? space :
@@ -1798,7 +1798,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                 (table_sort_ascending_ ? " ▲" : " ▼") : "";
             const std::string label = clipText(table_columns_[i].title,
                 std::max(0,widths[i]-1-textWidth(indicator)))+indicator;
-            painter.text(alignedX(x,widths[i]-1,textWidth(label),table_columns_[i].alignment),
+            painter.text(aligned_x(x,widths[i]-1,textWidth(label),table_columns_[i].alignment),
                 bounds_.y,label,heading);
             x += widths[i]+1;
         }
@@ -1806,7 +1806,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             painter.horizontalLine(bounds_.x,bounds_.y+1,bounds_.width,
                 {.foreground = palette.muted,.background = base});
         const int visible = std::max(0,bounds_.height-2);
-        const auto order = tableOrder();
+        const auto order = table_order();
         const int scroll = table_scroll_.offset();
         for (int r = 0; r < visible && scroll+r < static_cast<int>(order.size()); ++r)
         {
@@ -1834,7 +1834,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                     painter.fillBackground({.x = column_x,.y = y,.width = widths[i],.height = 1},
                         *formatted.background);
                 const std::string cell_text = clipText(formatted.text,std::max(0,widths[i]-1));
-                painter.text(alignedX(column_x,widths[i]-1,textWidth(cell_text),
+                painter.text(aligned_x(column_x,widths[i]-1,textWidth(cell_text),
                     table_columns_[i].alignment),y,cell_text,cell_style);
                 column_x += widths[i]+1;
             }
@@ -2115,7 +2115,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             Painter::ClipScope clip(painter,child->bounds_);
             child->paint(painter,focused_id,hovered_id,effective_background,theme,unicode);
         }
-        const Rect handle = splitHandle();
+        const Rect handle = split_handle();
         if (handle.width > 0 && handle.height > 0)
         {
             const Palette palette = theme ? theme->palette : Theme::dark().palette;

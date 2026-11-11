@@ -102,17 +102,17 @@ TEST(Context, StatefulProviderUpdatesDescendantsThroughContext)
         std::function<void()> toggle;
     };
     const Context<Model> theme({false,{}});
-    const auto useTheme = [&] { return useContext(theme); };
+    const auto use_theme = [&] { return useContext(theme); };
     const auto label = component([&] {
-        return Typography({.text = useTheme().dark ? "dark" : "light"});
+        return Typography({.text = use_theme().dark ? "dark" : "light"});
     });
     const auto toggle = component([&] {
-        return Button({.text = "toggle",.onClick = useTheme().toggle});
+        return Button({.text = "toggle",.on_click = use_theme().toggle});
     });
     const auto provider = component([&] {
-        auto [dark,setDark] = useState(false);
-        return ContextProvider(theme,Model{dark,[setDark] {
-            setDark([](bool previous) { return !previous; });
+        auto [dark,set_dark] = useState(false);
+        return ContextProvider(theme,Model{dark,[set_dark] {
+            set_dark([](bool previous) { return !previous; });
         }},std::vector<Component>{label(),toggle()});
     });
 

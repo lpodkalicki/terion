@@ -22,16 +22,16 @@ public:
         double step = 1.0;
         std::string key = {};
         bool disabled = false;
-        bool showValue = true;
+        bool show_value = true;
         ColorVariant color = ColorVariant::Primary;
-        std::function<void(double)> onChange = {};
+        std::function<void(double)> on_change = {};
         LayoutStyle layout = {.width = 25};
     }; /* End of struct Props */
 
     explicit Slider(Props props) : Component({.type = Type::Slider,.key = std::move(props.key),
         .layout = props.layout,.color_variant = props.color,.disabled = props.disabled,.value = props.value,
         .slider_min = props.min,.slider_max = props.max,.slider_step = props.step,
-        .slider_show_value = props.showValue,.slider_on_change = std::move(props.onChange)})
+        .slider_show_value = props.show_value,.slider_on_change = std::move(props.on_change)})
     {}
 }; /* End of class Slider */
 

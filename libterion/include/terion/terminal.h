@@ -67,11 +67,11 @@ enum class MousePointerShape
 
 struct TerminalCapabilities
 {
-    bool trueColor = true;
+    bool true_color = true;
     bool unicode = true;
     bool mouse = true;
-    bool mousePointerShape = false;
-    bool activelyProbed = false;
+    bool mouse_pointer_shape = false;
+    bool actively_probed = false;
 }; /* End of struct TerminalCapabilities */
 
 struct MouseEvent
@@ -79,8 +79,8 @@ struct MouseEvent
     Point position{};
     MouseButton button = MouseButton::None;
     MouseAction action = MouseAction::Move;
-    int scrollX = 0;
-    int scrollY = 0;
+    int scroll_x = 0;
+    int scroll_y = 0;
     bool shift = false;
     bool alt = false;
     bool ctrl = false;
@@ -209,7 +209,7 @@ public:
     [[nodiscard]] Size size() const override { return size_; }
     [[nodiscard]] TerminalCapabilities capabilities() const override
     {
-        return {.mousePointerShape = true};
+        return {.mouse_pointer_shape = true};
     }
     void resize(const Size size)
     {

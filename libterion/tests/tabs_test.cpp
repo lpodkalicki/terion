@@ -13,7 +13,7 @@ TEST(Tabs, ArrowKeysSkipDisabledTabsAndWrap)
     Reconciler tree;
     const auto build = [&](std::string value) {
         tree.update(Tabs({.options = {{"One","one"},{"Disabled","disabled",true},{"Three","three"}},
-            .value = std::move(value),.onChange = [&](std::string next) { selected = std::move(next); }}));
+            .value = std::move(value),.on_change = [&](std::string next) { selected = std::move(next); }}));
     };
     build("one");
     EXPECT_TRUE(tree.root()->handleTabsKey({.key = Key::Right}));
@@ -31,7 +31,7 @@ TEST(Tabs, MouseClickChangesSelectedTab)
     std::string selected;
     Reconciler tree;
     tree.update(Tabs({.options = {{"One","one"},{"Two","two"},{"Three","three"}},
-        .value = "one",.onChange = [&](std::string next) { selected = std::move(next); }}));
+        .value = "one",.on_change = [&](std::string next) { selected = std::move(next); }}));
     tree.root()->layout({.maximum = {.width = 50,.height = 5}});
     EXPECT_TRUE(tree.root()->handleTabsClick({.x = 8,.y = 1}));
     EXPECT_EQ(selected,"two");
@@ -84,11 +84,11 @@ TEST(TabPanel, SwitchingPanelsUpdatesFocusTargets)
         const auto page = active.get();
         return Column({.children = {
             Tabs({.options = {{"One","one"},{"Two","two"}},.value = page,.key = "tabs",
-                .onChange = [&](std::string value) { active.set(std::move(value)); }}),
+                .on_change = [&](std::string value) { active.set(std::move(value)); }}),
             TabPanel({.children = {Button({.text = "First",.key = "first",
-                .onClick = [] {}})},.key = "panel-one",.active = page == "one"}),
+                .on_click = [] {}})},.key = "panel-one",.active = page == "one"}),
             TabPanel({.children = {Button({.text = "Second",.key = "second",
-                .onClick = [] {}})},.key = "panel-two",.active = page == "two"})
+                .on_click = [] {}})},.key = "panel-two",.active = page == "two"})
         }});
     });
     app.renderOnce();

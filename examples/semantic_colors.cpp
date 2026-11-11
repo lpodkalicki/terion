@@ -46,7 +46,7 @@ int main()
     app.render([&] {
         return ThemeProvider(light.get() ? Theme::light() : Theme::dark(),
             Column({.children = {
-                Button({.text = "Toggle light/dark",.onClick = [&] { light.set(!light.get()); }}),
+                Button({.text = "Toggle light/dark",.on_click = [&] { light.set(!light.get()); }}),
                 PalettePreview()
             }}));
     });

@@ -15,7 +15,7 @@ TEST(ContextMenu, OpensAtRightClickAndClampsToScreen)
         .options = {{"Open","open"},{"Remove","remove"}}}));
     const Size screen {.width = 32,.height = 12};
     tree.root()->layout({.minimum = screen,.maximum = screen});
-    auto* target = tree.root()->contextTarget({.x = 31,.y = 11});
+    auto* target = tree.root()->context_target({.x = 31,.y = 11});
     ASSERT_EQ(target,tree.root());
     EXPECT_TRUE(target->openContextMenu({.x = 31,.y = 11},screen));
     const auto popup = target->selectPopupRect(screen);
@@ -30,7 +30,7 @@ TEST(ContextMenu, SelectsEnabledOptionUsingKeyboard)
     Reconciler tree;
     tree.update(ContextMenu({.child = Typography({.text = "Target"}),
         .options = {{"Disabled","disabled",true},{"Open","open"},{"Delete","delete"}},
-        .onSelect = [&](std::string value) { action = std::move(value); }}));
+        .on_select = [&](std::string value) { action = std::move(value); }}));
     const Size screen {.width = 30,.height = 10};
     tree.root()->layout({.maximum = screen});
     ASSERT_TRUE(tree.root()->openContextMenu({.x = 1,.y = 0},screen));
@@ -49,7 +49,7 @@ TEST(ContextMenu, MouseClickAndOutsideDismissal)
     Reconciler tree;
     tree.update(ContextMenu({.child = Typography({.text = "Target"}),
         .options = {{"Open","open"},{"Delete","delete"}},
-        .onSelect = [&](std::string value) { action = std::move(value); }}));
+        .on_select = [&](std::string value) { action = std::move(value); }}));
     const Size screen {.width = 40,.height = 12};
     tree.root()->layout({.maximum = screen});
     OverlayManager overlays;

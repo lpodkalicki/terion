@@ -18,15 +18,15 @@ public:
         std::string key = {};
         bool active = true;
         LayoutStyle layout = {};
-        std::function<void(ComponentEvent&)> onEventCapture = {};
-        std::function<void(ComponentEvent&)> onEvent = {};
+        std::function<void(ComponentEvent&)> on_event_capture = {};
+        std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
 
     explicit TabPanel(Props props) :
         Component({.type = Type::TabPanel,.key = std::move(props.key),
             .children = std::move(props.children),.layout = props.layout,
-            .on_event_capture = std::move(props.onEventCapture),
-            .on_event = std::move(props.onEvent),.tab_panel_active = props.active})
+            .on_event_capture = std::move(props.on_event_capture),
+            .on_event = std::move(props.on_event),.tab_panel_active = props.active})
     {}
 }; /* End of class TabPanel */
 

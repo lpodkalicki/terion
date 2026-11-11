@@ -15,12 +15,12 @@ int main()
     const auto Form = component([&] {
         return Column({.children = {
             Typography({.text = "Application name"}),
-            TextField({.value = name.get(),.onChange = [&](std::string value) {
+            TextField({.value = name.get(),.on_change = [&](std::string value) {
                 name.set(std::move(value));
             }}),
             Row({.children = {
-                Button({.text = "Cancel",.onClick = [&] { open.set(false); }}),
-                Button({.text = "Save",.onClick = [&] { open.set(false); }})
+                Button({.text = "Cancel",.on_click = [&] { open.set(false); }}),
+                Button({.text = "Save",.on_click = [&] { open.set(false); }})
             },.layout = {.gap = 1}})
         },.layout = {.gap = 1}});
     });
@@ -28,9 +28,9 @@ int main()
     app.render([&] {
         return Column({.children = {
             Typography({.text = "Name: " + name.get()}),
-            Button({.text = "Settings",.onClick = [&] { open.set(true); }}),
+            Button({.text = "Settings",.on_click = [&] { open.set(true); }}),
             Dialog({.open = open.get(),.title = "Settings",
-                .onClose = [&] { open.set(false); },.children = {Form()}})
+                .on_close = [&] { open.set(false); },.children = {Form()}})
         },.layout = {.padding = 2,.gap = 1}});
     });
     return app.run();

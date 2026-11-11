@@ -18,14 +18,14 @@ public:
         std::string key = {};
         LayoutStyle layout = {};
         bool active = false;
-        std::function<void(ComponentEvent&)> onEventCapture = {};
-        std::function<void(ComponentEvent&)> onEvent = {};
+        std::function<void(ComponentEvent&)> on_event_capture = {};
+        std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
 
     explicit FocusScope(Props props) :
         Component({.type = Type::FocusScope,.key = std::move(props.key),
             .children = std::move(props.children),.layout = props.layout,
-            .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
+            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .focus_scope_active = props.active})
     {}
 }; /* End of class FocusScope */

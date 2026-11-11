@@ -18,13 +18,13 @@ public:
         std::vector<Component> children = {};
         SplitDirection direction = SplitDirection::Horizontal;
         int position = 20;
-        int minFirst = 3;
-        int minSecond = 3;
+        int min_first = 3;
+        int min_second = 3;
         std::string key = {};
         LayoutStyle layout = {};
-        std::function<void(int)> onChange = {};
-        std::function<void(ComponentEvent&)> onEventCapture = {};
-        std::function<void(ComponentEvent&)> onEvent = {};
+        std::function<void(int)> on_change = {};
+        std::function<void(ComponentEvent&)> on_event_capture = {};
+        std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
 
     explicit ResizableSplit(Props props) :
@@ -38,10 +38,10 @@ private:
             throw std::invalid_argument("ResizableSplit requires exactly two children");
         return {.type = Type::ResizableSplit,.key = std::move(props.key),
             .children = std::move(props.children),.layout = props.layout,
-            .on_event_capture = std::move(props.onEventCapture),
-            .on_event = std::move(props.onEvent),.split_direction = props.direction,
-            .split_position = props.position,.split_min_first = props.minFirst,
-            .split_min_second = props.minSecond,.split_on_change = std::move(props.onChange)};
+            .on_event_capture = std::move(props.on_event_capture),
+            .on_event = std::move(props.on_event),.split_direction = props.direction,
+            .split_position = props.position,.split_min_first = props.min_first,
+            .split_min_second = props.min_second,.split_on_change = std::move(props.on_change)};
     }
 }; /* End of class ResizableSplit */
 

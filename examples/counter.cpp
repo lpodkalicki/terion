@@ -21,7 +21,7 @@ int main()
         },"root",LayoutStyle{.padding = 1,.gap = 1});
     });
 
-    app.onEvent([&](const Event& event) {
+    app.on_event([&](const Event& event) {
         if (event.key != Key::Enter) return false;
         counter.update([](const int value) { return value + 1; });
         return true;

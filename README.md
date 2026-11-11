@@ -51,7 +51,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
   ancestors without affecting siblings. See `examples/context.cpp`.
 - `ContextProvider(context, value, std::vector<Component>{...})` shares one context
   across several direct children without adding a layout node. A custom hook such as
-  `useTheme()` can simply return `useContext(themeContext)`; a provider component can
+  `useTheme()` can simply return `useContext(theme_context)`; a provider component can
   combine `useState()` with context data and an update callback. See `examples/stateful_context.cpp`.
 - `Fragment({.children = {...}})` groups sibling declarations without introducing a
   layout node. It also works when returned from `component(lambda)`; a top-level
@@ -64,7 +64,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `Dialog({.open = visible,.title = "Settings",.children = {SettingsForm()}})`
   renders arbitrary nested components in a modal overlay with scoped keyboard focus.
   Dialogs with custom children omit the built-in Confirm/Cancel footer by default;
-  set `.showActions = true` to retain it. Dialogs without children preserve their
+  set `.show_actions = true` to retain it. Dialogs without children preserve their
   built-in actions. See `examples/dialog_form.cpp`.
 - Long dialog content scrolls within a clipped viewport using the mouse wheel,
   PageUp/PageDown, Home/End, or Up/Down when no child handles the key. Focused
@@ -100,7 +100,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - Controlled `TextField` supports UTF-8 codepoint entry, cursor movement, Backspace/Delete and mouse focus.
 - Drawing primitives, styled `Box`, `Divider`, `Progress` and button visual variants.
 - Theme-aware `Paper` and `Card`, plus `Stack` and equal-column `Grid` layouts.
-- `LayoutStyle` supports minimum/maximum dimensions, weighted `flex` in `Row`/`Column`, `justifyContent` and `alignItems`.
+- `LayoutStyle` supports minimum/maximum dimensions, weighted `flex` in `Row`/`Column`, `justify_content` and `align_items`.
 - `examples/fullscreen.cpp` demonstrates a terminal-sized dashboard with all current declarative components.
 - Buttons have true-color surfaces, Unicode rounded borders, hover/focus states and compact/medium/large sizes (`examples/buttons.cpp`).
 - Text fields have outlined/filled variants, themed focus/disabled states and horizontal text viewport (`examples/text_fields.cpp`).
@@ -114,7 +114,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - `OverlayManager` collects non-owning `Portal` entries after reconciliation, paints them above the component tree in z-index order, routes popup mouse events and dismisses inactive menus.
 - `Select` menus choose the available space above/below the field, open near the selected option and show a draggable scrollbar for long lists. The example contains two independent selects.
 - Controlled modal `Dialog` overlays the screen with a dimmed backdrop, title, message and Cancel/Confirm actions; it intercepts keyboard/mouse events while open (`examples/dialog.cpp`).
-- Event handlers support capture → target → bubble propagation (`onEventCapture`, `onEvent`) with `stopPropagation()` and `preventDefault()`.
+- Event handlers support capture → target → bubble propagation (`on_event_capture`, `on_event`) with `stopPropagation()` and `preventDefault()`.
 - `FocusScope` confines keyboard focus to one active subtree (for example a form). An open `Dialog` automatically creates a modal focus scope and restores the previously focused background element when closed.
 - `Dialog::Props::children` accepts arbitrary nested components; the overlay lays them out and paints them inside the dialog. See `examples/architecture.cpp` for a composed dialog with a `TextField` and a `Button`.
 - UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.

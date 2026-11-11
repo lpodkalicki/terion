@@ -21,7 +21,7 @@ struct ToastNotification
 {
     std::string message;
     ToastSeverity severity = ToastSeverity::Info;
-    int durationMs = 3500; // 0 = persistent until dismissed.
+    int duration_ms = 3500; // 0 = persistent until dismissed.
 }; /* End of struct ToastNotification */
 
 class ToastManager

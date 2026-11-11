@@ -11,11 +11,11 @@ TEST(Checkbox, TogglesWithSpaceAndEnter)
 {
     bool value = false;
     Reconciler tree;
-    tree.update(Checkbox({.label = "Logging",.checked = false,.onChange = [&](bool next) { value = next; }}));
+    tree.update(Checkbox({.label = "Logging",.checked = false,.on_change = [&](bool next) { value = next; }}));
     auto* node = tree.root();
     EXPECT_TRUE(node->handleChoiceKey({.key = Key::Character,.character = U' '}));
     EXPECT_TRUE(value);
-    tree.update(Checkbox({.label = "Logging",.checked = true,.onChange = [&](bool next) { value = next; }}));
+    tree.update(Checkbox({.label = "Logging",.checked = true,.on_change = [&](bool next) { value = next; }}));
     EXPECT_TRUE(node->handleChoiceKey({.key = Key::Enter}));
     EXPECT_FALSE(value);
 }
@@ -25,7 +25,7 @@ TEST(Checkbox, DisabledDoesNotRespondToInput)
     int calls = 0;
     Reconciler tree;
     tree.update(Checkbox({.label = "Disabled",.disabled = true,
-        .onChange = [&](bool) { ++calls; }}));
+        .on_change = [&](bool) { ++calls; }}));
     EXPECT_FALSE(tree.root()->handleChoiceKey({.key = Key::Enter}));
     EXPECT_FALSE(tree.root()->handleChoiceClick({}));
     EXPECT_EQ(calls,0);

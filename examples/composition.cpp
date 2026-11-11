@@ -18,14 +18,14 @@ struct FileRowProps
     std::string name;
     std::string kind;
     std::string key;
-    std::function<void()> onOpen;
+    std::function<void()> on_open;
 };
 
 const auto FileRow = component([](const FileRowProps& props) {
     return Row({.children = {
         Typography({.text = props.kind,.key = "kind"}),
         Typography({.text = props.name,.key = "filename"}),
-        Button({.text = "Open",.key = "open",.onClick = props.onOpen,
+        Button({.text = "Open",.key = "open",.on_click = props.on_open,
             .size = ButtonSize::Compact})
     },.key = props.key,.layout = {.gap = 2}});
 });
@@ -35,7 +35,7 @@ struct FileListProps
     std::string title;
     std::vector<std::string> files;
     std::string key;
-    std::function<void(const std::string&)> onOpen;
+    std::function<void(const std::string&)> on_open;
 };
 
 // Composition: FileList renders FileRow without knowing its internal structure.
@@ -45,7 +45,7 @@ const auto FileList = component([](const FileListProps& props) {
     for (const auto& name : props.files)
     {
         rows.emplace_back(FileRow({.name = name,.kind = "FILE",.key = name,
-            .onOpen = [onOpen = props.onOpen,name] { if (onOpen) onOpen(name); }}).keyed(name));
+            .on_open = [on_open = props.on_open,name] { if (on_open) on_open(name); }}).keyed(name));
     }
     return Card({.title = props.title,.children = std::move(rows),
         .key = props.key});
@@ -64,13 +64,13 @@ int main()
         content.emplace_back(Typography({.text = "Terion - reusable components & composition"}));
         content.emplace_back(Typography({.text = "Selected: " + selected.get()}));
         content.emplace_back(Button({.text = "Toggle archives",.key = "toggle",
-            .onClick = [&] { show_archives.set(!show_archives.get()); }}));
+            .on_click = [&] { show_archives.set(!show_archives.get()); }}));
         content.emplace_back(FileList({.title = "Documents",.files = {"report.pdf","notes.txt"},
-            .key = "documents",.onOpen = [&](const std::string& name) { selected.set(name); }}).keyed("documents"));
+            .key = "documents",.on_open = [&](const std::string& name) { selected.set(name); }}).keyed("documents"));
         if (show_archives.get())
         {
             content.emplace_back(FileList({.title = "Archives",.files = {"backup.zip","logs.tar"},
-                .key = "archives",.onOpen = [&](const std::string& name) { selected.set(name); }}).keyed("archives"));
+                .key = "archives",.on_open = [&](const std::string& name) { selected.set(name); }}).keyed("archives"));
         }
         return Column({.children = std::move(content),.layout = {.padding = 1,.gap = 1}});
     });

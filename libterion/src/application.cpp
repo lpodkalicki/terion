@@ -134,7 +134,7 @@ void Application::renderOnce()
         if (reconciler_.root())
             overlays_.paint(painter,buffer.size(),theme_,focus_.current());
     }
-    if (!overlays_.modalOpen())
+    if (!overlays_.modal_open())
         toasts_.paint(painter,buffer.size(),theme_,overlays_.toastOccupiedHeight(buffer.size()));
     timings.paint = Clock::now()-paint_start;
     const auto terminal_start = Clock::now();
@@ -158,8 +158,8 @@ void Application::syncFocusTargets()
     {
         const auto find_active = [&](const auto& self, const RenderNode& node) -> const RenderNode* {
             if (!node.tabPanelActive()) return nullptr;
-            if (node.type() == Component::Type::Dialog && !node.dialogOpen()) return nullptr;
-            if (node.focusScopeActive()) return &node;
+            if (node.type() == Component::Type::Dialog && !node.dialog_open()) return nullptr;
+            if (node.focus_scope_active()) return &node;
             for (const auto& child : node.children())
                 if (const auto* found = self(self,*child)) return found;
             return nullptr;
@@ -180,14 +180,14 @@ void Application::syncFocusTargets()
         if (!node.tabPanelActive()) return;
         if (node.type() == Component::Type::Dialog)
         {
-            if (!node.dialogOpen()) return;
+            if (!node.dialog_open()) return;
             const std::string child_scope = std::to_string(node.id());
             for (const auto& child : node.children()) self(self,*child,child_scope);
             return;
         }
         if (node.type() == Component::Type::FocusScope)
         {
-            const std::string child_scope = scope.empty() && node.focusScopeActive() ?
+            const std::string child_scope = scope.empty() && node.focus_scope_active() ?
                 std::to_string(node.id()) : scope;
             for (const auto& child : node.children()) self(self,*child,child_scope);
             return;
@@ -293,7 +293,7 @@ void Application::syncFocusTargets()
 
 bool Application::handleMouse(const MouseEvent& mouse)
 {
-    overlays_.setHover(mouse.action == MouseAction::Move ?
+    overlays_.set_hover(mouse.action == MouseAction::Move ?
         std::optional<Point>{mouse.position} : std::nullopt);
     if (auto* dialog = overlays_.activeDialog())
     {
@@ -305,7 +305,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
     }
     updateHover(mouse);
     updateMousePointer(mouse);
-    if (!overlays_.modalOpen() &&
+    if (!overlays_.modal_open() &&
         toasts_.handleMouse(mouse,backend_->size(),overlays_.toastOccupiedHeight(backend_->size())))
         return true;
     if (component_ && reconciler_.root())
@@ -321,7 +321,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
         overlays_.dismissOutside(mouse,backend_->size());
         if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Right)
         {
-            if (auto* menu = reconciler_.root()->contextTarget(mouse.position))
+            if (auto* menu = reconciler_.root()->context_target(mouse.position))
             {
                 overlays_.dismissExcept(menu);
                 return menu->openContextMenu(mouse.position,backend_->size());
@@ -389,7 +389,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
         component_ && reconciler_.root())
     {
-        if (auto* target = reconciler_.root()->splitTarget(mouse.position))
+        if (auto* target = reconciler_.root()->split_target(mouse.position))
         {
             split_drag_id_ = target->id();
             pressed_button_id_.clear();
@@ -400,7 +400,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
     if (mouse.action == MouseAction::Scroll && component_ && reconciler_.root())
     {
         if (auto* target = reconciler_.root()->scrollTarget(mouse.position))
-            return target->scrollBy(-mouse.scrollY * 3);
+            return target->scrollBy(-mouse.scroll_y * 3);
     }
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
         component_ && reconciler_.root())
@@ -525,7 +525,7 @@ void Application::updateHover(const MouseEvent& mouse)
 
 void Application::updateMousePointer(const MouseEvent& mouse)
 {
-    if (!backend_->capabilities().mousePointerShape) return;
+    if (!backend_->capabilities().mouse_pointer_shape) return;
     MousePointerShape shape = MousePointerShape::Default;
     if (scrollbar_drag_id_ != 0 && mouse.action != MouseAction::Release)
         shape = MousePointerShape::Grabbing;
@@ -650,7 +650,7 @@ bool Application::dispatchEvent(const Event& event)
 int Application::run()
 {
     running_ = true;
-    Size lastSize {.width = -1,.height = -1};
+    Size last_size {.width = -1,.height = -1};
     auto next_progress_frame = std::chrono::steady_clock::now();
     while (running_)
     {
@@ -663,7 +663,7 @@ int Application::run()
             next_progress_frame = now+std::chrono::milliseconds(90);
         }
         const auto size = backend_->size();
-        if (size != lastSize) { renderer_.invalidate(); lastSize = size; invalidate(); }
+        if (size != last_size) { renderer_.invalidate(); last_size = size; invalidate(); }
         if (needsRender()) renderOnce();
         // Drain a bounded number of pending events to avoid delaying input under load.
         for (int i = 0; i < 64 && running_; ++i)

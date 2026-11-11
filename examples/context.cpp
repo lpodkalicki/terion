@@ -33,7 +33,7 @@ int main()
         const std::string current = dark.get() ? "dark" : "light";
         return Column({.children = {
             Button({.text = "Toggle theme",.key = "toggle",
-                .onClick = [&] { dark.set(!dark.get()); }}),
+                .on_click = [&] { dark.set(!dark.get()); }}),
             ContextProvider(theme_context,current,ThemePanel(),"provider"),
             ThemeLabel().keyed("fallback")
         },.layout = {.padding = 2,.gap = 1}});

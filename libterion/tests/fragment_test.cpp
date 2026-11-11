@@ -30,9 +30,9 @@ TEST(Fragment, PreservesFunctionHooksAndProviderScope)
 {
     const Context<std::string> theme("fallback");
     const auto label = component([&] {
-        auto [count,setCount] = useState(0);
+        auto [count,set_count] = useState(0);
         return Button({.text = useContext(theme) + std::to_string(count),
-            .onClick = [setCount] { setCount([](int n) { return n + 1; }); }});
+            .on_click = [set_count] { set_count([](int n) { return n + 1; }); }});
     });
     const auto build = [&] {
         return Column({.children = {

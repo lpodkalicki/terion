@@ -43,7 +43,7 @@ std::string clipText(const std::string_view value, const int limit)
 
 std::uint64_t ToastManager::enqueue(ToastNotification notification)
 {
-    notification.durationMs = std::max(0,notification.durationMs);
+    notification.duration_ms = std::max(0,notification.duration_ms);
     const std::uint64_t id = next_id_++;
     if (pending_.size() >= max_pending_) pending_.pop_front();
     pending_.push_back({.id = id,.notification = std::move(notification)});
@@ -86,8 +86,8 @@ bool ToastManager::tick(const std::chrono::steady_clock::time_point now)
 {
     const auto before = visible_.size();
     std::erase_if(visible_,[now](const Item& item) {
-        return item.notification.durationMs > 0 &&
-            now-item.started >= std::chrono::milliseconds(item.notification.durationMs);
+        return item.notification.duration_ms > 0 &&
+            now-item.started >= std::chrono::milliseconds(item.notification.duration_ms);
     });
     if (visible_.size() == before) return false;
     promote(now);

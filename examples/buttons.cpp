@@ -19,18 +19,18 @@ int main()
                 Typography({.text = "Variants  (Tab to focus, mouse to hover/click)"}),
                 Row({.children = {
                     Button({.text = "Contained",.key = "contained",.variant = ButtonVariant::Contained,
-                        .onClick = [&] { clicks.set(clicks.get() + 1); }}),
+                        .on_click = [&] { clicks.set(clicks.get() + 1); }}),
                     Button({.text = "Outlined",.key = "outlined",.variant = ButtonVariant::Outlined,
-                        .onClick = [&] { clicks.set(clicks.get() + 1); }}),
+                        .on_click = [&] { clicks.set(clicks.get() + 1); }}),
                     Button({.text = "Text",.key = "text",.variant = ButtonVariant::Text,
-                        .onClick = [&] { clicks.set(clicks.get() + 1); }})
+                        .on_click = [&] { clicks.set(clicks.get() + 1); }})
                 },.layout = {.gap = 2}}),
                 Typography({.text = "Sizes"}),
                 Row({.children = {
                     Button({.text = "Compact",.size = ButtonSize::Compact}),
                     Button({.text = "Medium",.variant = ButtonVariant::Contained}),
                     Button({.text = "Large",.variant = ButtonVariant::Outlined,.size = ButtonSize::Large})
-                },.layout = {.gap = 2,.alignItems = AlignItems::Center}}),
+                },.layout = {.gap = 2,.align_items = AlignItems::Center}}),
                 Typography({.text = "Disabled"}),
                 Row({.children = {
                     Button({.text = "Disabled",.variant = ButtonVariant::Contained,.disabled = true}),

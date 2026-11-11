@@ -128,9 +128,9 @@ int main()
                     Progress({.value = progress.get() / 100.0,.layout = {.width = 25}}),
                     Row({.children = {
                         Button({.text = "+10%",.key = "progress-add",.variant = ButtonVariant::Contained,
-                            .onClick = [&] { progress.set(std::min(100,progress.get() + 10)); }}),
+                            .on_click = [&] { progress.set(std::min(100,progress.get() + 10)); }}),
                         Button({.text = "Reset",.key = "progress-reset",
-                            .onClick = [&] { progress.set(0); }})
+                            .on_click = [&] { progress.set(0); }})
                     },.layout = {.gap = 2}})
                 },.layout = {.padding = 1,.gap = 1}}),
                 Box({.children = {
@@ -149,43 +149,43 @@ int main()
             .children = {
                 Typography({.text = "Library settings / Form controls",.variant = TypographyVariant::H2}),
                 TextField({.value = name.get(),.placeholder = "Name",.key = "demo-name",
-                    .onChange = [&](std::string value) { name.set(std::move(value)); }}),
+                    .on_change = [&](std::string value) { name.set(std::move(value)); }}),
                 Row({.children = {
                     Select({.options = {{"English","en"},{"Polski","pl"},{"Deutsch","de"}},
                         .value = language.get(),.key = "language",.layout = {.width = 20},
-                        .onChange = [&](std::string value) { language.set(std::move(value)); }}),
+                        .on_change = [&](std::string value) { language.set(std::move(value)); }}),
                     DropdownMenu({.label = "Actions",.options = {{"Save","save"},{"Export","export"},
                         {"Delete","delete"}},.key = "actions",
-                        .onSelect = [&](std::string value) { last_action.set("Action: " + value); }})
+                        .on_select = [&](std::string value) { last_action.set("Action: " + value); }})
                 },.layout = {.gap = 2}}),
                 Divider({.layout = {.width = std::max(0,content_width - 4)}}),
                 Row({.children = {
                     Checkbox({.label = "Default",.key = "checkbox-default",.checked = checked.get(),
-                        .onChange = [&](bool value) { checked.set(value); }}),
+                        .on_change = [&](bool value) { checked.set(value); }}),
                     Checkbox({.label = "Unicode",.key = "checkbox-unicode",.checked = unicode_checked.get(),
                         .variant = CheckboxVariant::Unicode,
-                        .onChange = [&](bool value) { unicode_checked.set(value); }}),
+                        .on_change = [&](bool value) { unicode_checked.set(value); }}),
                     Checkbox({.label = "Emoji",.key = "checkbox-emoji",.checked = emoji_checked.get(),
                         .variant = CheckboxVariant::Emoji,
-                        .onChange = [&](bool value) { emoji_checked.set(value); }})
+                        .on_change = [&](bool value) { emoji_checked.set(value); }})
                 },.layout = {.gap = 2}}),
                 Switch({.label = "Enabled",.key = "enabled",.checked = enabled.get(),
-                    .onChange = [&](bool value) { enabled.set(value); }}),
+                    .on_change = [&](bool value) { enabled.set(value); }}),
                 Row({.children = {
                     Radio({.label = "Green",.key = "radio-green",.checked = radio.get() == "green",
-                        .onChange = [&](bool value) { if (value) radio.set("green"); }}),
+                        .on_change = [&](bool value) { if (value) radio.set("green"); }}),
                     Radio({.label = "Blue",.key = "radio-blue",.checked = radio.get() == "blue",
-                        .onChange = [&](bool value) { if (value) radio.set("blue"); }})
+                        .on_change = [&](bool value) { if (value) radio.set("blue"); }})
                 },.layout = {.gap = 2}}),
                 RadioGroup({.options = {{"Automatic","auto"},{"Manual","manual"},{"Off","off"}},
                     .value = mode.get(),.key = "mode",
-                    .onChange = [&](std::string value) { mode.set(std::move(value)); }}),
+                    .on_change = [&](std::string value) { mode.set(std::move(value)); }}),
                 Row({.children = {
                     Button({.text = "Open dialog",.key = "open-dialog",.variant = ButtonVariant::Contained,
-                        .onClick = [&] { dialog_open.set(true); }}),
+                        .on_click = [&] { dialog_open.set(true); }}),
                     Button({.text = "Disabled",.disabled = true}),
                     Button({.text = "Text button",.key = "text-button",.variant = ButtonVariant::Text,
-                        .onClick = [&] { last_action.set("Text button"); }})
+                        .on_click = [&] { last_action.set("Text button"); }})
                 },.layout = {.gap = 2}}),
                 Typography({.text = "Name: " + name.get() + " | Mode: " + mode.get()})
             },.key = "controls-panel",.active = active == "settings",
@@ -197,7 +197,7 @@ int main()
                 Typography({.text = "Files / " + node.get(),.variant = TypographyVariant::H2}),
                 Row({.children = {
                     Tooltip({.child = Button({.text = "Import",.key = "import-file",.variant = ButtonVariant::Contained,
-                        .onClick = [&] {
+                        .on_click = [&] {
                             imported.set(imported.get()+1);
                             const auto status = "Simulated import #"+std::to_string(imported.get());
                             last_action.set(status);
@@ -205,12 +205,12 @@ int main()
                                 .severity = ToastSeverity::Success});
                         }}),.text = "Import files into the current collection",.key = "import-tooltip"}),
                     Button({.text = "File details",.key = "file-details",
-                        .onClick = [&] { page.set("details"); }}),
+                        .on_click = [&] { page.set("details"); }}),
                     Button({.text = "Delete...",.key = "delete-file",
-                        .onClick = [&] { dialog_open.set(true); }})
+                        .on_click = [&] { dialog_open.set(true); }})
                 },.layout = {.gap = 1}}),
                 TextField({.value = filter.get(),.placeholder = "Search files...",.key = "table-filter",
-                    .onChange = [&](std::string value) { filter.set(std::move(value)); }}),
+                    .on_change = [&](std::string value) { filter.set(std::move(value)); }}),
                 ContextMenu({.child = Table({.columns = file_columns,
                     .rows = rows,
                     .filter = [query = filter.get(),hidden = show_hidden.get()](const TableRow& row) {
@@ -218,7 +218,7 @@ int main()
                             (query.empty() || row.cells[0].find(query) != std::string::npos ||
                                 row.cells[1].find(query) != std::string::npos);
                     },
-                    .formatCell = [](const TableRow& row, std::size_t column) {
+                    .format_cell = [](const TableRow& row, std::size_t column) {
                         TableCellFormat cell{.text = row.cells[column]};
                         if (column == 1)
                         {
@@ -230,16 +230,16 @@ int main()
                     },
                     .value = selected_row.get(),.key = "files-table",
                     .layout = {.height = std::max(3,std::min(12,body_height - 10))},
-                    .onChange = [&](std::string value) { selected_row.set(std::move(value)); }}),
+                    .on_change = [&](std::string value) { selected_row.set(std::move(value)); }}),
                     .options = {{"Open details","open"},{"Rename","rename"},
                         {"Delete...","delete"}},.key = "file-context-menu",
-                    .onSelect = [&](std::string action) {
+                    .on_select = [&](std::string action) {
                         if (action == "open") page.set("details");
                         else if (action == "delete") dialog_open.set(true);
                         last_action.set("Context menu: " + action + " (" + selected_row.get() + ")");
                     }}),
                 Checkbox({.label = "Show hidden files",.key = "show-hidden",.checked = show_hidden.get(),
-                    .onChange = [&](bool value) { show_hidden.set(value); }}),
+                    .on_change = [&](bool value) { show_hidden.set(value); }}),
                 Typography({.text = "Selected: " + selected_row.get() + " | Demo imports: " +
                     std::to_string(imported.get())})
             },.key = "data-panel",.active = active == "files",
@@ -262,26 +262,26 @@ int main()
                         Typography({.text = "[10:06] Monitoring active"}),
                         Typography({.text = "[10:07] Ready"})
                     },.key = "demo-log",.layout = {.width = 45,.height = 7,.gap = 0},
-                        .scrollOffset = scroll_offset.get(),
-                        .onScroll = [&](int value) { scroll_offset.set(value); }})
+                        .scroll_offset = scroll_offset.get(),
+                        .on_scroll = [&](int value) { scroll_offset.set(value); }})
                 },.layout = {.padding = 1,.gap = 1}}),
                 Typography({.text = "ResizableSplit, TreeView and Tabs compose the fullscreen shell."}),
                 Button({.text = "Back to files",.key = "back-overview",
-                    .onClick = [&] { page.set("files"); }})
+                    .on_click = [&] { page.set("files"); }})
             },.key = "layout-panel",.active = active == "showcase",
             .layout = {.padding = 1,.gap = 1}
         });
 
-        const auto makeFolderTree = [&]() -> Component { return Paper({.children = {
+        const auto make_folder_tree = [&]() -> Component { return Paper({.children = {
             Typography({.text = "COLLECTIONS",.variant = TypographyVariant::Subtitle}),
             TreeView({.items = navigation,.expanded = expanded.get(),.value = node.get(),
                 .key = "navigation-tree",.layout = {.height = std::max(3,body_height - 5)},
-                .onChange = [&](std::string value) {
+                .on_change = [&](std::string value) {
                     node.set(std::move(value));
                     page.set("files");
                     content_scroll.set(0);
                 },
-                .onToggle = [&](std::string key, bool open) {
+                .on_toggle = [&](std::string key, bool open) {
                     auto values = expanded.get();
                     values.erase(std::remove(values.begin(),values.end(),key),values.end());
                     if (open) values.push_back(std::move(key));
@@ -290,7 +290,7 @@ int main()
         },.layout = {.padding = 1,.gap = 1}}); };
 
         std::vector<Component> folder_children;
-        if (compact) folder_children.emplace_back(makeFolderTree());
+        if (compact) folder_children.emplace_back(make_folder_tree());
         Component folders = TabPanel({.children = std::move(folder_children),
             .key = "folders-panel",.active = compact && active == "folders",
             .layout = {.padding = 0}});
@@ -298,29 +298,29 @@ int main()
         Component content = Column({.children = {
             Tabs({.options = page_tabs,
                 .value = active,.key = "demo-tabs",
-                .onChange = [&](std::string value) {
+                .on_change = [&](std::string value) {
                     page.set(std::move(value));
                     content_scroll.set(0);
                 }}),
             ScrollView({.children = {std::move(folders),std::move(data),std::move(overview),
                 std::move(controls),std::move(layout)},
                 .key = "content-scroll",.layout = {.width = content_width,.gap = 0,.flex = 1},
-                .scrollOffset = content_scroll.get(),
-                .onScroll = [&](int value) { content_scroll.set(value); }})
+                .scroll_offset = content_scroll.get(),
+                .on_scroll = [&](int value) { content_scroll.set(value); }})
         },.layout = {.width = compact ? screen.width :
             std::max(0,screen.width-left_width-1),.height = body_height,.gap = 0,.flex = 1}});
 
         Component body = compact ? Component(std::move(content)) :
-            Component(ResizableSplit({.children = {makeFolderTree(),std::move(content)},
+            Component(ResizableSplit({.children = {make_folder_tree(),std::move(content)},
                 .direction = SplitDirection::Horizontal,.position = left_width,
-                .minFirst = 16,.minSecond = 28,.key = "demo-split",
+                .min_first = 16,.min_second = 28,.key = "demo-split",
                 .layout = {.width = screen.width,.height = body_height},
-                .onChange = [&](int value) { sidebar_width.set(value); }}));
+                .on_change = [&](int value) { sidebar_width.set(value); }}));
 
         std::vector<Component> menus;
         menus.emplace_back(DropdownMenu({.label = "File",.options = {{"Import","import"},
             {"New collection","new"},{"Exit","exit"}},.key = "top-file",
-            .onSelect = [&](std::string value) {
+            .on_select = [&](std::string value) {
                 last_action.set("File: "+value);
                 if (value == "exit") app.quit();
                 else if (value == "import") imported.set(imported.get()+1);
@@ -329,7 +329,7 @@ int main()
         if (!narrow)
             menus.emplace_back(DropdownMenu({.label = "Edit",.options = {{"Rename","rename"},
                 {"Delete...","delete"}},.key = "top-edit",
-                .onSelect = [&](std::string value) {
+                .on_select = [&](std::string value) {
                     last_action.set("Edit: "+value);
                     if (value == "delete") dialog_open.set(true);
                     else page.set("details");
@@ -337,10 +337,10 @@ int main()
         menus.emplace_back(DropdownMenu({.label = "View",.options = {{"Folders","folders"},
             {"Files","files"},{"Details","details"},{"Settings","settings"},
             {"Showcase","showcase"}},.key = "top-view",
-            .onSelect = [&](std::string value) { page.set(std::move(value)); }}));
+            .on_select = [&](std::string value) { page.set(std::move(value)); }}));
         if (!narrow)
             menus.emplace_back(DropdownMenu({.label = "Help",.options = {{"About","about"}},.key = "top-help",
-                .onSelect = [&](std::string) { last_action.set("Terion C++20 / v1.0 demo"); }}));
+                .on_select = [&](std::string) { last_action.set("Terion C++20 / v1.0 demo"); }}));
 
         return Column({
             .children = {
@@ -349,7 +349,7 @@ int main()
                         .variant = TypographyVariant::H2}),
                     Row({.children = std::move(menus),.layout = {.gap = narrow ? 0 : 1}}),
                     Typography({.text = currentTime()})
-                },.layout = {.width = screen.width,.justifyContent = JustifyContent::SpaceBetween}})},
+                },.layout = {.width = screen.width,.justify_content = JustifyContent::SpaceBetween}})},
                     .layout = {.width = screen.width,.padding = 0}}),
                 Divider({.layout = {.width = screen.width}}),
                 std::move(body),
@@ -359,25 +359,25 @@ int main()
                         "Ready | Tab/Shift+Tab: focus | Esc: close | View: " + active +
                         " | " + last_action.get()}),
                     Button({.text = light_theme.get() ? "Dark" : "Light",.key = "theme-toggle",
-                        .variant = ButtonVariant::Text,.onClick = [&] {
+                        .variant = ButtonVariant::Text,.on_click = [&] {
                             light_theme.set(!light_theme.get());
                             app.setTheme(light_theme.get() ? Theme::light() : Theme::dark());
                         },.size = ButtonSize::Compact})
-                },.layout = {.width = screen.width,.justifyContent = JustifyContent::SpaceBetween}})},
+                },.layout = {.width = screen.width,.justify_content = JustifyContent::SpaceBetween}})},
                     .layout = {.width = screen.width,.padding = 0}}),
                 Dialog({.open = dialog_open.get(),.title = "Delete file?",
                     .message = "Demo only: no real files will be removed.",.key = "demo-dialog",
-                    .confirmText = "Delete",.cancelText = "Cancel",
-                    .onConfirm = [&] {
+                    .confirm_text = "Delete",.cancel_text = "Cancel",
+                    .on_confirm = [&] {
                         last_action.set("Simulated delete: "+selected_row.get());
                         (void)app.toasts().enqueue({.message = "File deleted (demo)",
                             .severity = ToastSeverity::Success});
                         dialog_open.set(false);
                     },
-                    .onClose = [&] { dialog_open.set(false); }})
+                    .on_close = [&] { dialog_open.set(false); }})
             },
             .layout = {.width = screen.width,.height = screen.height,.gap = 0,
-                .alignItems = AlignItems::Stretch}
+                .align_items = AlignItems::Stretch}
         });
     });
     return app.run();

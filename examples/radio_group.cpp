@@ -17,7 +17,7 @@ int main()
                 .variant = TypographyVariant::H2}),
             RadioGroup({.options = {{"Automatic","auto"},{"Manual","manual"},
                 {"Unavailable","locked",true},{"Off","off"}},
-                .value = mode.get(),.key = "mode",.onChange = [&](std::string value) { mode.set(std::move(value)); }}),
+                .value = mode.get(),.key = "mode",.on_change = [&](std::string value) { mode.set(std::move(value)); }}),
             Typography({.text = "Selected mode: " + mode.get()})
         },.layout = {.padding = 1,.gap = 1}});
     });

@@ -21,7 +21,7 @@ int main()
                     .placeholder = "Enter your name",
                     .key = "name",
                     .layout = {.width = 32},
-                    .onChange = [&](std::string value) { name.set(std::move(value)); }
+                    .on_change = [&](std::string value) { name.set(std::move(value)); }
                 }),
                 Typography({.text = "Hello, " + name.get()}),
                 Typography({.text = "Tab, arrows, Home/End, Backspace, Delete, mouse click"})

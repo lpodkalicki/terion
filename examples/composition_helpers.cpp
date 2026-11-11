@@ -24,7 +24,7 @@ int main()
 
     app.render([&] {
         return Column({.children = {
-            Button({.text = "Toggle list",.onClick = [&] { expanded.set(!expanded.get()); }}),
+            Button({.text = "Toggle list",.on_click = [&] { expanded.set(!expanded.get()); }}),
             When(expanded.get(),ForEach(items,[](const Item& item) {
                 return ItemRow(item).keyed(item.id);
             }))

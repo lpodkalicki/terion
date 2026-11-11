@@ -44,9 +44,9 @@ TEST(ComponentProps, SupportsTemporaryDesignatedInitializers)
 TEST(ComponentProps, ChangingPropsKeepsStateForSameKey)
 {
     const auto counter = component([](const PanelProps& props) {
-        auto [count,setCount] = useState(0);
+        auto [count,set_count] = useState(0);
         return Button({.text = props.title + std::to_string(count),
-            .onClick = [setCount] { setCount([](int n) { return n + 1; }); }});
+            .on_click = [set_count] { set_count([](int n) { return n + 1; }); }});
     });
     Reconciler tree;
     tree.update(counter({.title = "A"}).keyed("counter"));

@@ -364,7 +364,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         node->tree_last_selected_ = props.text;
         node->tree_pending_reveal_ = !props.text.empty();
     }
-    node->tree_scroll_.configure(static_cast<int>(node->treeVisibleItems().size()),
+    node->tree_scroll_.configure(static_cast<int>(node->tree_visible_items().size()),
         node->tree_scroll_.viewport());
     if (props.type == Component::Type::Table)
         node->table_scroll_.configure(counts.at(&component),node->table_scroll_.viewport());

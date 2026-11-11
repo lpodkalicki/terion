@@ -28,7 +28,7 @@ int main()
                             Typography({.text = "TERION  /  Dashboard",.variant = TypographyVariant::H2}),
                             Typography({.text = "C++20 | MUI-inspired"})
                         },
-                        .layout = {.width = screen.width,.justifyContent = JustifyContent::SpaceBetween}
+                        .layout = {.width = screen.width,.justify_content = JustifyContent::SpaceBetween}
                     })},
                     .layout = {.width = screen.width,.padding = 0}
                 }),
@@ -45,7 +45,7 @@ int main()
                                 Button({.text = "Reports",.disabled = true,.size = ButtonSize::Compact}),
                                 Typography({.text = "Search",.variant = TypographyVariant::Subtitle}),
                                 TextField({.value = query.get(),.placeholder = "Type to search...",
-                                    .key = "search",.onChange = [&](std::string text) { query.set(std::move(text)); },
+                                    .key = "search",.on_change = [&](std::string text) { query.set(std::move(text)); },
                                     .size = ButtonSize::Compact}),
                                 Typography({.text = "Input: " + query.get()})
                             },
@@ -76,9 +76,9 @@ int main()
                                             .children = {
                                                 Button({.text = "+10%",.key = "increase",
                                                     .variant = ButtonVariant::Contained,
-                                                    .onClick = [&] { load.set(std::min(100,load.get() + 10)); }}),
+                                                    .on_click = [&] { load.set(std::min(100,load.get() + 10)); }}),
                                                 Button({.text = "Reset",.key = "reset",
-                                                    .onClick = [&] { load.set(0); }})
+                                                    .on_click = [&] { load.set(0); }})
                                             },
                                             .layout = {.gap = 2},.direction = StackDirection::Horizontal
                                         }),
@@ -91,23 +91,23 @@ int main()
                             .layout = {.gap = 1,.flex = 1}
                         })
                     },
-                    .layout = {.gap = 1,.flex = 1,.alignItems = AlignItems::Stretch}
+                    .layout = {.gap = 1,.flex = 1,.align_items = AlignItems::Stretch}
                 }),
                 Paper({
                     .children = {Row({
                         .children = {
                             Typography({.text = "Ready  |  Tab: focus  |  Mouse: click"}),
                             Button({.text = light.get() ? "Dark" : "Light",.key = "theme",
-                                .variant = ButtonVariant::Text,.onClick = [&] {
+                                .variant = ButtonVariant::Text,.on_click = [&] {
                                     light.set(!light.get());
                                     app.setTheme(light.get() ? Theme::light() : Theme::dark());
                                 },.size = ButtonSize::Compact})
-                        },.layout = {.width = screen.width,.justifyContent = JustifyContent::SpaceBetween}
+                        },.layout = {.width = screen.width,.justify_content = JustifyContent::SpaceBetween}
                     })},
                     .layout = {.width = screen.width,.padding = 0}
                 })
             },
-            .layout = {.width = screen.width,.height = screen.height,.alignItems = AlignItems::Stretch}
+            .layout = {.width = screen.width,.height = screen.height,.align_items = AlignItems::Stretch}
         });
     });
     return app.run();

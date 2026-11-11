@@ -12,12 +12,12 @@ struct ThemeState
     std::function<void()> toggle;
 };
 
-const Context<ThemeState> themeContext({"system",{}});
+const Context<ThemeState> theme_context({"system",{}});
 
 // A custom hook is an ordinary C++ function called during component rendering.
 ThemeState useThemeState()
 {
-    return useContext(themeContext);
+    return useContext(theme_context);
 }
 
 const auto ThemeLabel = component([] {
@@ -27,16 +27,16 @@ const auto ThemeLabel = component([] {
 
 const auto ThemeToggle = component([] {
     const auto theme = useThemeState();
-    return Button({.text = "Toggle theme",.onClick = theme.toggle});
+    return Button({.text = "Toggle theme",.on_click = theme.toggle});
 });
 
 const auto StatefulThemeProvider = component([] {
-    auto [dark,setDark] = useState(false);
+    auto [dark,set_dark] = useState(false);
     ThemeState state{
         dark ? "dark" : "light",
-        [setDark] { setDark([](bool previous) { return !previous; }); }
+        [set_dark] { set_dark([](bool previous) { return !previous; }); }
     };
-    return ContextProvider(themeContext,std::move(state),std::vector<Component>{
+    return ContextProvider(theme_context,std::move(state),std::vector<Component>{
         ThemeLabel(),
         ThemeToggle()
     });

@@ -15,11 +15,11 @@ int main()
         return Paper({.children = {
             Typography({.text = "Radio — Tab, Space/Enter or mouse",.variant = TypographyVariant::H2}),
             Radio({.label = "Red",.key = "red",.checked = choice.get() == "red",
-                .onChange = [&](bool checked) { if (checked) choice.set("red"); }}),
+                .on_change = [&](bool checked) { if (checked) choice.set("red"); }}),
             Radio({.label = "Green",.key = "green",.checked = choice.get() == "green",
-                .onChange = [&](bool checked) { if (checked) choice.set("green"); }}),
+                .on_change = [&](bool checked) { if (checked) choice.set("green"); }}),
             Radio({.label = "Blue",.key = "blue",.checked = choice.get() == "blue",
-                .onChange = [&](bool checked) { if (checked) choice.set("blue"); }}),
+                .on_change = [&](bool checked) { if (checked) choice.set("blue"); }}),
             Radio({.label = "Disabled",.disabled = true}),
             Typography({.text = "Selected: " + choice.get()})
         },.layout = {.padding = 1,.gap = 1}});

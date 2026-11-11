@@ -85,7 +85,7 @@ void OverlayManager::paint(Painter& painter, const Size screen, const Theme& the
     }
     int offset = 0;
     for (const auto& portal : portals_)
-        if (portal.owner->toastOpen())
+        if (portal.owner->toast_open())
         {
             const Rect popup = portal.owner->toastRect(screen,offset);
             portal.owner->paintToast(painter,screen,portal.owner->resolvedTheme(theme),offset);
@@ -105,7 +105,7 @@ int OverlayManager::toastOccupiedHeight(const Size screen) const noexcept
 {
     int offset = 0;
     for (const auto& portal : portals_)
-        if (portal.owner->toastOpen())
+        if (portal.owner->toast_open())
         {
             const Rect rect = portal.owner->toastRect(screen,offset);
             if (rect.height <= 0) break;
@@ -114,17 +114,17 @@ int OverlayManager::toastOccupiedHeight(const Size screen) const noexcept
     return offset;
 }
 
-bool OverlayManager::modalOpen() const noexcept
+bool OverlayManager::modal_open() const noexcept
 {
     for (const auto& portal : portals_)
-        if (portal.owner->dialogOpen()) return true;
+        if (portal.owner->dialog_open()) return true;
     return false;
 }
 
 RenderNode* OverlayManager::activeDialog() const noexcept
 {
     for (auto it = portals_.rbegin(); it != portals_.rend(); ++it)
-        if (it->owner->dialogOpen()) return it->owner;
+        if (it->owner->dialog_open()) return it->owner;
     return nullptr;
 }
 
@@ -172,7 +172,7 @@ RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size scre
     {
         int offset = 0;
         for (const auto& portal : portals_)
-            if (portal.owner->toastOpen())
+            if (portal.owner->toast_open())
             {
                 const Rect popup = portal.owner->toastRect(screen,offset);
                 if (mouse.position.x >= popup.x && mouse.position.x < popup.x+popup.width &&
@@ -195,7 +195,7 @@ RenderNode* OverlayManager::handleMouse(const MouseEvent& mouse, const Size scre
 
 void OverlayManager::dismissOutside(const MouseEvent& mouse, const Size screen)
 {
-    if (modalOpen()) return;
+    if (modal_open()) return;
     if (mouse.action != MouseAction::Press ||
         (mouse.button != MouseButton::Left && mouse.button != MouseButton::Right)) return;
     for (const auto& entry : portals_)

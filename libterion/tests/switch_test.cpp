@@ -12,11 +12,11 @@ TEST(Switch, ClickTogglesCurrentValue)
     bool next = false;
     Reconciler tree;
     tree.update(Switch({.label = "Dark mode",.checked = true,
-        .onChange = [&](bool checked) { next = checked; }}));
+        .on_change = [&](bool checked) { next = checked; }}));
     EXPECT_TRUE(tree.root()->handleChoiceClick({}));
     EXPECT_FALSE(next);
     tree.update(Switch({.label = "Dark mode",.checked = false,
-        .onChange = [&](bool checked) { next = checked; }}));
+        .on_change = [&](bool checked) { next = checked; }}));
     EXPECT_TRUE(tree.root()->handleChoiceClick({}));
     EXPECT_TRUE(next);
 }

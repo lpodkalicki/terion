@@ -30,20 +30,20 @@ int main()
             Typography({.text = "Select an operation to display a notification."}),
             Row({.children = {
                 Button({.text = "Import",.key = "import",.variant = ButtonVariant::Contained,
-                    .onClick = [&] { notify(ToastSeverity::Success,"3 files imported successfully"); }}),
+                    .on_click = [&] { notify(ToastSeverity::Success,"3 files imported successfully"); }}),
                 Button({.text = "Save",.key = "save",
-                    .onClick = [&] { notify(ToastSeverity::Info,"Changes saved"); }}),
+                    .on_click = [&] { notify(ToastSeverity::Info,"Changes saved"); }}),
                 Button({.text = "Low space",.key = "warning",
-                    .onClick = [&] { notify(ToastSeverity::Warning,"Storage almost full"); }}),
+                    .on_click = [&] { notify(ToastSeverity::Warning,"Storage almost full"); }}),
                 Button({.text = "Failed",.key = "error",
-                    .onClick = [&] { notify(ToastSeverity::Error,"Could not delete file"); }})
+                    .on_click = [&] { notify(ToastSeverity::Error,"Could not delete file"); }})
             },.layout = {.gap = 1}}),
             Typography({.text = "Toast appears in the bottom-right corner."}),
             Typography({.text = "It closes automatically or when clicked."}),
             Typography({.text = "Tab / Shift+Tab to navigate; Enter to activate."}),
             Toast({.open = open.get(),.message = message.get(),.severity = severity.get(),
-                .durationMs = 3500,.key = "toast-" + std::to_string(sequence.get()),
-                .onClose = [&] { open.set(false); }})
+                .duration_ms = 3500,.key = "toast-" + std::to_string(sequence.get()),
+                .on_close = [&] { open.set(false); }})
         },.layout = {.padding = 1,.gap = 1}});
     });
     return app.run();

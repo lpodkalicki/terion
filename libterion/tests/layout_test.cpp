@@ -15,9 +15,9 @@ TEST(Layout, DistributesFlexAndJustifiesChildren)
         Row({.children = {
             Box({.children = {Typography({.text = "L"})},.layout = {.width = 5}}),
             Box({.children = {Typography({.text = "R"})},.layout = {.flex = 1}})
-        },.layout = {.flex = 1,.alignItems = AlignItems::Stretch}}),
+        },.layout = {.flex = 1,.align_items = AlignItems::Stretch}}),
         Typography({.text = "Footer"})
-    },.layout = {.width = 30,.height = 10,.alignItems = AlignItems::Stretch}}));
+    },.layout = {.width = 30,.height = 10,.align_items = AlignItems::Stretch}}));
     flexible.root()->layout(Constraints{.maximum = {.width = 30,.height = 10}});
     const auto& flex_children = flexible.root()->children();
     EXPECT_EQ(flex_children[0]->bounds().height,1);
@@ -29,14 +29,14 @@ TEST(Layout, DistributesFlexAndJustifiesChildren)
 
     flexible.update(Row({.children = {
         Typography({.text = "A"}),Typography({.text = "B"})
-    },.layout = {.width = 12,.justifyContent = JustifyContent::SpaceBetween,
-        .alignItems = AlignItems::End}}));
+    },.layout = {.width = 12,.justify_content = JustifyContent::SpaceBetween,
+        .align_items = AlignItems::End}}));
     flexible.root()->layout(Constraints{.maximum = {.width = 12,.height = 4}});
     EXPECT_EQ(flexible.root()->children()[0]->bounds().x,0);
     EXPECT_EQ(flexible.root()->children()[1]->bounds().x,11);
 
     flexible.update(Box({.children = {Typography({.text = "X"})},
-        .layout = {.width = 20,.minWidth = 3,.maxWidth = 8}}));
+        .layout = {.width = 20,.min_width = 3,.max_width = 8}}));
     EXPECT_EQ(flexible.root()->measure(Constraints{.maximum = {.width = 40,.height = 10}}).width,8);
 
 }

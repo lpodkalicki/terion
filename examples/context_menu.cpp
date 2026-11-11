@@ -22,16 +22,16 @@ int main()
             Row({.children = {
                 ContextMenu({.child = Button({.text = "File actions",.key = "actions-button",
                     .variant = ButtonVariant::Contained,
-                    .onClick = [&] { last_action.set("Button clicked"); }}),
+                    .on_click = [&] { last_action.set("Button clicked"); }}),
                     .options = {{"New file","new"},{"Import","import"},
                         {"Disabled action","disabled",true}},
                     .key = "button-context-menu",
-                    .onSelect = [&](std::string action) { last_action.set("Button menu: " + action); }}),
+                    .on_select = [&](std::string action) { last_action.set("Button menu: " + action); }}),
                 ContextMenu({.child = Button({.text = "More",.key = "more-button",
-                    .onClick = [&] { last_action.set("More clicked"); }}),
+                    .on_click = [&] { last_action.set("More clicked"); }}),
                     .options = {{"Refresh","refresh"},{"Help","help"}},
                     .key = "more-context-menu",
-                    .onSelect = [&](std::string action) { last_action.set("More menu: " + action); }})
+                    .on_select = [&](std::string action) { last_action.set("More menu: " + action); }})
             },.layout = {.gap = 2}}),
             Typography({.text = "Files (left-click to select, right-click for actions)",
                 .variant = TypographyVariant::Subtitle}),
@@ -42,11 +42,11 @@ int main()
                     {"photo.png",{"photo.png","Image","2 MB"}}},
                 .value = selected.get(),.key = "files-table",
                 .layout = {.height = 5},
-                .onChange = [&](std::string value) { selected.set(std::move(value)); }}),
+                .on_change = [&](std::string value) { selected.set(std::move(value)); }}),
                 .options = {{"Open","open"},{"Rename","rename"},
                     {"Delete...","delete"},{"Unavailable","disabled",true}},
                 .key = "table-context-menu",
-                .onSelect = [&](std::string action) {
+                .on_select = [&](std::string action) {
                     last_action.set(action + ": " + selected.get());
                 }}),
             Typography({.text = "Selected file: " + selected.get()}),

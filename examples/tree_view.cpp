@@ -36,8 +36,8 @@ int main()
                 .variant = TypographyVariant::H2}),
             TreeView({.items = items,.expanded = expanded.get(),.value = selected.get(),
                 .key = "tree",.layout = {.width = 38,.height = 14},
-                .onChange = [&](std::string value) { selected.set(std::move(value)); },
-                .onToggle = [&](std::string key, bool open) {
+                .on_change = [&](std::string value) { selected.set(std::move(value)); },
+                .on_toggle = [&](std::string key, bool open) {
                     auto values = expanded.get();
                     values.erase(std::remove(values.begin(),values.end(),key),values.end());
                     if (open) values.push_back(std::move(key));

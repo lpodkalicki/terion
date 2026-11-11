@@ -20,19 +20,19 @@ int main()
                 .variant = TypographyVariant::H2}),
             Tabs({.options = {{"Overview","overview"},{"Settings","settings"},
                 {"Disabled","disabled",true},{"About","about"}},
-                .value = page,.key = "main-tabs",.onChange = [&](std::string value) { active.set(std::move(value)); }}),
+                .value = page,.key = "main-tabs",.on_change = [&](std::string value) { active.set(std::move(value)); }}),
             TabPanel({.children = {
                 Typography({.text = "Overview",.variant = TypographyVariant::H2}),
                 Typography({.text = "This is a retained, composable tab panel."}),
                 Button({.text = "Go to Settings",.key = "go-settings",.variant = ButtonVariant::Outlined,
-                    .onClick = [&] { active.set("settings"); }})
+                    .on_click = [&] { active.set("settings"); }})
             },.key = "overview-panel",.active = page == "overview",.layout = {.padding = 1,.gap = 1}}),
             TabPanel({.children = {
                 Typography({.text = "Settings",.variant = TypographyVariant::H2}),
                 TextField({.value = name.get(),.placeholder = "Application name",.key = "name",
-                    .onChange = [&](std::string value) { name.set(std::move(value)); }}),
+                    .on_change = [&](std::string value) { name.set(std::move(value)); }}),
                 Checkbox({.label = "Notifications",.key = "notifications",.checked = notifications.get(),
-                    .onChange = [&](bool value) { notifications.set(value); }})
+                    .on_change = [&](bool value) { notifications.set(value); }})
             },.key = "settings-panel",.active = page == "settings",.layout = {.padding = 1,.gap = 1}}),
             TabPanel({.children = {
                 Typography({.text = "About Terion",.variant = TypographyVariant::H2}),

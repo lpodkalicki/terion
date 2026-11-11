@@ -19,16 +19,16 @@ int main()
                 .variant = TypographyVariant::H2}),
             Typography({.text = "Default"}),
             Switch({.label = "Default",.key = "default",.checked = standard.get(),
-                .onChange = [&](bool checked) { standard.set(checked); }}),
+                .on_change = [&](bool checked) { standard.set(checked); }}),
             Switch({.label = "Disabled",.key = "disabled",.checked = true,.disabled = true}),
             Typography({.text = "Unicode"}),
             Switch({.label = "Unicode",.key = "unicode",.checked = unicode.get(),
                 .variant = CheckboxVariant::Unicode,
-                .onChange = [&](bool checked) { unicode.set(checked); }}),
+                .on_change = [&](bool checked) { unicode.set(checked); }}),
             Typography({.text = "Emoji"}),
             Switch({.label = "Emoji",.key = "emoji",.checked = emoji.get(),
                 .variant = CheckboxVariant::Emoji,
-                .onChange = [&](bool checked) { emoji.set(checked); }}),
+                .on_change = [&](bool checked) { emoji.set(checked); }}),
             Typography({.text = "Toggle each switch to compare ON and OFF states."})
         },.layout = {.padding = 1,.gap = 1}});
     });

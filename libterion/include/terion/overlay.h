@@ -30,13 +30,13 @@ public:
     void paint(Painter& painter, Size screen, const Theme& theme, std::string_view focused_id = {}) const;
     [[nodiscard]] RenderNode* handleMouse(const MouseEvent& mouse, Size screen);
     bool handleKey(const Event& event);
-    [[nodiscard]] bool modalOpen() const noexcept;
+    [[nodiscard]] bool modal_open() const noexcept;
     [[nodiscard]] RenderNode* activeDialog() const noexcept;
     [[nodiscard]] RenderNode* activePopup() const noexcept;
     [[nodiscard]] bool acceptsInput(const RenderNode& node) const noexcept;
     void dismissOutside(const MouseEvent& mouse, Size screen);
     void dismissExcept(const RenderNode* active);
-    void setHover(std::optional<Point> position) noexcept { hover_position_ = position; }
+    void set_hover(std::optional<Point> position) noexcept { hover_position_ = position; }
     bool tick(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now());
     [[nodiscard]] int toastOccupiedHeight(Size screen) const noexcept;
 

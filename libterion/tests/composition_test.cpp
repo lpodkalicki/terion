@@ -40,16 +40,16 @@ TEST(ComponentComposition, ComposesChildrenAndCallbacks)
     struct PanelProps
     {
         std::vector<Component> children;
-        std::function<void()> onClick;
+        std::function<void()> on_click;
     };
     const auto Panel = [](PanelProps props) -> Component {
         props.children.emplace_back(Button({.text = "Action",.key = "action",
-            .onClick = std::move(props.onClick)}));
+            .on_click = std::move(props.on_click)}));
         return Column({.children = std::move(props.children)});
     };
     bool invoked = false;
     auto panel = Panel({.children = {Label({"Body","body"})},
-        .onClick = [&] { invoked = true; }});
+        .on_click = [&] { invoked = true; }});
     ASSERT_EQ(panel.props().children.size(),2u);
     EXPECT_EQ(panel.props().children[0].props().key,"body");
     panel.props().children[1].props().on_click();

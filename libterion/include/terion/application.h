@@ -54,7 +54,7 @@ public:
     void renderOnce();
     void invalidate() noexcept { dirty_->store(true); }
     [[nodiscard]] bool needsRender() const noexcept { return dirty_->load(); }
-    void onEvent(EventCallback callback) { on_event_ = std::move(callback); }
+    void on_event(EventCallback callback) { on_event_ = std::move(callback); }
     std::uint64_t addShortcut(Shortcut shortcut, std::function<void()> callback);
     bool removeShortcut(std::uint64_t id);
     bool dispatchEvent(const Event& event);

@@ -11,10 +11,10 @@ TEST(TreeView, FlattensOnlyExpandedBranches)
 {
     Reconciler tree;
     tree.update(TreeView({.items = {{"parent","Parent",{{"child","Child",{{"leaf","Leaf"}}}}}}}));
-    ASSERT_EQ(tree.root()->treeVisibleItems().size(),1U);
+    ASSERT_EQ(tree.root()->tree_visible_items().size(),1U);
     tree.update(TreeView({.items = {{"parent","Parent",{{"child","Child",{{"leaf","Leaf"}}}}}},
         .expanded = {"parent"}}));
-    const auto items = tree.root()->treeVisibleItems();
+    const auto items = tree.root()->tree_visible_items();
     ASSERT_EQ(items.size(),2U);
     EXPECT_EQ(items[1].item->key,"child");
     EXPECT_EQ(items[1].parent,"parent");
@@ -28,16 +28,16 @@ TEST(TreeView, KeyboardNavigatesAndTogglesExpandedNodes)
     bool opened = false;
     Reconciler tree;
     tree.update(TreeView({.items = {{"root","Root",{{"first","First"},{"second","Second"}}}},
-        .value = "root",.onChange = [&](std::string value) { selected = std::move(value); },
-        .onToggle = [&](std::string key,bool value) { toggled = std::move(key); opened = value; }}));
+        .value = "root",.on_change = [&](std::string value) { selected = std::move(value); },
+        .on_toggle = [&](std::string key,bool value) { toggled = std::move(key); opened = value; }}));
     tree.root()->layout({.maximum = {.width = 30,.height = 8}});
     EXPECT_TRUE(tree.root()->handleTreeKey({.key = Key::Right}));
     EXPECT_EQ(toggled,"root");
     EXPECT_TRUE(opened);
     tree.update(TreeView({.items = {{"root","Root",{{"first","First"},{"second","Second"}}}},
         .expanded = {"root"},.value = "root",
-        .onChange = [&](std::string value) { selected = std::move(value); },
-        .onToggle = [&](std::string key,bool value) { toggled = std::move(key); opened = value; }}));
+        .on_change = [&](std::string value) { selected = std::move(value); },
+        .on_toggle = [&](std::string key,bool value) { toggled = std::move(key); opened = value; }}));
     tree.root()->layout({.maximum = {.width = 30,.height = 8}});
     EXPECT_TRUE(tree.root()->handleTreeKey({.key = Key::Down}));
     EXPECT_EQ(selected,"first");
@@ -52,14 +52,14 @@ TEST(TreeView, MouseSelectsLabelAndTogglesDisclosure)
     bool expanded = false;
     Reconciler tree;
     tree.update(TreeView({.items = {{"root","Root",{{"child","Child"}}}},
-        .value = "root",.onChange = [&](std::string value) { selected = std::move(value); },
-        .onToggle = [&](std::string,bool value) { expanded = value; }}));
+        .value = "root",.on_change = [&](std::string value) { selected = std::move(value); },
+        .on_toggle = [&](std::string,bool value) { expanded = value; }}));
     tree.root()->layout({.maximum = {.width = 30,.height = 8}});
     EXPECT_TRUE(tree.root()->handleTreeClick({.x = 0,.y = 0}));
     EXPECT_TRUE(expanded);
     tree.update(TreeView({.items = {{"root","Root",{{"child","Child"}}}},
         .expanded = {"root"},.value = "root",
-        .onChange = [&](std::string value) { selected = std::move(value); }}));
+        .on_change = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 30,.height = 8}});
     EXPECT_TRUE(tree.root()->handleTreeClick({.x = 5,.y = 1}));
     EXPECT_EQ(selected,"child");
@@ -93,7 +93,7 @@ TEST(TreeView, KeyboardSkipsDisabledItemsAtBothEdges)
     Reconciler tree;
     tree.update(TreeView({.items = {
         {"first","First",{},true},{"middle","Middle"},{"last","Last",{},true}},
-        .value = "middle",.onChange = [&](std::string value) { selected = std::move(value); }}));
+        .value = "middle",.on_change = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 30,.height = 5}});
     EXPECT_TRUE(tree.root()->handleTreeKey({.key = Key::Home}));
     EXPECT_TRUE(selected.empty());
@@ -101,7 +101,7 @@ TEST(TreeView, KeyboardSkipsDisabledItemsAtBothEdges)
     EXPECT_TRUE(selected.empty());
     tree.update(TreeView({.items = {
         {"first","First",{},true},{"middle","Middle"},{"last","Last",{},true}},
-        .onChange = [&](std::string value) { selected = std::move(value); }}));
+        .on_change = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 30,.height = 5}});
     EXPECT_TRUE(tree.root()->handleTreeKey({.key = Key::Home}));
     EXPECT_EQ(selected,"middle");
@@ -159,8 +159,8 @@ TEST(TreeView, CollapsingBranchMovesSelectionFromHiddenDescendantToParent)
     Reconciler tree;
     tree.update(TreeView({.items = {{"root","Root",{{"child","Child"}}}},
         .expanded = {"root"},.value = "child",
-        .onChange = [&](std::string value) { selection = std::move(value); },
-        .onToggle = [&](std::string,bool value) { opened = value; }}));
+        .on_change = [&](std::string value) { selection = std::move(value); },
+        .on_toggle = [&](std::string,bool value) { opened = value; }}));
     tree.root()->layout({.maximum = {.width = 25,.height = 4}});
     EXPECT_TRUE(tree.root()->handleTreeClick({.x = 0,.y = 0}));
     EXPECT_FALSE(opened);

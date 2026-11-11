@@ -11,7 +11,7 @@ namespace {
 
 enum class Action { Increment, Decrement, Reset };
 
-int reduceCount(int value,Action action)
+int reduce_count(int value,Action action)
 {
     switch (action)
     {
@@ -23,9 +23,9 @@ int reduceCount(int value,Action action)
 }
 
 const auto Counter = component([] {
-    auto [count,dispatch] = useReducer(reduceCount,0);
+    auto [count,dispatch] = useReducer(reduce_count,0);
     return Button({.text = std::to_string(count),
-        .onClick = [dispatch] { dispatch(Action::Increment); }});
+        .on_click = [dispatch] { dispatch(Action::Increment); }});
 });
 
 } /* End of anonymous namespace */
@@ -34,9 +34,9 @@ TEST(Reducer, DispatchUpdatesLatestStateAcrossRenders)
 {
     Reconciler tree;
     tree.update(Counter().keyed("counter"));
-    const auto onClick = tree.root()->onClick();
-    onClick();
-    onClick();
+    const auto on_click = tree.root()->onClick();
+    on_click();
+    on_click();
     tree.update(Counter().keyed("counter"));
     EXPECT_EQ(tree.root()->text(),"2");
     tree.root()->onClick()();
@@ -56,9 +56,9 @@ TEST(Reducer, UnmountResetsReducerState)
 
 TEST(Reducer, RejectsCallsOutsideMountAndChangedHookKinds)
 {
-    EXPECT_THROW((void)useReducer(reduceCount,0),std::logic_error);
+    EXPECT_THROW((void)useReducer(reduce_count,0),std::logic_error);
     const auto variant = component([](bool reducer) {
-        if (reducer) (void)useReducer(reduceCount,0);
+        if (reducer) (void)useReducer(reduce_count,0);
         else (void)useState(0);
         return Typography({.text = "ok"});
     });

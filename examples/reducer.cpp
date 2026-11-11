@@ -8,7 +8,7 @@ using namespace terion;
 
 enum class CounterAction { Increment, Decrement, Reset };
 
-int counterReducer(int count,CounterAction action)
+int counter_reducer(int count,CounterAction action)
 {
     switch (action)
     {
@@ -20,13 +20,13 @@ int counterReducer(int count,CounterAction action)
 }
 
 const auto Counter = component([] {
-    auto [count,dispatch] = useReducer(counterReducer,0);
+    auto [count,dispatch] = useReducer(counter_reducer,0);
     return Column({.children = {
         Typography({.text = "Count: " + std::to_string(count)}),
         Row({.children = {
-            Button({.text = "+",.onClick = [dispatch] { dispatch(CounterAction::Increment); }}),
-            Button({.text = "-",.onClick = [dispatch] { dispatch(CounterAction::Decrement); }}),
-            Button({.text = "Reset",.onClick = [dispatch] { dispatch(CounterAction::Reset); }})
+            Button({.text = "+",.on_click = [dispatch] { dispatch(CounterAction::Increment); }}),
+            Button({.text = "-",.on_click = [dispatch] { dispatch(CounterAction::Decrement); }}),
+            Button({.text = "Reset",.on_click = [dispatch] { dispatch(CounterAction::Reset); }})
         },.layout = {.gap = 1}})
     },.layout = {.gap = 1}});
 });

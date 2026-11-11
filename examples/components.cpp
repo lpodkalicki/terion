@@ -20,10 +20,10 @@ int main()
                 Typography({.text = "Counter: " + std::to_string(counter.get())}),
                 Row({
                     .children = {
-                        Button({.text = "Increment",.key = "inc",.onClick = [&] {
+                        Button({.text = "Increment",.key = "inc",.on_click = [&] {
                             counter.update([](const int value) { return value + 1; });
                         }}),
-                        Button({.text = "Reset",.key = "reset",.onClick = [&] { counter.set(0); }}),
+                        Button({.text = "Reset",.key = "reset",.on_click = [&] { counter.set(0); }}),
                         Button({.text = "Disabled",.disabled = true})
                     },
                     .layout = {.gap = 2}

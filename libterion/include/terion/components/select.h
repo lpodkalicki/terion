@@ -20,16 +20,16 @@ public:
         std::string key = {};
         bool disabled = false;
         LayoutStyle layout = {};
-        std::function<void(std::string)> onChange = {};
+        std::function<void(std::string)> on_change = {};
         ButtonSize size = ButtonSize::Medium;
-        std::function<void(ComponentEvent&)> onEventCapture = {};
-        std::function<void(ComponentEvent&)> onEvent = {};
+        std::function<void(ComponentEvent&)> on_event_capture = {};
+        std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
 
     explicit Select(Props props) :
         Component({.type = Type::Select,.key = std::move(props.key),.text = std::move(props.value),
-            .layout = props.layout,.on_event_capture = std::move(props.onEventCapture),
-            .on_event = std::move(props.onEvent),.on_change = std::move(props.onChange),
+            .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
+            .on_event = std::move(props.on_event),.on_change = std::move(props.on_change),
             .placeholder = std::move(props.placeholder),.disabled = props.disabled,
             .button_size = props.size,.select_options = std::move(props.options)})
     {}

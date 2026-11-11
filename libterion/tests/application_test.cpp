@@ -83,10 +83,10 @@ TEST(Application, DispatchesFocusAndMouseActionsToButtons)
     app.render([&] {
         return Column({.children = {
             Typography({.text = "Actions",.variant = TypographyVariant::H2}),
-            Button({.text = "First",.key = "first",.onClick = [&] { ++clicks; },.size = ButtonSize::Compact}),
-            Button({.text = "Disabled",.key = "disabled",.disabled = true,.onClick = [&] { clicks += 100; },
+            Button({.text = "First",.key = "first",.on_click = [&] { ++clicks; },.size = ButtonSize::Compact}),
+            Button({.text = "Disabled",.key = "disabled",.disabled = true,.on_click = [&] { clicks += 100; },
                 .size = ButtonSize::Compact}),
-            Button({.text = "Second",.key = "second",.onClick = [&] { clicks += 10; },.size = ButtonSize::Compact})
+            Button({.text = "Second",.key = "second",.on_click = [&] { clicks += 10; },.size = ButtonSize::Compact})
         }});
     });
     app.renderOnce();
@@ -132,8 +132,8 @@ TEST(Application, EditsUtf8TextAndMovesFocus)
     app.render([&] {
         return Column({.children = {
             TextField({.value = input.get(),.placeholder = "Name",.key = "name",
-                .onChange = [&](std::string value) { input.set(std::move(value)); },.size = ButtonSize::Compact}),
-            Button({.text = "OK",.key = "ok",.onClick = [&] { ++clicks; },.size = ButtonSize::Compact})
+                .on_change = [&](std::string value) { input.set(std::move(value)); },.size = ButtonSize::Compact}),
+            Button({.text = "OK",.key = "ok",.on_click = [&] { ++clicks; },.size = ButtonSize::Compact})
         }});
     });
     app.renderOnce();
@@ -174,7 +174,7 @@ TEST(Application, ClickingOutsideTextFieldRemovesFocusAndKeepsItRemovedAfterRend
     State<std::string> input{std::string{}};
     app.render([&] {
         return Column({.children = {
-            TextField({.value = input.get(),.onChange = [&](std::string value) {
+            TextField({.value = input.get(),.on_change = [&](std::string value) {
                 input.set(std::move(value)); },.size = ButtonSize::Compact}),
             Typography({.text = "Static label"})
         }});
@@ -200,7 +200,7 @@ TEST(Application, DispatchesCustomEventsAndStopsHeadlessLoop)
     app.render([](Painter&, Size) {});
     app.renderOnce();
     bool received = false;
-    app.onEvent([&](const Event& event) { received = event.key == Key::Enter; return received; });
+    app.on_event([&](const Event& event) { received = event.key == Key::Enter; return received; });
     EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Enter}));
     EXPECT_TRUE(received);
     received = false;
@@ -220,9 +220,9 @@ TEST(Application, FocusesKeyedComponentsAndRecoversWhenControlIsDisabled)
     State<bool> available{true};
     app.render([&] {
         return Column({.children = {
-            Button({.text = "First",.key = "first",.onClick = [] {}}),
-            Button({.text = "Second",.key = "second",.disabled = !available.get(),.onClick = [] {}}),
-            Button({.text = "Third",.key = "third",.onClick = [] {}})
+            Button({.text = "First",.key = "first",.on_click = [] {}}),
+            Button({.text = "Second",.key = "second",.disabled = !available.get(),.on_click = [] {}}),
+            Button({.text = "Third",.key = "third",.on_click = [] {}})
         }});
     });
     app.renderOnce();
@@ -273,7 +273,7 @@ TEST(Application, TerminalResizeRebuildsResponsiveLayoutAndKeepsKeyedFocus)
         const auto screen = app.backend().size();
         return Column({.children = {
             Typography({.text = screen.width < 76 ? "Compact" : "Wide"}),
-            Button({.text = "Action",.key = "action",.onClick = [&] { ++activations; }}),
+            Button({.text = "Action",.key = "action",.on_click = [&] { ++activations; }}),
             Typography({.text = "Footer"})
         },.layout = {.width = screen.width,.height = screen.height}});
     });

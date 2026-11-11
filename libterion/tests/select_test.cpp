@@ -14,19 +14,19 @@ TEST(Select, SupportsScrollbarDraggingAndPopupPlacement)
         long_options.push_back({.label = std::to_string(i),.value = std::to_string(i)});
     Reconciler long_select;
     long_select.update(Select({.options = long_options,.value = "7",.layout = {.width = 15},
-        .onChange = [](std::string) {}}));
+        .on_change = [](std::string) {}}));
     const Size menu_screen {.width = 24,.height = 8};
     long_select.root()->layout(Constraints{.maximum = menu_screen});
     EXPECT_TRUE(long_select.root()->handleSelectKey(Event{.key = Key::Enter},menu_screen));
     const Rect long_popup = long_select.root()->selectPopupRect(menu_screen);
     EXPECT_TRUE(long_popup.y == 3 && long_popup.height == 5);
-    EXPECT_EQ(long_select.root()->selectScrollbarTrack(menu_screen).height,5);
+    EXPECT_EQ(long_select.root()->select_scrollbar_track(menu_screen).height,5);
     ScreenBuffer long_buffer(menu_screen);
     Painter long_painter(long_buffer);
     long_select.root()->paintOverlay(long_painter,menu_screen,Theme::dark());
     EXPECT_EQ(long_buffer.at(long_popup.x+1,long_popup.y).grapheme,"5");
-    const Rect long_thumb = long_select.root()->selectScrollbarThumb(menu_screen);
-    const int scrollbar_x = long_select.root()->selectScrollbarTrack(menu_screen).x;
+    const Rect long_thumb = long_select.root()->select_scrollbar_thumb(menu_screen);
+    const int scrollbar_x = long_select.root()->select_scrollbar_track(menu_screen).x;
     EXPECT_TRUE(long_select.root()->handleSelectMouse(MouseEvent{.position = {.x = scrollbar_x,.y = long_thumb.y},
         .button = MouseButton::Left,.action = MouseAction::Press},menu_screen));
     EXPECT_TRUE(long_select.root()->selectDragging());
@@ -54,10 +54,10 @@ TEST(Select, HandlesKeyboardMouseAndOverlayDismissal)
                 {.label = "Beta",.value = "b"},
                 {.label = "Disabled",.value = "c",.disabled = true}},
                 .value = chosen.get(),.key = "choice",.layout = {.width = 15},
-                .onChange = [&](std::string value) { chosen.set(std::move(value)); }}),
+                .on_change = [&](std::string value) { chosen.set(std::move(value)); }}),
             Select({.options = {{.label = "One",.value = "1"},{.label = "Two",.value = "2"}},
                 .value = "1",.key = "second",.layout = {.width = 15},
-                .onChange = [](std::string) {}})
+                .on_change = [](std::string) {}})
         }});
     });
     select_app.renderOnce();
@@ -94,7 +94,7 @@ TEST(Select, HandlesKeyboardMouseAndOverlayDismissal)
     OverlayManager overlays;
     Reconciler overlay_tree;
     overlay_tree.update(Select({.options = {{.label = "Overlay",.value = "o"}},
-        .value = "o",.onChange = [](std::string) {}}));
+        .value = "o",.on_change = [](std::string) {}}));
     overlays.collect(overlay_tree.root());
     EXPECT_TRUE(overlay_tree.root()->handleSelectKey(Event{.key = Key::Enter}));
     overlays.dismissExcept(nullptr);

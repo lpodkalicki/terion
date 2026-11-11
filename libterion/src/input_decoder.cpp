@@ -111,8 +111,8 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
                     if (mouse.action == MouseAction::Scroll)
                     {
                         mouse.button = MouseButton::None;
-                        if (button < 2) mouse.scrollY = button == 0 ? 1 : -1;
-                        else mouse.scrollX = button == 2 ? -1 : 1;
+                        if (button < 2) mouse.scroll_y = button == 0 ? 1 : -1;
+                        else mouse.scroll_x = button == 2 ? -1 : 1;
                     }
                     return Event{.key = Key::Mouse,.mouse = mouse};
                 }

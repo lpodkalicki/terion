@@ -12,7 +12,7 @@ TEST(ToastManager, EnqueuesThreeAndPromotesPendingAfterExpiry)
 {
     ToastManager manager;
     for (int i = 0; i < 5; ++i)
-        (void)manager.enqueue({.message = std::to_string(i),.durationMs = 100});
+        (void)manager.enqueue({.message = std::to_string(i),.duration_ms = 100});
     EXPECT_EQ(manager.visibleCount(),3);
     EXPECT_EQ(manager.pendingCount(),2);
     EXPECT_TRUE(manager.tick(std::chrono::steady_clock::now()+std::chrono::seconds(1)));
@@ -23,7 +23,7 @@ TEST(ToastManager, EnqueuesThreeAndPromotesPendingAfterExpiry)
 TEST(ToastManager, PersistentNotificationWaitsUntilDismissed)
 {
     ToastManager manager;
-    const auto id = manager.enqueue({.message = "Persistent",.durationMs = 0});
+    const auto id = manager.enqueue({.message = "Persistent",.duration_ms = 0});
     EXPECT_FALSE(manager.tick(std::chrono::steady_clock::now()+std::chrono::hours(1)));
     EXPECT_EQ(manager.visibleCount(),1);
     EXPECT_TRUE(manager.dismiss(id));

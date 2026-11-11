@@ -23,14 +23,14 @@ int main() {
                             .text = "+10%",
                             .key = "plus",
                             .variant = ButtonVariant::Contained,
-                            .onClick = [&] { progress.set(std::min(100, progress.get() + 10)); }
+                            .on_click = [&] { progress.set(std::min(100, progress.get() + 10)); }
                         }),
 
                         Button({
                             .text = "Reset",
                             .key = "reset",
                             .variant = ButtonVariant::Outlined,
-                            .onClick = [&] { progress.set(0); }
+                            .on_click = [&] { progress.set(0); }
                         })
                     },
                     .layout = {.gap = 2}

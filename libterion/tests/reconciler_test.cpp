@@ -119,7 +119,7 @@ TEST(Reconciler, ThrowingTableFilterLeavesRetainedTreeUntouched)
     EXPECT_EQ(tree.root()->children()[0]->id(),label_id);
     EXPECT_EQ(tree.root()->children()[0]->text(),"Before");
     EXPECT_EQ(tree.root()->children()[1]->id(),table_id);
-    EXPECT_EQ(tree.root()->children()[1]->tableOrder().size(),1u);
+    EXPECT_EQ(tree.root()->children()[1]->table_order().size(),1u);
     EXPECT_EQ(tree.stats().visited,previous_stats);
 
     tree.update(Component::column({Component::text("After","label"),
@@ -138,7 +138,7 @@ TEST(Reconciler, TablePredicateRunsOnceDuringUpdate)
         {"a",{"Alpha"}}, {"b",{"Beta"}}, {"c",{"Gamma"}}},
         .filter = [&](const TableRow&) { ++calls; return true; }}));
     EXPECT_EQ(calls,3);
-    EXPECT_EQ(tree.root()->tableOrder().size(),3u);
+    EXPECT_EQ(tree.root()->table_order().size(),3u);
 }
 
 TEST(Reconciler, ReportsCreatedReusedAndRemovedRoots)

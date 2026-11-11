@@ -20,17 +20,17 @@ public:
         std::vector<SelectOption> options = {};
         std::string key = {};
         bool disabled = false;
-        std::function<void(std::string)> onSelect = {};
-        std::function<void(ComponentEvent&)> onEventCapture = {};
-        std::function<void(ComponentEvent&)> onEvent = {};
+        std::function<void(std::string)> on_select = {};
+        std::function<void(ComponentEvent&)> on_event_capture = {};
+        std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
 
     explicit ContextMenu(Props props) :
         Component({.type = Type::ContextMenu,.key = std::move(props.key),
             .children = {std::move(props.child)},
-            .on_event_capture = std::move(props.onEventCapture),
-            .on_event = std::move(props.onEvent),
-            .on_change = std::move(props.onSelect),.disabled = props.disabled,
+            .on_event_capture = std::move(props.on_event_capture),
+            .on_event = std::move(props.on_event),
+            .on_change = std::move(props.on_select),.disabled = props.disabled,
             .select_options = std::move(props.options)})
     {}
 }; /* End of class ContextMenu */

@@ -40,8 +40,8 @@ TEST(ScrollView, RendersScrollbarAndHandlesKeyboardNavigation)
     scrolling.update(ScrollView({.children = {
         Typography({.text = "0"}),Typography({.text = "1"}),Typography({.text = "2"}),
         Typography({.text = "3"}),Typography({.text = "4"}),Typography({.text = "5"})
-    },.layout = {.width = 5,.height = 3},.scrollOffset = 2,
-        .onScroll = [&](int offset) { reported_scroll = offset; }}));
+    },.layout = {.width = 5,.height = 3},.scroll_offset = 2,
+        .on_scroll = [&](int offset) { reported_scroll = offset; }}));
     scrolling.root()->layout(Constraints{.maximum = {.width = 5,.height = 3}});
     ScreenBuffer scroll_buffer({.width = 5,.height = 6});
     Painter scroll_painter(scroll_buffer);
@@ -60,7 +60,7 @@ TEST(ScrollView, RendersScrollbarAndHandlesKeyboardNavigation)
     int grab = -1;
     EXPECT_TRUE(scrolling.root()->scrollbarPress({.x = 4,.y = 1},grab));
     EXPECT_EQ(grab,0);
-    EXPECT_TRUE(scrolling.root()->scrollbarDrag(2,grab));
+    EXPECT_TRUE(scrolling.root()->scrollbar_drag(2,grab));
     EXPECT_EQ(reported_scroll,3);
     EXPECT_TRUE(scrolling.root()->scrollbarPress({.x = 4,.y = 0},grab));
     EXPECT_EQ(reported_scroll,0);
@@ -85,7 +85,7 @@ TEST(ScrollView, UsesThemeScrollbarGlyphsAndAsciiFallback)
     scrolling.update(ScrollView({.children = {
         Typography({.text = "0"}),Typography({.text = "1"}),
         Typography({.text = "2"}),Typography({.text = "3"})
-    },.layout = {.width = 5,.height = 2},.scrollOffset = 1,.onScroll = [](int) {}}));
+    },.layout = {.width = 5,.height = 2},.scroll_offset = 1,.on_scroll = [](int) {}}));
     scrolling.root()->layout(Constraints{.maximum = {.width = 5,.height = 2}});
 
     Theme custom = Theme::dark();
@@ -109,7 +109,7 @@ TEST(ScrollView, UsesIndependentScrollbarColorsForTrackThumbHoverAndDrag)
     scrolling.update(ScrollView({.children = {
         Typography({.text = "0"}),Typography({.text = "1"}),Typography({.text = "2"}),
         Typography({.text = "3"}),Typography({.text = "4"}),Typography({.text = "5"})
-    },.layout = {.width = 5,.height = 3},.scrollOffset = 2,.onScroll = [](int) {}}));
+    },.layout = {.width = 5,.height = 3},.scroll_offset = 2,.on_scroll = [](int) {}}));
     auto* node = scrolling.root();
     node->layout(Constraints{.maximum = {.width = 5,.height = 3}});
 
@@ -156,8 +156,8 @@ TEST(ScrollView, HandlesWheelAndScrollbarMouseDragging)
         return ScrollView({.children = {
             Typography({.text = "0"}),Typography({.text = "1"}),Typography({.text = "2"}),
             Typography({.text = "3"}),Typography({.text = "4"}),Typography({.text = "5"})
-        },.layout = {.width = 8,.height = 3},.scrollOffset = wheel_offset.get(),
-            .onScroll = [&](int next) { wheel_offset.set(next); }});
+        },.layout = {.width = 8,.height = 3},.scroll_offset = wheel_offset.get(),
+            .on_scroll = [&](int next) { wheel_offset.set(next); }});
     });
     wheel_app.renderOnce();
     EXPECT_EQ(wheel_app.focus().current(),std::to_string(wheel_app.reconciler().root()->id()));
@@ -168,7 +168,7 @@ TEST(ScrollView, HandlesWheelAndScrollbarMouseDragging)
     EXPECT_EQ(wheel_offset.get(),0);
     wheel_app.renderOnce();
     EXPECT_TRUE(wheel_app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
-        .position = {.x = 1,.y = 1},.action = MouseAction::Scroll,.scrollY = -1}}));
+        .position = {.x = 1,.y = 1},.action = MouseAction::Scroll,.scroll_y = -1}}));
     EXPECT_EQ(wheel_offset.get(),3);
     wheel_app.renderOnce();
     EXPECT_EQ(wheel_app.reconciler().root()->children()[0]->bounds().y,-3);

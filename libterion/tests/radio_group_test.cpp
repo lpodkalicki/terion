@@ -12,11 +12,11 @@ TEST(RadioGroup, ArrowsSkipDisabledOptionsAndWrap)
     std::string selected;
     Reconciler tree;
     tree.update(RadioGroup({.options = {{"Auto","auto"},{"Disabled","locked",true},{"Off","off"}},
-        .value = "auto",.onChange = [&](std::string value) { selected = std::move(value); }}));
+        .value = "auto",.on_change = [&](std::string value) { selected = std::move(value); }}));
     EXPECT_TRUE(tree.root()->handleChoiceKey({.key = Key::Down}));
     EXPECT_EQ(selected,"off");
     tree.update(RadioGroup({.options = {{"Auto","auto"},{"Disabled","locked",true},{"Off","off"}},
-        .value = "off",.onChange = [&](std::string value) { selected = std::move(value); }}));
+        .value = "off",.on_change = [&](std::string value) { selected = std::move(value); }}));
     EXPECT_TRUE(tree.root()->handleChoiceKey({.key = Key::Down}));
     EXPECT_EQ(selected,"auto");
 }
@@ -26,7 +26,7 @@ TEST(RadioGroup, ClickSelectsRowButNotDisabledOption)
     std::string selected;
     Reconciler tree;
     tree.update(RadioGroup({.options = {{"Auto","auto"},{"Disabled","locked",true},{"Off","off"}},
-        .value = "auto",.onChange = [&](std::string value) { selected = std::move(value); }}));
+        .value = "auto",.on_change = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 30,.height = 10}});
     EXPECT_TRUE(tree.root()->handleChoiceClick({.x = 0,.y = 1}));
     EXPECT_TRUE(selected.empty());

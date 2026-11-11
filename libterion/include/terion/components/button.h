@@ -19,19 +19,19 @@ public:
         ButtonVariant variant = ButtonVariant::Outlined;
         ColorVariant color = ColorVariant::Primary;
         bool disabled = false;
-        std::function<void()> onClick = {};
+        std::function<void()> on_click = {};
         TextStyle style = {};
         LayoutStyle layout = {};
         ButtonSize size = ButtonSize::Medium;
-        std::function<void(ComponentEvent&)> onEventCapture = {};
-        std::function<void(ComponentEvent&)> onEvent = {};
+        std::function<void(ComponentEvent&)> on_event_capture = {};
+        std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
 
     explicit Button(Props props) :
         Component({.type = Type::Button,.key = std::move(props.key),.text = std::move(props.text),
             .layout = props.layout,.text_style = props.style,.color_variant = props.color,
-            .on_click = std::move(props.onClick),
-            .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
+            .on_click = std::move(props.on_click),
+            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .disabled = props.disabled,
             .button_variant = props.variant,.button_size = props.size})
     {}

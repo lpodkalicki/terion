@@ -23,19 +23,19 @@ int main()
             Row({.children = {
                 Tooltip({.child = Button({.text = "Save",.key = "save-button",
                     .variant = ButtonVariant::Contained,
-                    .onClick = [&] { clicks.set(clicks.get()+1); }}),
+                    .on_click = [&] { clicks.set(clicks.get()+1); }}),
                     .text = "Save the current document",.key = "save-tooltip"}),
                 Tooltip({.child = Button({.text = "Export",.key = "export-button",
-                    .onClick = [&] { clicks.set(clicks.get()+1); }}),
+                    .on_click = [&] { clicks.set(clicks.get()+1); }}),
                     .text = "Export a copy of the document",.key = "export-tooltip"}),
                 Tooltip({.child = Button({.text = "Unavailable",.disabled = true}),
                     .text = "This action is not available",.key = "disabled-button-tooltip"})
             },.layout = {.gap = 2}}),
             Tooltip({.child = Checkbox({.label = "Enable automatic backup",.key = "backup",
-                .checked = enabled.get(),.onChange = [&](bool value) { enabled.set(value); }}),
+                .checked = enabled.get(),.on_change = [&](bool value) { enabled.set(value); }}),
                 .text = "Automatically save changes every few minutes",.key = "backup-tooltip"}),
             Tooltip({.child = TextField({.value = name.get(),.placeholder = "Document name",
-                .key = "document-name",.onChange = [&](std::string value) { name.set(std::move(value)); }}),
+                .key = "document-name",.on_change = [&](std::string value) { name.set(std::move(value)); }}),
                 .text = "Enter the name of your document",.key = "name-tooltip"}),
             Typography({.text = "Actions: " + std::to_string(clicks.get()) +
                 " | Backup: " + (enabled.get() ? "ON" : "OFF")}),

@@ -43,14 +43,14 @@ public:
         return const_cast<RenderNode*>(static_cast<const RenderNode&>(*this).hitTest(position));
     }
     [[nodiscard]] RenderNode* scrollTarget(Point position) noexcept;
-    [[nodiscard]] RenderNode* contextTarget(Point position) noexcept;
+    [[nodiscard]] RenderNode* context_target(Point position) noexcept;
     bool openContextMenu(Point position, Size screen);
     bool scrollBy(int delta);
     bool handleScrollKey(const Event& event);
     [[nodiscard]] Rect scrollbarTrack() const;
     [[nodiscard]] Rect scrollbarThumb() const;
     bool scrollbarPress(Point position, int& grab_offset);
-    bool scrollbarDrag(int y, int grab_offset);
+    bool scrollbar_drag(int y, int grab_offset);
     bool beginScrollbarDrag(Point position);
     bool moveScrollbarDrag(int y);
     void endScrollbarDrag() noexcept { scrollbar_drag_.end(); }
@@ -81,8 +81,8 @@ public:
     bool handleTableClick(Point position);
     bool handleTreeKey(const Event& event);
     bool handleTreeClick(Point position);
-    [[nodiscard]] Rect splitHandle() const noexcept;
-    [[nodiscard]] RenderNode* splitTarget(Point position) noexcept;
+    [[nodiscard]] Rect split_handle() const noexcept;
+    [[nodiscard]] RenderNode* split_target(Point position) noexcept;
     bool handleSplitKey(const Event& event);
     bool dragSplit(Point position);
     struct TreeVisibleItem
@@ -94,10 +94,10 @@ public:
         bool has_next = false;
         std::vector<bool> ancestor_has_next;
     }; /* End of struct TreeVisibleItem */
-    [[nodiscard]] std::vector<TreeVisibleItem> treeVisibleItems() const;
-    [[nodiscard]] std::vector<std::size_t> tableOrder() const;
-    [[nodiscard]] int tableSortColumn() const noexcept { return table_sort_column_; }
-    [[nodiscard]] bool tableSortAscending() const noexcept { return table_sort_ascending_; }
+    [[nodiscard]] std::vector<TreeVisibleItem> tree_visible_items() const;
+    [[nodiscard]] std::vector<std::size_t> table_order() const;
+    [[nodiscard]] int table_sort_column() const noexcept { return table_sort_column_; }
+    [[nodiscard]] bool table_sort_ascending() const noexcept { return table_sort_ascending_; }
     [[nodiscard]] bool tabPanelActive() const noexcept
     {
         return type_ != Component::Type::TabPanel || tab_panel_active_;
@@ -115,21 +115,21 @@ public:
     bool handleSelectKey(const Event& event, Size screen = {.width = 80,.height = 24});
     bool handleSelectMouse(const MouseEvent& mouse, Size screen);
     [[nodiscard]] bool selectDragging() const noexcept { return select_open_ && select_drag_.active(); }
-    [[nodiscard]] Rect selectScrollbarTrack(Size screen) const noexcept;
-    [[nodiscard]] Rect selectScrollbarThumb(Size screen) const noexcept;
+    [[nodiscard]] Rect select_scrollbar_track(Size screen) const noexcept;
+    [[nodiscard]] Rect select_scrollbar_thumb(Size screen) const noexcept;
     void closeSelect() noexcept { select_open_ = false; select_drag_.end(); }
     void paintOverlay(Painter& painter, Size screen, const Theme& theme) const;
     [[nodiscard]] bool tooltipContains(Point point) const noexcept;
     [[nodiscard]] Rect tooltipRect(Point point, Size screen) const noexcept;
     void paintTooltip(Painter& painter, Point point, Size screen, const Theme& theme) const;
-    [[nodiscard]] bool toastOpen() const noexcept { return type_ == Component::Type::Toast && toast_visible_; }
+    [[nodiscard]] bool toast_open() const noexcept { return type_ == Component::Type::Toast && toast_visible_; }
     [[nodiscard]] Rect toastRect(Size screen, int bottom_offset = 0) const noexcept;
     void paintToast(Painter& painter, Size screen, const Theme& theme, int bottom_offset = 0) const;
     bool expireToast(std::chrono::steady_clock::time_point now);
     void closeToast();
     void paintOverlays(Painter& painter, Size screen, const Theme& theme) const;
-    [[nodiscard]] bool dialogOpen() const noexcept { return type_ == Component::Type::Dialog && dialog_open_; }
-    [[nodiscard]] bool focusScopeActive() const noexcept
+    [[nodiscard]] bool dialog_open() const noexcept { return type_ == Component::Type::Dialog && dialog_open_; }
+    [[nodiscard]] bool focus_scope_active() const noexcept
     {
         return type_ == Component::Type::FocusScope && focus_scope_active_;
     }

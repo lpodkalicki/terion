@@ -48,13 +48,13 @@ struct LayoutStyle
     std::optional<int> height = std::nullopt;
     int padding = 0;
     int gap = 0;
-    std::optional<int> minWidth = std::nullopt;
-    std::optional<int> maxWidth = std::nullopt;
-    std::optional<int> minHeight = std::nullopt;
-    std::optional<int> maxHeight = std::nullopt;
+    std::optional<int> min_width = std::nullopt;
+    std::optional<int> max_width = std::nullopt;
+    std::optional<int> min_height = std::nullopt;
+    std::optional<int> max_height = std::nullopt;
     int flex = 0;
-    JustifyContent justifyContent = JustifyContent::Start;
-    AlignItems alignItems = AlignItems::Start;
+    JustifyContent justify_content = JustifyContent::Start;
+    AlignItems align_items = AlignItems::Start;
     bool clip = false;
 
     bool operator==(const LayoutStyle&) const = default;

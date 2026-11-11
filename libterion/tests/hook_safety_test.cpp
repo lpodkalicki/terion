@@ -15,8 +15,8 @@ int cleaned = 0;
 
 const auto Tracked = component([](int value,bool fail) {
     ++calls;
-    auto [count,setCount] = useState(3);
-    (void)setCount;
+    auto [count,set_count] = useState(3);
+    (void)set_count;
     useEffect([value] {
         ++started;
         return [value] { (void)value; ++cleaned; };
@@ -26,8 +26,8 @@ const auto Tracked = component([](int value,bool fail) {
 });
 
 const auto Replacement = component([] {
-    auto [count,setCount] = useState(99);
-    (void)setCount;
+    auto [count,set_count] = useState(99);
+    (void)set_count;
     return Typography({.text = std::to_string(count)});
 });
 

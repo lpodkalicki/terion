@@ -14,15 +14,15 @@ TEST(EventPropagation, CapturesTargetsAndBubblesInOrder)
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 40,.height = 10}));
     app.render([&] {
         return Column({.children = {
-            Button({.text = "Action",.key = "action",.onClick = [&] { ++clicks; },
-                .onEvent = [&](ComponentEvent& event) {
+            Button({.text = "Action",.key = "action",.on_click = [&] { ++clicks; },
+                .on_event = [&](ComponentEvent& event) {
                     EXPECT_EQ(event.phase,EventPhase::Target);
                     phases.push_back("target");
                 }})
-        },.onEventCapture = [&](ComponentEvent& event) {
+        },.on_event_capture = [&](ComponentEvent& event) {
             EXPECT_EQ(event.phase,EventPhase::Capture);
             phases.push_back("capture");
-        },.onEvent = [&](ComponentEvent& event) {
+        },.on_event = [&](ComponentEvent& event) {
             EXPECT_EQ(event.phase,EventPhase::Bubble);
             phases.push_back("bubble");
         }});
@@ -40,11 +40,11 @@ TEST(EventPropagation, PreventDefaultBlocksWidgetAction)
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 40,.height = 10}));
     app.render([&] {
         return Column({.children = {
-            Button({.text = "Action",.onClick = [&] { ++clicks; }})
-        },.onEventCapture = [](ComponentEvent& event) {
+            Button({.text = "Action",.on_click = [&] { ++clicks; }})
+        },.on_event_capture = [](ComponentEvent& event) {
             event.preventDefault();
             event.stopPropagation();
-        },.onEvent = [&](ComponentEvent&) { ++bubbles; }});
+        },.on_event = [&](ComponentEvent&) { ++bubbles; }});
     });
     app.renderOnce();
     EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Enter}));
@@ -77,10 +77,10 @@ TEST(FocusScope, TrapsTabWithinActiveForm)
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 50,.height = 20}));
     app.render([&] {
         return Column({.children = {
-            Button({.text = "Outside",.key = "outside",.onClick = [] {}}),
+            Button({.text = "Outside",.key = "outside",.on_click = [] {}}),
             FocusScope({.children = {
-                Button({.text = "First",.key = "first",.onClick = [] {}}),
-                Button({.text = "Second",.key = "second",.onClick = [] {}})
+                Button({.text = "First",.key = "first",.on_click = [] {}}),
+                Button({.text = "Second",.key = "second",.on_click = [] {}})
             },.key = "form",.active = active.get()})
         }});
     });
@@ -108,21 +108,21 @@ TEST(Dialog, ComposesInteractiveChildrenWithinModalFocusScope)
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 80,.height = 24}));
     app.render([&] {
         return Column({.children = {
-            Button({.text = "Outside",.key = "outside",.onClick = [&] { ++outside_clicks; }}),
+            Button({.text = "Outside",.key = "outside",.on_click = [&] { ++outside_clicks; }}),
             Dialog({.open = open.get(),.title = "Edit profile",.message = "Enter a name",
-                .key = "profile",.onClose = [&] { open.set(false); },
+                .key = "profile",.on_close = [&] { open.set(false); },
                 .children = {
-                    TextField({.value = name.get(),.key = "name",.onChange = [&](std::string next) {
+                    TextField({.value = name.get(),.key = "name",.on_change = [&](std::string next) {
                         name.set(std::move(next));
                     },.size = ButtonSize::Compact}),
-                    Button({.text = "Save",.key = "save",.onClick = [&] { ++inside_clicks; },
+                    Button({.text = "Save",.key = "save",.on_click = [&] { ++inside_clicks; },
                         .size = ButtonSize::Compact})
                 }})
         }});
     });
     app.renderOnce();
     auto* dialog = app.reconciler().root()->children()[1].get();
-    ASSERT_TRUE(dialog->dialogOpen());
+    ASSERT_TRUE(dialog->dialog_open());
     ASSERT_EQ(dialog->children().size(),2u);
     EXPECT_EQ(app.focus().activeScope(),std::to_string(dialog->id()));
     EXPECT_EQ(app.focus().current(),std::to_string(dialog->children()[0]->id()));

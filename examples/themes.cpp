@@ -46,10 +46,10 @@ int main()
         return ThemeProvider(presets[index].make(),Column({.children = {
             Typography({.text = std::string("Theme: ")+presets[index].name}),
             Row({.children = {
-                Button({.text = "Previous",.onClick = [&] {
+                Button({.text = "Previous",.on_click = [&] {
                     selected.update([](int n) { return (n+8)%9; });
                 }}),
-                Button({.text = "Next",.onClick = [&] {
+                Button({.text = "Next",.on_click = [&] {
                     selected.update([](int n) { return (n+1)%9; });
                 }})
             },.layout = {.gap = 1}}),

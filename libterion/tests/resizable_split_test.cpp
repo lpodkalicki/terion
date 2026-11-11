@@ -19,21 +19,21 @@ TEST(ResizableSplit, HorizontalLayoutAndMouseResizeRespectMinimumSizes)
     Reconciler tree;
     const auto build = [&](int position) {
         tree.update(ResizableSplit({.children = {Typography({.text = "Left"}),
-            Typography({.text = "Right"})},.position = position,.minFirst = 5,.minSecond = 6,
-            .layout = {.width = 30,.height = 5},.onChange = [&](int value) { changed = value; }}));
+            Typography({.text = "Right"})},.position = position,.min_first = 5,.min_second = 6,
+            .layout = {.width = 30,.height = 5},.on_change = [&](int value) { changed = value; }}));
         tree.root()->layout({.maximum = {.width = 30,.height = 5}});
     };
     build(10);
     auto* split = tree.root();
-    const Rect horizontal_handle = split->splitHandle();
+    const Rect horizontal_handle = split->split_handle();
     EXPECT_EQ(horizontal_handle.x,10);
     EXPECT_EQ(horizontal_handle.y,0);
     EXPECT_EQ(horizontal_handle.width,1);
     EXPECT_EQ(horizontal_handle.height,5);
     EXPECT_EQ(split->children()[0]->bounds().width,10);
     EXPECT_EQ(split->children()[1]->bounds().x,11);
-    EXPECT_EQ(split->splitTarget({.x = 10,.y = 2}),split);
-    EXPECT_EQ(split->splitTarget({.x = 9,.y = 2}),nullptr);
+    EXPECT_EQ(split->split_target({.x = 10,.y = 2}),split);
+    EXPECT_EQ(split->split_target({.x = 9,.y = 2}),nullptr);
     EXPECT_TRUE(split->dragSplit({.x = 29,.y = 2}));
     EXPECT_EQ(changed,23);
     build(changed);
@@ -49,11 +49,11 @@ TEST(ResizableSplit, VerticalLayoutAndKeyboardResize)
     Reconciler tree;
     tree.update(ResizableSplit({.children = {Typography({.text = "Top"}),
         Typography({.text = "Bottom"})},.direction = SplitDirection::Vertical,
-        .position = 4,.minFirst = 2,.minSecond = 3,
+        .position = 4,.min_first = 2,.min_second = 3,
         .layout = {.width = 20,.height = 12},
-        .onChange = [&](int value) { changed = value; }}));
+        .on_change = [&](int value) { changed = value; }}));
     tree.root()->layout({.maximum = {.width = 20,.height = 12}});
-    const Rect vertical_handle = tree.root()->splitHandle();
+    const Rect vertical_handle = tree.root()->split_handle();
     EXPECT_EQ(vertical_handle.x,0);
     EXPECT_EQ(vertical_handle.y,4);
     EXPECT_EQ(vertical_handle.width,20);
@@ -87,7 +87,7 @@ TEST(ResizableSplit, ApplicationDragsDividerAndKeepsNewPosition)
         return ResizableSplit({.children = {Typography({.text = "Left"}),
             Typography({.text = "Right"})},.position = position.get(),
             .layout = {.width = 40,.height = 8},
-            .onChange = [&](int value) { position.set(value); }});
+            .on_change = [&](int value) { position.set(value); }});
     });
     app.renderOnce();
     EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
@@ -96,7 +96,7 @@ TEST(ResizableSplit, ApplicationDragsDividerAndKeepsNewPosition)
         .position = {.x = 18,.y = 3},.button = MouseButton::Left,.action = MouseAction::Move}}));
     EXPECT_EQ(position.get(),18);
     app.renderOnce();
-    EXPECT_EQ(app.reconciler().root()->splitHandle().x,18);
+    EXPECT_EQ(app.reconciler().root()->split_handle().x,18);
     EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Mouse,.mouse = {
         .position = {.x = 18,.y = 3},.button = MouseButton::Left,.action = MouseAction::Release}}));
     EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::Right}));

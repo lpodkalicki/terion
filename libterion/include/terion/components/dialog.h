@@ -19,17 +19,17 @@ public:
         std::string title = {};
         std::string message = {};
         std::string key = {};
-        std::string confirmText = "Confirm";
-        std::string cancelText = "Cancel";
+        std::string confirm_text = "Confirm";
+        std::string cancel_text = "Cancel";
         int width = 48;
-        bool closeOnBackdrop = true;
-        std::function<void()> onConfirm = {};
-        std::function<void()> onClose = {};
+        bool close_on_backdrop = true;
+        std::function<void()> on_confirm = {};
+        std::function<void()> on_close = {};
         std::vector<Component> children = {};
         // Defaults to the built-in actions only for dialogs without custom content.
-        std::optional<bool> showActions = std::nullopt;
-        std::function<void(ComponentEvent&)> onEventCapture = {};
-        std::function<void(ComponentEvent&)> onEvent = {};
+        std::optional<bool> show_actions = std::nullopt;
+        std::function<void(ComponentEvent&)> on_event_capture = {};
+        std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
 
     explicit Dialog(Props props) : Component(makeProps(std::move(props))) {}
@@ -37,15 +37,15 @@ public:
 private:
     static Component::Props makeProps(Props props)
     {
-        const bool show_actions = props.showActions.value_or(props.children.empty());
+        const bool show_actions = props.show_actions.value_or(props.children.empty());
         return {.type = Type::Dialog,.key = std::move(props.key),
             .text = std::move(props.message),.children = std::move(props.children),
-            .on_click = std::move(props.onConfirm),
-            .on_event_capture = std::move(props.onEventCapture),.on_event = std::move(props.onEvent),
+            .on_click = std::move(props.on_confirm),
+            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .dialog_open = props.open,.dialog_title = std::move(props.title),
-            .dialog_confirm_text = std::move(props.confirmText),
-            .dialog_cancel_text = std::move(props.cancelText),.dialog_width = props.width,
-            .dialog_close_on_backdrop = props.closeOnBackdrop,.dialog_on_close = std::move(props.onClose),
+            .dialog_confirm_text = std::move(props.confirm_text),
+            .dialog_cancel_text = std::move(props.cancel_text),.dialog_width = props.width,
+            .dialog_close_on_backdrop = props.close_on_backdrop,.dialog_on_close = std::move(props.on_close),
             .dialog_show_actions = show_actions};
     }
 }; /* End of class Dialog */

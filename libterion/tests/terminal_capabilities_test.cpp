@@ -9,13 +9,13 @@ using namespace terion;
 
 TEST(TerminalCapabilities, DetectsSupportedPointerProtocols)
 {
-    EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("Apple_Terminal").mousePointerShape);
-    EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("vscode").mousePointerShape);
-    EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("iTerm.app").mousePointerShape);
-    EXPECT_TRUE(AnsiTerminalBackend::detectCapabilities("ghostty").mousePointerShape);
-    EXPECT_TRUE(AnsiTerminalBackend::detectCapabilities("kitty").mousePointerShape);
-    EXPECT_TRUE(AnsiTerminalBackend::detectCapabilities("Apple_Terminal", "1").mousePointerShape);
-    EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("kitty", "0").mousePointerShape);
+    EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("Apple_Terminal").mouse_pointer_shape);
+    EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("vscode").mouse_pointer_shape);
+    EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("iTerm.app").mouse_pointer_shape);
+    EXPECT_TRUE(AnsiTerminalBackend::detectCapabilities("ghostty").mouse_pointer_shape);
+    EXPECT_TRUE(AnsiTerminalBackend::detectCapabilities("kitty").mouse_pointer_shape);
+    EXPECT_TRUE(AnsiTerminalBackend::detectCapabilities("Apple_Terminal", "1").mouse_pointer_shape);
+    EXPECT_TRUE(!AnsiTerminalBackend::detectCapabilities("kitty", "0").mouse_pointer_shape);
 }
 
 TEST(TerminalCapabilities, EmitsPointerShapeChangesForInteractiveComponents)
@@ -26,9 +26,9 @@ TEST(TerminalCapabilities, EmitsPointerShapeChangesForInteractiveComponents)
     pointer_app.render([] {
         return Column({.children = {
             Typography({.text = "Label"}),
-            TextField({.value = "Edit",.key = "edit",.onChange = [](std::string) {},
+            TextField({.value = "Edit",.key = "edit",.on_change = [](std::string) {},
                 .size = ButtonSize::Compact}),
-            Button({.text = "Click",.key = "click",.onClick = [] {},.size = ButtonSize::Compact}),
+            Button({.text = "Click",.key = "click",.on_click = [] {},.size = ButtonSize::Compact}),
             Box({.children = {Typography({.text = "Box"})},.layout = {.width = 20,.height = 3}})
         }});
     });
@@ -63,15 +63,15 @@ TEST(TerminalCapabilities, ProbeRecognizesSupportedAndUnsupportedResponses)
 {
     TerminalCapabilityProbe supported(TerminalCapabilities{});
     EXPECT_TRUE(supported.feed("\033P1+r5463=31\033\\\033[?1006;2$y").empty());
-    EXPECT_TRUE(supported.capabilities().activelyProbed);
-    EXPECT_TRUE(supported.capabilities().trueColor);
+    EXPECT_TRUE(supported.capabilities().actively_probed);
+    EXPECT_TRUE(supported.capabilities().true_color);
     EXPECT_TRUE(supported.capabilities().mouse);
 
     TerminalCapabilityProbe unsupported(TerminalCapabilities{});
     EXPECT_TRUE(unsupported.feed("\033P0+r5463\033\\\033P0+r524742\033\\").empty());
     EXPECT_TRUE(unsupported.feed("\033[?1006;0$y").empty());
-    EXPECT_TRUE(unsupported.capabilities().activelyProbed);
-    EXPECT_FALSE(unsupported.capabilities().trueColor);
+    EXPECT_TRUE(unsupported.capabilities().actively_probed);
+    EXPECT_FALSE(unsupported.capabilities().true_color);
     EXPECT_FALSE(unsupported.capabilities().mouse);
 }
 
@@ -80,7 +80,7 @@ TEST(TerminalCapabilities, ProbePreservesUserInputAndSplitReplies)
     TerminalCapabilityProbe probe(TerminalCapabilities{});
     EXPECT_EQ(probe.feed("abc\033P1+r524"),"abc");
     EXPECT_EQ(probe.feed("742=31\033\\z\033[A"),"z\033[A");
-    EXPECT_TRUE(probe.capabilities().activelyProbed);
+    EXPECT_TRUE(probe.capabilities().actively_probed);
     EXPECT_EQ(probe.feed("\033"),"");
     EXPECT_EQ(probe.finish(),"\033");
 }
@@ -89,5 +89,5 @@ TEST(TerminalCapabilities, ProbePreservesUnrelatedEscapeSequences)
 {
     TerminalCapabilityProbe probe(TerminalCapabilities{});
     EXPECT_EQ(probe.feed("\033[?25h\033Pnon-probe\033\\"),"\033[?25h\033Pnon-probe\033\\");
-    EXPECT_FALSE(probe.capabilities().activelyProbed);
+    EXPECT_FALSE(probe.capabilities().actively_probed);
 }

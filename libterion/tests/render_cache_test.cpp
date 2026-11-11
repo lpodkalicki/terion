@@ -50,8 +50,8 @@ TEST(RenderCache, PreservesFocusRenderingAfterChange)
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 32,.height = 8}));
     app.render([] { return Column({.children = {
         Typography({.text = "Caption"}),
-        Button({.text = "One",.key = "one",.onClick = [] {}}),
-        Button({.text = "Two",.key = "two",.onClick = [] {}})
+        Button({.text = "One",.key = "one",.on_click = [] {}}),
+        Button({.text = "Two",.key = "two",.on_click = [] {}})
     }}); });
     app.renderOnce();
     EXPECT_TRUE(app.focus("two"));

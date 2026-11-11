@@ -13,10 +13,10 @@ TEST(Dialog, RestoresPreviousFocusAfterModalScopeCloses)
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 60,.height = 20}));
     app.render([&] {
         return Column({.children = {
-            Button({.text = "First",.key = "first",.onClick = [] {}}),
-            Button({.text = "Open",.key = "open",.onClick = [&] { opened.set(true); }}),
-            Dialog({.open = opened.get(),.title = "Dialog",.onClose = [&] { opened.set(false); },
-                .children = {Button({.text = "Inside",.key = "inside",.onClick = [] {}})}})
+            Button({.text = "First",.key = "first",.on_click = [] {}}),
+            Button({.text = "Open",.key = "open",.on_click = [&] { opened.set(true); }}),
+            Dialog({.open = opened.get(),.title = "Dialog",.on_close = [&] { opened.set(false); },
+                .children = {Button({.text = "Inside",.key = "inside",.on_click = [] {}})}})
         }});
     });
     app.renderOnce();
@@ -58,10 +58,10 @@ TEST(Dialog, CapturesInputAndInvokesActions)
     Application dialog_app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 50,.height = 16}));
     dialog_app.render([&] {
         return Column({.children = {
-            Button({.text = "Background",.key = "background",.onClick = [&] { ++background_clicks; }}),
+            Button({.text = "Background",.key = "background",.on_click = [&] { ++background_clicks; }}),
             Dialog({.open = show_dialog.get(),.title = "Confirm",.message = "Proceed?",.key = "modal",
-                .onConfirm = [&] { ++confirmations; show_dialog.set(false); },
-                .onClose = [&] { show_dialog.set(false); }})
+                .on_confirm = [&] { ++confirmations; show_dialog.set(false); },
+                .on_close = [&] { show_dialog.set(false); }})
         }});
     });
     dialog_app.renderOnce();
@@ -114,7 +114,7 @@ TEST(Dialog, CustomActionsCanBeExplicitlyEnabled)
     Reconciler reconciler;
     reconciler.update(Dialog({.open = true,.title = "Confirm",.children = {
         Typography({.text = "Details"})
-    },.showActions = true}));
+    },.show_actions = true}));
     auto* dialog = reconciler.root();
     const Size screen{.width = 60,.height = 18};
     dialog->layoutDialogChildren(screen);
@@ -141,7 +141,7 @@ TEST(Dialog, ScrollsLongContentAndClipsHitTesting)
     const int first_y = first->bounds().y;
     EXPECT_LT(dialog->dialogRect(screen).height,last->bounds().y);
     EXPECT_TRUE(dialog->handleDialogMouse({.position = {.x = 20,.y = 6},
-        .action = MouseAction::Scroll,.scrollY = -2},screen));
+        .action = MouseAction::Scroll,.scroll_y = -2},screen));
     EXPECT_LT(first->bounds().y,first_y);
     EXPECT_TRUE(dialog->scrollDialog(1000,screen));
     EXPECT_LE(last->bounds().y,screen.height);

@@ -71,7 +71,7 @@ TEST(InputDecoder, DecodesMousePressReleaseAndWheel)
     const auto wheel = decoder.nextEvent();
     ASSERT_TRUE(wheel.has_value());
     EXPECT_EQ(wheel->mouse.action,MouseAction::Scroll);
-    EXPECT_EQ(wheel->mouse.scrollY,1);
+    EXPECT_EQ(wheel->mouse.scroll_y,1);
     decoder.feed("\033[<32;3;4M");
     EXPECT_EQ(decoder.nextEvent()->mouse.action,MouseAction::Move);
 

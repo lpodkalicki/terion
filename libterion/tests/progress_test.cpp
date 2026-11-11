@@ -9,7 +9,7 @@ using namespace terion;
 
 namespace {
 
-std::string progressGlyphs(const Progress::Props& props, bool unicode = true)
+std::string progress_glyphs(const Progress::Props& props, bool unicode = true)
 {
     Reconciler reconciler;
     reconciler.update(Progress(props));
@@ -28,23 +28,23 @@ std::string progressGlyphs(const Progress::Props& props, bool unicode = true)
 
 TEST(Progress, RendersDeterminateAndClampsValues)
 {
-    EXPECT_EQ(progressGlyphs({.value = -1.0,.variant = ProgressVariant::Ascii}),
+    EXPECT_EQ(progress_glyphs({.value = -1.0,.variant = ProgressVariant::Ascii}),
         "--------------------");
-    EXPECT_EQ(progressGlyphs({.value = 0.5,.variant = ProgressVariant::Ascii}),
+    EXPECT_EQ(progress_glyphs({.value = 0.5,.variant = ProgressVariant::Ascii}),
         "##########----------");
-    EXPECT_EQ(progressGlyphs({.value = 2.0,.variant = ProgressVariant::Ascii}),
+    EXPECT_EQ(progress_glyphs({.value = 2.0,.variant = ProgressVariant::Ascii}),
         "####################");
 }
 
 TEST(Progress, DisplaysOptionalPercentage)
 {
-    EXPECT_EQ(progressGlyphs({.value = 0.42,.variant = ProgressVariant::Ascii,
-        .showPercentage = true}),"######--------- 42% ");
+    EXPECT_EQ(progress_glyphs({.value = 0.42,.variant = ProgressVariant::Ascii,
+        .show_percentage = true}),"######--------- 42% ");
 }
 
 TEST(Progress, UsesAsciiWhenUnicodeUnavailable)
 {
-    EXPECT_EQ(progressGlyphs({.value = 0.5},false),"##########----------");
+    EXPECT_EQ(progress_glyphs({.value = 0.5},false),"##########----------");
 }
 
 TEST(Progress, DetectsActiveIndeterminateProgress)

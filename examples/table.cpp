@@ -22,7 +22,7 @@ int main()
             Typography({.text = "Table — click header to sort, drag scrollbar, wheel, arrows, PgUp/PgDn",
                 .variant = TypographyVariant::H2}),
             TextField({.value = filter.get(),.placeholder = "Filter nodes...",.key = "filter",
-                .onChange = [&](std::string value) { filter.set(std::move(value)); }}),
+                .on_change = [&](std::string value) { filter.set(std::move(value)); }}),
             Table({.columns = {{"Name",20},{"Status",12,TableAlignment::Center},
                     {"Address",18,TableAlignment::Right}},
                 .rows = rows,
@@ -30,7 +30,7 @@ int main()
                     return query.empty() || row.cells[0].find(query) != std::string::npos ||
                         row.cells[1].find(query) != std::string::npos;
                 },
-                .formatCell = [](const TableRow& row, std::size_t column) {
+                .format_cell = [](const TableRow& row, std::size_t column) {
                     TableCellFormat cell {.text = row.cells[column]};
                     if (column == 1)
                     {
@@ -42,7 +42,7 @@ int main()
                 },
                 .value = selected.get(),.key = "nodes",
                 .layout = {.height = 12},
-                .onChange = [&](std::string value) { selected.set(std::move(value)); }}),
+                .on_change = [&](std::string value) { selected.set(std::move(value)); }}),
             Typography({.text = "Selected: "+selected.get()})
         },.layout = {.padding = 1,.gap = 1}});
     });

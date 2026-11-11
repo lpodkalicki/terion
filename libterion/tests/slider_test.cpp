@@ -12,7 +12,7 @@ TEST(Slider, HandlesKeyboardAndBounds)
     double selected = -1;
     Reconciler slider;
     slider.update(Slider({.value = 50,.min = 0,.max = 100,.step = 10,
-        .onChange = [&](double value) { selected = value; }}));
+        .on_change = [&](double value) { selected = value; }}));
     auto* node = slider.root();
     EXPECT_TRUE(node->handleSliderKey({.key = Key::Right}));
     EXPECT_DOUBLE_EQ(selected,60);
@@ -28,7 +28,7 @@ TEST(Slider, SnapsMousePositionToStep)
     double selected = -1;
     Reconciler slider;
     slider.update(Slider({.value = 0,.min = 0,.max = 100,.step = 10,
-        .showValue = false,.onChange = [&](double value) { selected = value; },
+        .show_value = false,.on_change = [&](double value) { selected = value; },
         .layout = {.width = 11}}));
     slider.root()->layout({.maximum = {.width = 11,.height = 1}});
     EXPECT_TRUE(slider.root()->handleSliderMouse({.x = 5,.y = 0}));
@@ -38,7 +38,7 @@ TEST(Slider, SnapsMousePositionToStep)
 TEST(Slider, DisabledSliderDoesNotHandleInput)
 {
     Reconciler slider;
-    slider.update(Slider({.value = 50,.disabled = true,.onChange = [](double) {}}));
+    slider.update(Slider({.value = 50,.disabled = true,.on_change = [](double) {}}));
     EXPECT_FALSE(slider.root()->sliderInteractive());
     EXPECT_FALSE(slider.root()->handleSliderKey({.key = Key::Right}));
 }

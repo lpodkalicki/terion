@@ -40,17 +40,17 @@ int main()
                     .children = std::move(entries),
                     .key = "list",
                     .layout = {.width = screen.width,.gap = 1,.flex = 1},
-                    .scrollOffset = offset.get(),
-                    .onScroll = [&](int next) { offset.set(next); }
+                    .scroll_offset = offset.get(),
+                    .on_scroll = [&](int next) { offset.set(next); }
                 }),
                 Row({.children = {
                     Button({.text = "Top",.key = "top",.variant = ButtonVariant::Contained,
-                        .onClick = [&] { offset.set(0); },.size = ButtonSize::Compact}),
+                        .on_click = [&] { offset.set(0); },.size = ButtonSize::Compact}),
                     Typography({.text = "60 items | ScrollView clips content to its viewport"})
                 },.layout = {.gap = 2}})
             },
             .layout = {.width = screen.width,.height = screen.height,.gap = 1,
-                .alignItems = AlignItems::Stretch}
+                .align_items = AlignItems::Stretch}
         });
     });
     return app.run();
