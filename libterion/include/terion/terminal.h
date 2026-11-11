@@ -71,6 +71,7 @@ struct TerminalCapabilities
     bool unicode = true;
     bool mouse = true;
     bool mousePointerShape = false;
+    bool activelyProbed = false;
 }; /* End of struct TerminalCapabilities */
 
 struct MouseEvent
@@ -153,6 +154,24 @@ public:
     }
 }; /* End of class TerminalBackend */
 
+// Collects replies to terminal capability queries while preserving ordinary input.
+// The parser accepts responses split across multiple read() calls.
+class TerminalCapabilityProbe
+{
+public:
+    explicit TerminalCapabilityProbe(TerminalCapabilities fallback) : capabilities_(fallback) {}
+
+    [[nodiscard]] std::string feed(std::string_view bytes);
+    [[nodiscard]] std::string finish();
+    [[nodiscard]] TerminalCapabilities capabilities() const noexcept { return capabilities_; }
+
+private:
+    void process(std::string_view sequence);
+    TerminalCapabilities capabilities_;
+    std::string pending_;
+    unsigned rejected_colors_ = 0;
+}; /* End of class TerminalCapabilityProbe */
+
 class AnsiTerminalBackend final : public TerminalBackend
 {
 public:
@@ -178,6 +197,7 @@ private:
     Size last_size_{};
     InputDecoder decoder_;
     TerminalCapabilities capabilities_{};
+    void probeCapabilities();
     std::chrono::steady_clock::time_point last_input_{};
 }; /* End of class AnsiTerminalBackend */
 

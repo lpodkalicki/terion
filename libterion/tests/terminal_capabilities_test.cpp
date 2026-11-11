@@ -58,3 +58,36 @@ TEST(TerminalCapabilities, EmitsPointerShapeChangesForInteractiveComponents)
     EXPECT_NE(pointer_output->output().find("\033]22;default\033\\"),std::string::npos);
 
 }
+
+TEST(TerminalCapabilities, ProbeRecognizesSupportedAndUnsupportedResponses)
+{
+    TerminalCapabilityProbe supported(TerminalCapabilities{});
+    EXPECT_TRUE(supported.feed("\033P1+r5463=31\033\\\033[?1006;2$y").empty());
+    EXPECT_TRUE(supported.capabilities().activelyProbed);
+    EXPECT_TRUE(supported.capabilities().trueColor);
+    EXPECT_TRUE(supported.capabilities().mouse);
+
+    TerminalCapabilityProbe unsupported(TerminalCapabilities{});
+    EXPECT_TRUE(unsupported.feed("\033P0+r5463\033\\\033P0+r524742\033\\").empty());
+    EXPECT_TRUE(unsupported.feed("\033[?1006;0$y").empty());
+    EXPECT_TRUE(unsupported.capabilities().activelyProbed);
+    EXPECT_FALSE(unsupported.capabilities().trueColor);
+    EXPECT_FALSE(unsupported.capabilities().mouse);
+}
+
+TEST(TerminalCapabilities, ProbePreservesUserInputAndSplitReplies)
+{
+    TerminalCapabilityProbe probe(TerminalCapabilities{});
+    EXPECT_EQ(probe.feed("abc\033P1+r524"),"abc");
+    EXPECT_EQ(probe.feed("742=31\033\\z\033[A"),"z\033[A");
+    EXPECT_TRUE(probe.capabilities().activelyProbed);
+    EXPECT_EQ(probe.feed("\033"),"");
+    EXPECT_EQ(probe.finish(),"\033");
+}
+
+TEST(TerminalCapabilities, ProbePreservesUnrelatedEscapeSequences)
+{
+    TerminalCapabilityProbe probe(TerminalCapabilities{});
+    EXPECT_EQ(probe.feed("\033[?25h\033Pnon-probe\033\\"),"\033[?25h\033Pnon-probe\033\\");
+    EXPECT_FALSE(probe.capabilities().activelyProbed);
+}

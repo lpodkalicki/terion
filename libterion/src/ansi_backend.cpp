@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <cerrno>
 #include <chrono>
+#include <algorithm>
+#include <cstdint>
+#include <utility>
 #include <cstdlib>
 #include <stdexcept>
 #include <terion/terminal.h>
@@ -21,6 +24,149 @@ TerminalCapabilities AnsiTerminalBackend::detectCapabilities(const std::string_v
     if (pointer_override == "1") capabilities.mousePointerShape = true;
     if (pointer_override == "0") capabilities.mousePointerShape = false;
     return capabilities;
+}
+
+// XTGETTCAP: DCS (1|0)+r HEX_NAME[=HEX_VALUE] ST
+// DECRQM: CSI ? MODE ; STATUS $ y
+void TerminalCapabilityProbe::process(const std::string_view sequence)
+{
+    if (sequence.starts_with("\033P") && sequence.ends_with("\033\\") && sequence.size() >= 7 &&
+        (sequence.substr(2,3) == "1+r" || sequence.substr(2,3) == "0+r"))
+    {
+        const bool supported = sequence[2] == '1';
+        const auto payload = sequence.substr(5,sequence.size()-7);
+        const auto name = payload.substr(0,payload.find('='));
+        if (name == "5463" || name == "524742") // Tc and RGB
+        {
+            capabilities_.activelyProbed = true;
+            if (supported) capabilities_.trueColor = true;
+            else if (++rejected_colors_ >= 2) capabilities_.trueColor = false;
+        }
+    }
+    else if (sequence.starts_with("\033[?") && sequence.ends_with("$y"))
+    {
+        const auto body = sequence.substr(3,sequence.size()-5);
+        const auto separator = body.find(';');
+        if (separator == std::string_view::npos) return;
+        const auto mode = body.substr(0,separator);
+        const auto status = body.substr(separator+1);
+        if (mode == "1006" || mode == "1003")
+        {
+            if (status == "0") capabilities_.mouse = false;
+            if (status == "0" || status == "1" || status == "2" || status == "3" || status == "4")
+                capabilities_.activelyProbed = true;
+        }
+    }
+}
+
+std::string TerminalCapabilityProbe::feed(const std::string_view bytes)
+{
+    std::string ordinary;
+    pending_.append(bytes);
+    while (!pending_.empty())
+    {
+        if (pending_[0] != '\033')
+        {
+            ordinary += pending_[0];
+            pending_.erase(0,1);
+            continue;
+        }
+        if (pending_.size() == 1) break;
+        const bool dcs = pending_[1] == 'P';
+        const bool csi = pending_[1] == '[';
+        if (!dcs && !csi)
+        {
+            ordinary += pending_[0];
+            pending_.erase(0,1);
+            continue;
+        }
+        if (dcs)
+        {
+            if (pending_.size() < 5)
+            {
+                if (std::string_view("\033P1+r").starts_with(pending_) ||
+                    std::string_view("\033P0+r").starts_with(pending_)) break;
+                ordinary += pending_[0];
+                pending_.erase(0,1);
+                continue;
+            }
+            if (pending_.substr(2,3) != "1+r" && pending_.substr(2,3) != "0+r")
+            {
+                ordinary += pending_[0];
+                pending_.erase(0,1);
+                continue;
+            }
+            const auto end = pending_.find("\033\\",5);
+            if (end == std::string::npos)
+            {
+                if (pending_.size() <= 128) break;
+            }
+            else
+            {
+                const std::string_view candidate(pending_.data(),end+2);
+                process(candidate);
+                pending_.erase(0,end+2);
+                continue;
+            }
+        }
+        else
+        {
+            if (pending_.size() < 3)
+            {
+                if (std::string_view("\033[?").starts_with(pending_)) break;
+            }
+            else if (pending_[2] == '?')
+            {
+                // Only buffer DECRQM responses for the modes we queried.
+                const auto final = pending_.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~",3);
+                if (final == std::string::npos)
+                {
+                    if (pending_.size() <= 48) break;
+                }
+                else
+                {
+                    const std::string_view candidate(pending_.data(),final+1);
+                    if (candidate.ends_with("$y") &&
+                        (candidate.starts_with("\033[?1006;") || candidate.starts_with("\033[?1003;")))
+                    {
+                        process(candidate);
+                        pending_.erase(0,final+1);
+                        continue;
+                    }
+                }
+            }
+        }
+        ordinary += pending_[0];
+        pending_.erase(0,1);
+    }
+    return ordinary;
+}
+
+std::string TerminalCapabilityProbe::finish()
+{
+    return std::exchange(pending_,std::string{});
+}
+
+void AnsiTerminalBackend::probeCapabilities()
+{
+    TerminalCapabilityProbe probe(capabilities_);
+    write("\033P+q5463;524742\033\\\033[?1006$p\033[?1003$p");
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(85);
+    while (std::chrono::steady_clock::now() < deadline)
+    {
+        const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now()).count();
+        pollfd descriptor{.fd = STDIN_FILENO,.events = POLLIN,.revents = 0};
+        const auto ready = ::poll(&descriptor,1,static_cast<int>(std::max<std::int64_t>(0,remaining)));
+        if (ready < 0 && errno == EINTR) continue;
+        if (ready <= 0 || !(descriptor.revents & POLLIN)) break;
+        char buffer[256];
+        const auto count = ::read(STDIN_FILENO,buffer,sizeof(buffer));
+        if (count <= 0) break;
+        decoder_.feed(probe.feed(std::string_view(buffer,static_cast<std::size_t>(count))));
+    }
+    decoder_.feed(probe.finish());
+    capabilities_ = probe.capabilities();
 }
 
 void AnsiTerminalBackend::setMousePointerShape(const MousePointerShape shape)
@@ -42,7 +188,12 @@ AnsiTerminalBackend::AnsiTerminalBackend()
     if (::tcsetattr(STDIN_FILENO,TCSAFLUSH,&raw) != 0) throw std::runtime_error("tcsetattr failed");
     active_ = true;
     last_size_ = size();
-    try { write("\033[?1049h\033[?25l\033[?1003h\033[?1006h\033[?2004h"); }
+    try
+    {
+        probeCapabilities();
+        write("\033[?1049h\033[?25l\033[?2004h");
+        if (capabilities_.mouse) write("\033[?1003h\033[?1006h");
+    }
     catch (...) { ::tcsetattr(STDIN_FILENO,TCSAFLUSH,&previous_); active_ = false; throw; }
 }
 
