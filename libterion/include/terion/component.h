@@ -14,6 +14,7 @@
 #include <terion/event.h>
 #include <terion/render/color.h>
 #include <terion/theme.h>
+#include <terion/form_value.h>
 
 namespace terion {
 
@@ -163,7 +164,8 @@ public:
         ContextProvider,
         Fragment,
         ErrorBoundary,
-        ThemeScope
+        ThemeScope,
+        FormFieldMarker
     }; /* End of enum Type */
 
     struct Props
@@ -247,6 +249,11 @@ public:
         double slider_step = 1.0;
         bool slider_show_value = false;
         std::function<void(double)> slider_on_change = {};
+        std::optional<FormValue> form_default_value = std::nullopt;
+        std::function<std::optional<std::string>(const FormValue&)> form_validator = {};
+        std::string form_field_name = {};
+        std::string form_field_label = {};
+        bool form_field_required = false;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

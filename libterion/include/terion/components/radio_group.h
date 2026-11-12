@@ -16,6 +16,7 @@ public:
     {
         std::vector<RadioOption> options = {};
         std::string value = {};
+        std::optional<std::string> default_value = std::nullopt;
         std::string key = {};
         bool disabled = false;
         ColorVariant color = ColorVariant::Primary;
@@ -30,7 +31,7 @@ public:
             .layout = props.layout,.color_variant = props.color,
             .on_event_capture = std::move(props.on_event_capture),
             .on_event = std::move(props.on_event),.on_change = std::move(props.on_change),
-            .disabled = props.disabled,.radio_options = std::move(props.options)})
+            .disabled = props.disabled,.radio_options = std::move(props.options),.form_default_value = props.default_value.value_or(props.value)})
     {}
 }; /* End of class RadioGroup */
 

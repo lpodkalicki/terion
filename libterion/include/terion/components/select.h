@@ -16,6 +16,7 @@ public:
     {
         std::vector<SelectOption> options = {};
         std::string value = {};
+        std::optional<std::string> default_value = std::nullopt;
         std::string placeholder = {};
         std::string key = {};
         bool disabled = false;
@@ -31,7 +32,7 @@ public:
             .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
             .on_event = std::move(props.on_event),.on_change = std::move(props.on_change),
             .placeholder = std::move(props.placeholder),.disabled = props.disabled,
-            .button_size = props.size,.select_options = std::move(props.options)})
+            .button_size = props.size,.select_options = std::move(props.options),.form_default_value = props.default_value.value_or(props.value)})
     {}
 }; /* End of class Select */
 

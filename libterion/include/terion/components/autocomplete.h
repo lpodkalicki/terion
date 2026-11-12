@@ -16,6 +16,7 @@ public:
     {
         std::vector<SelectOption> options = {};
         std::string value = {};
+        std::optional<std::string> default_value = std::nullopt;
         std::string query = {};
         std::string placeholder = {};
         std::string key = {};
@@ -36,7 +37,7 @@ public:
             .placeholder = std::move(props.placeholder),.disabled = props.disabled,
             .button_size = props.size,.select_options = std::move(props.options),
             .autocomplete_query = std::move(props.query),
-            .autocomplete_on_input_change = std::move(props.on_input_change)})
+            .autocomplete_on_input_change = std::move(props.on_input_change),.form_default_value = props.default_value.value_or(props.value)})
     {}
 }; /* End of class Autocomplete */
 

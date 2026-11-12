@@ -15,6 +15,7 @@ public:
     struct Props
     {
         std::string value = {};
+        std::optional<std::string> default_value = std::nullopt;
         std::string placeholder = {};
         std::string key = {};
         bool disabled = false;
@@ -22,6 +23,7 @@ public:
         int min_rows = 4;
         LayoutStyle layout = {};
         std::function<void(std::string)> on_change = {};
+        std::function<std::optional<std::string>(const std::string&)> validator = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
@@ -32,7 +34,12 @@ public:
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .on_change = std::move(props.on_change),.placeholder = std::move(props.placeholder),
             .disabled = props.disabled,.read_only = props.read_only,
-            .text_area_min_rows = props.min_rows})
+            .text_area_min_rows = props.min_rows,.form_default_value = props.default_value.value_or(props.value),
+            .form_validator = [validator = std::move(props.validator)](const FormValue& value)
+                -> std::optional<std::string> {
+                if (validator) return validator(std::get<std::string>(value));
+                return std::nullopt;
+            }})
     {}
 }; /* End of class TextArea */
 
