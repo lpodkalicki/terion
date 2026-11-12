@@ -144,6 +144,7 @@ public:
         NumberField,
         PasswordField,
         Select,
+        Autocomplete,
         DropdownMenu,
         ContextMenu,
         Tooltip,
@@ -207,6 +208,8 @@ public:
         std::function<void(int)> on_scroll = {};
         bool scrollbar_visible = true;
         std::vector<SelectOption> select_options = {};
+        std::string autocomplete_query = {};
+        std::function<void(std::string)> autocomplete_on_input_change = {};
         std::vector<RadioOption> radio_options = {};
         std::vector<TabOption> tab_options = {};
         std::vector<TableColumn> table_columns = {};

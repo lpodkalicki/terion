@@ -208,14 +208,15 @@ Size RenderNode::measure(const Constraints& constraints) const
         content = {.width = 32,.height = text_area_min_rows_+2};
     }
     else if (type_ == Component::Type::TextField || type_ == Component::Type::NumberField ||
-        type_ == Component::Type::PasswordField || type_ == Component::Type::Select)
+        type_ == Component::Type::PasswordField || type_ == Component::Type::Select ||
+        type_ == Component::Type::Autocomplete)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
         int content_width = std::max(textWidth(text_),textWidth(placeholder_));
-        if (type_ == Component::Type::Select)
+        if (type_ == Component::Type::Select || type_ == Component::Type::Autocomplete)
             for (const auto& option : select_options_) content_width = std::max(content_width,textWidth(option.label));
         content = {.width = addBounded(content_width,padding * 2 +
-            (type_ == Component::Type::Select ? 3 : text_field_variant_ == TextFieldVariant::Outlined ? 2 : 0)),
+            ((type_ == Component::Type::Select || type_ == Component::Type::Autocomplete) ? 3 : text_field_variant_ == TextFieldVariant::Outlined ? 2 : 0)),
             .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
     }
     else if (type_ == Component::Type::Text)
@@ -358,7 +359,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         type_ == Component::Type::TreeView ||
         type_ == Component::Type::TextField || type_ == Component::Type::NumberField ||
         type_ == Component::Type::PasswordField || type_ == Component::Type::TextArea ||
-        type_ == Component::Type::Select ||
+        type_ == Component::Type::Select || type_ == Component::Type::Autocomplete ||
         type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress || type_ == Component::Type::Slider) return;
 
@@ -1063,7 +1064,7 @@ bool RenderNode::openContextMenu(const Point position, const Size screen)
 
 Rect RenderNode::selectPopupRect(const Size screen) const noexcept
 {
-    if (!selectOpen() || select_options_.empty()) return {};
+    if (!selectOpen()) return {};
     if (type_ == Component::Type::ContextMenu)
     {
         int width = 8;
@@ -1076,7 +1077,8 @@ Rect RenderNode::selectPopupRect(const Size screen) const noexcept
     }
     const int below = std::max(0,screen.height - std::max(0,bounds_.y+bounds_.height));
     const int above = std::clamp(bounds_.y,0,screen.height);
-    const int height = std::min({6,static_cast<int>(select_options_.size()),std::max(below,above)});
+    const int height = std::min({6,std::max(1,static_cast<int>(select_options_.size())),
+        std::max(below,above)});
     int width = bounds_.width;
     if (type_ == Component::Type::DropdownMenu)
         for (const auto& option : select_options_) width = std::max(width,textWidth(option.label)+3);
@@ -1106,16 +1108,86 @@ bool RenderNode::selectContains(const Point point, const Size screen) const noex
         point.y >= popup.y && point.y < popup.y + popup.height;
 }
 
+void RenderNode::updateAutocompleteOptions()
+{
+    if (type_ != Component::Type::Autocomplete) return;
+    const auto lower_ascii = [](std::string_view input) {
+        std::string result(input);
+        for (char& letter : result)
+        {
+            const auto byte = static_cast<unsigned char>(letter);
+            if (byte >= 'A' && byte <= 'Z') letter = static_cast<char>(byte + ('a' - 'A'));
+        }
+        return result;
+    };
+    const std::string needle = lower_ascii(autocomplete_query_);
+    select_options_.clear();
+    for (const auto& option : autocomplete_all_options_)
+        if (lower_ascii(option.label).find(needle) != std::string::npos)
+            select_options_.push_back(option);
+    select_highlight_ = 0;
+    for (std::size_t i = 0; i < select_options_.size(); ++i)
+        if (!select_options_[i].disabled)
+        {
+            select_highlight_ = static_cast<int>(i);
+            break;
+        }
+    select_scroll_.setOffset(0);
+}
+
 bool RenderNode::handleSelectKey(const Event& event, const Size screen)
 {
-    if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu &&
+    if ((type_ != Component::Type::Select && type_ != Component::Type::Autocomplete &&
+        type_ != Component::Type::DropdownMenu &&
         type_ != Component::Type::ContextMenu) || disabled_) return false;
+    if (type_ == Component::Type::Autocomplete)
+    {
+        if (event.key == Key::Escape)
+        {
+            if (!select_open_) return false;
+            closeSelect();
+            return true;
+        }
+        bool edited = false;
+        std::string next_query = autocomplete_query_;
+        if (event.key == Key::Character && !event.ctrl && !event.alt &&
+            event.character >= U' ' && event.character != 127)
+        {
+            next_query += detail::encodeUtf8(event.character);
+            edited = true;
+        }
+        else if (event.key == Key::Paste)
+        {
+            for (const char character : event.text)
+                if (character != '\n' && character != '\r' && character != '\0')
+                    next_query += character;
+            edited = true;
+        }
+        else if (event.key == Key::Backspace && !next_query.empty())
+        {
+            std::size_t start = next_query.size()-1;
+            while (start > 0 &&
+                (static_cast<unsigned char>(next_query[start]) & 0xc0) == 0x80) --start;
+            next_query.erase(start);
+            edited = true;
+        }
+        if (edited)
+        {
+            autocomplete_query_ = std::move(next_query);
+            updateAutocompleteOptions();
+            select_open_ = true;
+            select_scroll_.configure(static_cast<int>(select_options_.size()),
+                std::max(1,selectPopupRect(screen).height));
+            if (autocomplete_on_input_change_) autocomplete_on_input_change_(autocomplete_query_);
+            return true;
+        }
+    }
     if (!select_open_)
     {
         if (type_ == Component::Type::ContextMenu) return false;
         if (event.key != Key::Enter && event.key != Key::Down &&
             !(event.key == Key::Character && event.character == U' ')) return false;
-        if (select_options_.empty()) return true;
+        if (select_options_.empty() && type_ != Component::Type::Autocomplete) return true;
         select_open_ = true;
         select_highlight_ = 0;
         for (std::size_t i = 0; i < select_options_.size(); ++i)
@@ -1135,6 +1207,7 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
             event.key == Key::End || event.key == Key::PageUp || event.key == Key::PageDown)
         {
             const int count = static_cast<int>(select_options_.size());
+            if (count == 0) return true;
             int next = select_highlight_;
             if (event.key == Key::Up) --next;
             if (event.key == Key::Down) ++next;
@@ -1143,7 +1216,7 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
             if (event.key == Key::PageUp) next -= std::max(1,selectPopupRect(screen).height);
             if (event.key == Key::PageDown) next += std::max(1,selectPopupRect(screen).height);
             select_highlight_ = std::clamp(next,0,count-1);
-            if (type_ != Component::Type::Select && select_options_[select_highlight_].disabled)
+            if (select_options_[select_highlight_].disabled)
             {
                 const int direction = event.key == Key::Up || event.key == Key::PageUp ||
                     event.key == Key::End ? -1 : 1;
@@ -1151,10 +1224,14 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
                     if (!select_options_[i].disabled) { select_highlight_ = i; break; }
             }
         }
-        else if (event.key == Key::Enter || (event.key == Key::Character && event.character == U' '))
+        else if (event.key == Key::Enter || (type_ != Component::Type::Autocomplete &&
+            event.key == Key::Character && event.character == U' '))
         {
+            if (select_options_.empty()) return true;
             if (!select_options_[select_highlight_].disabled && on_change_)
                 on_change_(select_options_[select_highlight_].value);
+            if (type_ == Component::Type::Autocomplete)
+                autocomplete_query_ = select_options_[select_highlight_].label;
             closeSelect();
             return true;
         }
@@ -1168,7 +1245,8 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
 
 bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
 {
-    if ((type_ != Component::Type::Select && type_ != Component::Type::DropdownMenu &&
+    if ((type_ != Component::Type::Select && type_ != Component::Type::Autocomplete &&
+        type_ != Component::Type::DropdownMenu &&
         type_ != Component::Type::ContextMenu) || disabled_) return false;
     if (select_drag_.active())
     {
@@ -1205,9 +1283,12 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
         if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
         {
             const int index = select_scroll_.offset()+mouse.position.y-popup.y;
-            if (index < static_cast<int>(select_options_.size()) && !select_options_[index].disabled)
+            if (index >= 0 && index < static_cast<int>(select_options_.size()) &&
+                !select_options_[index].disabled)
             {
                 if (on_change_) on_change_(select_options_[index].value);
+                if (type_ == Component::Type::Autocomplete)
+                    autocomplete_query_ = select_options_[index].label;
                 closeSelect();
             }
         }
@@ -1352,6 +1433,9 @@ void RenderNode::paintOverlay(Painter& painter, const Size screen, const Theme& 
         painter.text(popup.x+1,popup.y+i,clipText(select_options_[index].label,
             std::max(0,popup.width-2-(track.width > 0 ? 1 : 0))),style);
     }
+    if (type_ == Component::Type::Autocomplete && select_options_.empty())
+        painter.text(popup.x+1,popup.y,clipText("No results",std::max(0,popup.width-2)),
+            TextStyle{.foreground = palette.muted,.background = palette.surface});
     paintScrollbar(painter,track,thumb,theme,palette.surface,true,
         select_drag_.active() ? ScrollbarInteraction::Active : ScrollbarInteraction::Normal);
 }
@@ -2029,7 +2113,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             painter.put(arrow_x,y,select_open_ ? "▴" : "▾",style);
         return;
     }
-    if (type_ == Component::Type::Select)
+    if (type_ == Component::Type::Select || type_ == Component::Type::Autocomplete)
     {
         if (bounds_.width <= 0 || bounds_.height <= 0) return;
         const Palette palette = theme ? theme->palette : Theme::dark().palette;
@@ -2053,6 +2137,13 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         if (type_ == Component::Type::Select)
             for (const auto& option : select_options_)
                 if (option.value == text_) { label = option.label; break; }
+        if (type_ == Component::Type::Autocomplete)
+        {
+            label = autocomplete_query_;
+            if (label.empty() && !select_open_)
+                for (const auto& option : autocomplete_all_options_)
+                    if (option.value == text_) { label = option.label; break; }
+        }
         TextStyle label_style = style;
         if (label == placeholder_ && text_.empty()) label_style.foreground = palette.muted;
         painter.text(bounds_.x+2,bounds_.y+bounds_.height/2,clipText(label,std::max(0,bounds_.width-6)),label_style);

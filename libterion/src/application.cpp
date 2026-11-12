@@ -219,7 +219,8 @@ void Application::syncFocusTargets()
             focus_.add(id,[&node](const Event& event) { return node.handleScrollKey(event); },scope);
             component_focus_ids_.push_back(id);
         }
-        else if ((node.type() == Component::Type::Select || node.type() == Component::Type::DropdownMenu) &&
+        else if ((node.type() == Component::Type::Select || node.type() == Component::Type::Autocomplete ||
+            node.type() == Component::Type::DropdownMenu) &&
             !node.disabled())
         {
             const auto id = std::to_string(node.id());
@@ -427,6 +428,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
     RenderNode* hit = nullptr;
     if (component_ && reconciler_.root()) hit = reconciler_.root()->hitTest(mouse.position);
     if (hit && !(((hit->type() == Component::Type::Select ||
+            hit->type() == Component::Type::Autocomplete ||
         hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
         (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
         ((hit->type() == Component::Type::TextField ||
@@ -444,7 +446,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
         pressed_button_id_ = target;
         if (hit) focus_.focus(target);
         else if (focus_.activeScope().empty()) focus_.blur();
-        if (hit && (hit->type() == Component::Type::Select || hit->type() == Component::Type::DropdownMenu))
+        if (hit && (hit->type() == Component::Type::Select ||
+            hit->type() == Component::Type::Autocomplete || hit->type() == Component::Type::DropdownMenu))
         {
             overlays_.dismissExcept(hit);
             return hit->handleSelectMouse(mouse,backend_->size());
@@ -519,6 +522,7 @@ void Application::updateHover(const MouseEvent& mouse)
                 if (hit->type() == Component::Type::Tabs && hit->updateTabsHover(mouse.position))
                     invalidate();
                 if (((hit->type() == Component::Type::Select ||
+            hit->type() == Component::Type::Autocomplete ||
                     hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
                     (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
                     ((hit->type() == Component::Type::TextField ||
@@ -566,6 +570,7 @@ void Application::updateMousePointer(const MouseEvent& mouse)
                     shape = MousePointerShape::Text;
                 else if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
                     ((hit->type() == Component::Type::Select ||
+            hit->type() == Component::Type::Autocomplete ||
                         hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
                     hit->interactiveControl() || hit->sliderInteractive() ||
                     (hit->type() == Component::Type::Tabs && !hit->disabled()))
@@ -645,7 +650,8 @@ bool Application::dispatchEvent(const Event& event)
         if (reconciler_.root())
         {
             const auto find = [&](const auto& self, RenderNode& node) -> RenderNode* {
-                if ((node.type() == Component::Type::Select || node.type() == Component::Type::DropdownMenu) &&
+                if ((node.type() == Component::Type::Select || node.type() == Component::Type::Autocomplete ||
+            node.type() == Component::Type::DropdownMenu) &&
                     node.selectOpen() &&
                     std::to_string(node.id()) == focus_.current()) return &node;
                 for (const auto& child : node.children())

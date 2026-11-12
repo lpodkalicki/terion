@@ -110,12 +110,16 @@ public:
     bool scrollTextArea(int rows);
     [[nodiscard]] bool selectOpen() const noexcept
     {
-        return (type_ == Component::Type::Select || type_ == Component::Type::DropdownMenu ||
+        return (type_ == Component::Type::Select || type_ == Component::Type::Autocomplete ||
+            type_ == Component::Type::DropdownMenu ||
             type_ == Component::Type::ContextMenu) && select_open_;
     }
     [[nodiscard]] Rect selectPopupRect(Size screen) const noexcept;
     [[nodiscard]] bool selectContains(Point point, Size screen) const noexcept;
     bool handleSelectKey(const Event& event, Size screen = {.width = 80,.height = 24});
+    void updateAutocompleteOptions();
+    [[nodiscard]] const std::string& autocompleteQuery() const noexcept { return autocomplete_query_; }
+    [[nodiscard]] const std::vector<SelectOption>& autocompleteOptions() const noexcept { return select_options_; }
     bool handleSelectMouse(const MouseEvent& mouse, Size screen);
     [[nodiscard]] bool selectDragging() const noexcept { return select_open_ && select_drag_.active(); }
     [[nodiscard]] Rect select_scrollbar_track(Size screen) const noexcept;
@@ -214,6 +218,10 @@ private:
     std::function<void(int)> on_scroll_;
     bool disabled_ = false;
     std::vector<SelectOption> select_options_;
+    std::vector<SelectOption> autocomplete_all_options_;
+    std::string autocomplete_query_;
+    std::string autocomplete_requested_query_;
+    std::function<void(std::string)> autocomplete_on_input_change_;
     std::vector<RadioOption> radio_options_;
     std::vector<TabOption> tab_options_;
     std::vector<TableColumn> table_columns_;

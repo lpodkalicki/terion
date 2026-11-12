@@ -29,6 +29,7 @@
 #include <terion/components/number_field.h>
 #include <terion/components/password_field.h>
 #include <terion/components/select.h>
+#include <terion/components/autocomplete.h>
 #include <terion/components/dropdown_menu.h>
 #include <terion/components/context_menu.h>
 #include <terion/components/tooltip.h>

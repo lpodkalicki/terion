@@ -352,6 +352,24 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->placeholder_ = props.placeholder;
     node->disabled_ = props.disabled;
     node->select_options_ = props.select_options;
+    if (props.type == Component::Type::Autocomplete)
+    {
+        const bool requested_changed = node->autocomplete_requested_query_ != props.autocomplete_query;
+        const bool value_changed = !created && message_changed;
+        node->autocomplete_all_options_ = props.select_options;
+        node->autocomplete_on_input_change_ = props.autocomplete_on_input_change;
+        if (created || requested_changed)
+            node->autocomplete_query_ = props.autocomplete_query;
+        else if (value_changed)
+            for (const auto& option : props.select_options)
+                if (option.value == props.text)
+                {
+                    node->autocomplete_query_ = option.label;
+                    break;
+                }
+        node->autocomplete_requested_query_ = props.autocomplete_query;
+        node->updateAutocompleteOptions();
+    }
     node->radio_options_ = props.radio_options;
     node->tab_options_ = props.tab_options;
     node->table_columns_ = props.table_columns;

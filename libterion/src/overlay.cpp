@@ -16,7 +16,8 @@ void OverlayManager::collect(RenderNode* root)
         const auto add = [&](const OverlayLayer layer, const int z_index) {
             portals_.push_back(Portal{.owner = &node,.layer = layer,.z_index = z_index});
         };
-        if (node.type() == Component::Type::Select || node.type() == Component::Type::DropdownMenu ||
+        if (node.type() == Component::Type::Select || node.type() == Component::Type::Autocomplete ||
+            node.type() == Component::Type::DropdownMenu ||
             node.type() == Component::Type::ContextMenu || node.type() == Component::Type::Tooltip)
             add(OverlayLayer::Popup,0);
         if (node.type() == Component::Type::Dialog) add(OverlayLayer::Modal,100);
