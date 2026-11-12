@@ -223,6 +223,7 @@ public:
         int virtual_item_count = 0;
         std::function<std::string(int)> virtual_item_text = {};
         std::function<StyledText(int)> virtual_item_styled = {};
+        std::function<std::pair<int,int>(int,int)> virtual_on_width_change = {};
         int virtual_selected_index = -1;
         int virtual_row_height = 1;
         bool virtual_follow_tail = false;

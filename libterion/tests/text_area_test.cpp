@@ -52,3 +52,19 @@ TEST(TextArea, PaintsMultipleRows)
     EXPECT_EQ(buffer.at(1,1).grapheme,"o");
     EXPECT_EQ(buffer.at(1,2).grapheme,"t");
 }
+
+TEST(TextArea, MouseDragSelectsAcrossLinesAndUnicode)
+{
+    Reconciler reconciler;
+    reconciler.update(TextArea({.value = "abc\nŁódź end",.layout = {.width = 18,.height = 6}}));
+    auto* node = reconciler.root();
+    node->layout(Constraints{.maximum = {.width = 18,.height = 6}});
+    node->setTextCursor({.x = 2,.y = 1});
+    node->extendTextAreaSelection({.x = 5,.y = 2});
+    ScreenBuffer buffer({.width = 18,.height = 6});
+    Painter painter(buffer);
+    node->paint(painter,{}, {},std::nullopt,nullptr);
+    EXPECT_EQ(buffer.at(2,1).style.background,Theme::dark().palette.primary);
+    EXPECT_EQ(buffer.at(1,2).style.background,Theme::dark().palette.primary);
+    EXPECT_NE(buffer.at(7,2).style.background,Theme::dark().palette.primary);
+}

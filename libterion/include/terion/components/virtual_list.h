@@ -22,6 +22,7 @@ public:
         int item_count = 0;
         std::function<std::string(int)> item_text = {};
         std::function<StyledText(int)> item_styled = {};
+        std::function<std::pair<int,int>(int,int)> on_width_change = {};
         int selected_index = -1;
         int row_height = 1;
         bool follow_tail = false;
@@ -43,6 +44,7 @@ public:
             .virtual_item_count = std::max(0,props.item_count),
             .virtual_item_text = std::move(props.item_text),
             .virtual_item_styled = std::move(props.item_styled),
+            .virtual_on_width_change = std::move(props.on_width_change),
             .virtual_selected_index = props.selected_index,
             .virtual_row_height = std::max(1,props.row_height),
             .virtual_follow_tail = props.follow_tail,

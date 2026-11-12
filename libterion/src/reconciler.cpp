@@ -379,6 +379,8 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     const int previous_virtual_count = node->virtual_item_count_;
     const bool was_at_tail = node->virtual_scroll_.offset() == node->virtual_scroll_.maximum();
     node->virtual_item_count_ = std::max(0,props.virtual_item_count);
+    node->virtual_on_width_change_ = props.virtual_on_width_change;
+    if (created) node->virtual_last_width_ = -1;
     node->virtual_follow_tail_ = props.virtual_follow_tail;
     node->virtual_row_height_ = std::max(1,props.virtual_row_height);
     node->virtual_item_text_ = props.virtual_item_text;

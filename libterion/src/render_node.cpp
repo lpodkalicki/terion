@@ -322,8 +322,19 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     if (type_ == Component::Type::VirtualList)
     {
         const bool was_at_tail = virtual_scroll_.offset() == virtual_scroll_.maximum();
+        const int columns = std::max(0,size.width-(scrollbar_visible_ ? 1 : 0));
+        int requested_offset = virtual_scroll_.offset();
+        if (virtual_on_width_change_ && virtual_last_width_ != columns)
+        {
+            const auto [count,offset] = virtual_on_width_change_(columns,requested_offset);
+            virtual_item_count_ = std::max(0,count);
+            requested_offset = offset;
+            virtual_last_width_ = columns;
+        }
         const int visible_items = (size.height+virtual_row_height_-1)/virtual_row_height_;
         virtual_scroll_.configure(virtual_item_count_,visible_items);
+        virtual_scroll_.setOffset(requested_offset);
+        // A following-tail view is the only mode allowed to jump after resize.
         if (virtual_follow_tail_ && was_at_tail)
             virtual_scroll_.setOffset(virtual_scroll_.maximum());
     }

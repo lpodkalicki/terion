@@ -57,6 +57,8 @@
 #include <terion/components/virtual_list.h>
 #include <terion/components/virtual_table.h>
 #include <terion/components/log_view.h>
+#include <terion/components/markdown_view.h>
+#include <terion/components/diff_view.h>
 #include <terion/styled_text.h>
 #include <terion/focus.h>
 #include <terion/geometry.h>

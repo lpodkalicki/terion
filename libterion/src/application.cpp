@@ -338,6 +338,24 @@ bool Application::handleMouse(const MouseEvent& mouse)
             }
         }
     }
+    if (text_selection_drag_id_ != 0)
+    {
+        if (mouse.action == MouseAction::Release)
+        {
+            text_selection_drag_id_ = 0;
+            return true;
+        }
+        if (mouse.action == MouseAction::Move)
+        {
+            if (component_ && reconciler_.root())
+                if (auto* target = reconciler_.root()->findById(text_selection_drag_id_))
+                {
+                    target->extendTextAreaSelection(mouse.position);
+                    return true;
+                }
+            text_selection_drag_id_ = 0;
+        }
+    }
     if (scrollbar_drag_id_ != 0)
     {
         if (mouse.action == MouseAction::Release)
@@ -474,6 +492,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
             hit->type() == Component::Type::TextArea))
         {
             hit->setTextCursor(mouse.position);
+            if (hit->type() == Component::Type::TextArea)
+                text_selection_drag_id_ = hit->id();
             pressed_button_id_.clear();
         }
         if (hit && hit->sliderInteractive())

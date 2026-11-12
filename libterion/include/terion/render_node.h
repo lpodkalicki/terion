@@ -109,6 +109,7 @@ public:
     bool handleTextInput(const Event& event);
     void setCursorFromX(int x);
     void setTextCursor(Point position);
+    void extendTextAreaSelection(Point position);
     void paintTextArea(Painter& painter, std::string_view focused_id, const Theme* theme) const;
     bool scrollTextArea(int rows);
     [[nodiscard]] bool selectOpen() const noexcept
@@ -235,6 +236,8 @@ private:
     int table_sort_column_ = -1;
     bool table_sort_ascending_ = true;
     int virtual_item_count_ = 0;
+    std::function<std::pair<int,int>(int,int)> virtual_on_width_change_;
+    int virtual_last_width_ = -1;
     std::function<std::string(int)> virtual_item_text_;
     std::function<StyledText(int)> virtual_item_styled_;
     int virtual_selected_index_ = -1;

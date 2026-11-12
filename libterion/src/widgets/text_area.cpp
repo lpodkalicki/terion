@@ -82,6 +82,23 @@ void RenderNode::setTextCursor(Point position)
     text_area_preferred_column_ = -1;
 }
 
+void RenderNode::extendTextAreaSelection(Point position)
+{
+    if (type_ != Component::Type::TextArea || disabled_) return;
+    const auto lines = linesOf(text_);
+    const int visible_rows = std::max(1,bounds_.height-2);
+    const int row_in_view = position.y-bounds_.y-1;
+    if (row_in_view < 0) scrollTextArea(-1);
+    else if (row_in_view >= visible_rows) scrollTextArea(1);
+    const int row = std::clamp(position.y-bounds_.y-1+text_area_first_row_,
+        0,static_cast<int>(lines.size())-1);
+    const int column = std::max(0,position.x-bounds_.x-1+text_area_first_column_);
+    if (!selection_active_) selection_anchor_ = cursor_byte_;
+    cursor_byte_ = columnOffset(text_,lines[static_cast<std::size_t>(row)],column);
+    selection_active_ = selection_anchor_ != cursor_byte_;
+    text_area_preferred_column_ = -1;
+}
+
 bool RenderNode::scrollTextArea(int rows)
 {
     if (type_ != Component::Type::TextArea) return false;
