@@ -11,6 +11,7 @@ const ScrollController& RenderNode::scrollController() const noexcept
 {
     if (type_ == Component::Type::Dialog) return dialog_scroll_;
     if (type_ == Component::Type::TreeView) return tree_scroll_;
+    if (type_ == Component::Type::VirtualList) return virtual_scroll_;
     if (type_ == Component::Type::Table) return table_scroll_;
     return scroll_;
 }
@@ -22,6 +23,13 @@ Rect RenderNode::scrollbarTrack() const
         if (!dialog_open() || !dialog_scroll_.scrollable()) return {};
         return {.x = dialog_content_rect_.x+dialog_content_rect_.width,
             .y = dialog_content_rect_.y,.width = 1,.height = dialog_content_rect_.height};
+    }
+    if (type_ == Component::Type::VirtualList)
+    {
+        if (!scrollbar_visible_ || bounds_.width <= 0 || bounds_.height <= 0 ||
+            !virtual_scroll_.scrollable()) return {};
+        return {.x = bounds_.x+bounds_.width-1,.y = bounds_.y,
+            .width = 1,.height = bounds_.height};
     }
     if (type_ == Component::Type::TreeView)
     {
@@ -51,7 +59,7 @@ Rect RenderNode::scrollbarThumb() const
 bool RenderNode::scrollbar_drag(const int y, const int grab_offset)
 {
     if (type_ != Component::Type::Dialog && type_ != Component::Type::Table &&
-        type_ != Component::Type::TreeView && !on_scroll_) return false;
+        type_ != Component::Type::TreeView && type_ != Component::Type::VirtualList && !on_scroll_) return false;
     const Rect track = scrollbarTrack();
     const ScrollController scroll = scrollController();
     if (!scroll.scrollable() || track.height <= 0) return false;
@@ -66,6 +74,7 @@ void RenderNode::applyScrollOffset(const int target)
         (void)scrollDialog(target-dialog_scroll_.offset(),dialog_screen_);
     else if (type_ == Component::Type::Table) table_scroll_.setOffset(target);
     else if (type_ == Component::Type::TreeView) tree_scroll_.setOffset(target);
+    else if (type_ == Component::Type::VirtualList) virtual_scroll_.setOffset(target);
     else if (on_scroll_ && target != scroll.offset()) on_scroll_(target);
 }
 
@@ -73,7 +82,7 @@ bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
 {
     const Rect track = scrollbarTrack();
     if (type_ != Component::Type::Dialog && type_ != Component::Type::Table &&
-        type_ != Component::Type::TreeView && !on_scroll_) return false;
+        type_ != Component::Type::TreeView && type_ != Component::Type::VirtualList && !on_scroll_) return false;
     int target = 0;
     if (!scrollController().press(track,position,grab_offset,target)) return false;
     applyScrollOffset(target);
@@ -83,7 +92,7 @@ bool RenderNode::scrollbarPress(const Point position, int& grab_offset)
 bool RenderNode::beginScrollbarDrag(const Point position)
 {
     if (type_ != Component::Type::Dialog && type_ != Component::Type::Table &&
-        type_ != Component::Type::TreeView && !on_scroll_) return false;
+        type_ != Component::Type::TreeView && type_ != Component::Type::VirtualList && !on_scroll_) return false;
     int target = 0;
     if (!scrollbar_drag_.begin(scrollController(),scrollbarTrack(),position,target)) return false;
     applyScrollOffset(target);

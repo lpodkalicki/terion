@@ -194,6 +194,11 @@ Size RenderNode::measure(const Constraints& constraints) const
         }
         content = {.width = width,.height = addBounded(static_cast<int>(table_order().size()),2)};
     }
+    else if (type_ == Component::Type::VirtualList)
+    {
+        // Never scan item_count to measure: only the viewport determines size.
+        content = {.width = 24,.height = std::min(virtual_item_count_,10)};
+    }
     else if (type_ == Component::Type::TreeView)
     {
         const auto visible = tree_visible_items();
@@ -314,6 +319,8 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
 {
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
+    if (type_ == Component::Type::VirtualList)
+        virtual_scroll_.configure(virtual_item_count_,size.height);
     if (type_ == Component::Type::Table)
         table_scroll_.configure(static_cast<int>(table_order().size()),std::max(0,size.height-2));
     if (type_ == Component::Type::TreeView)
@@ -356,7 +363,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
         type_ == Component::Type::Tabs || type_ == Component::Type::Table ||
-        type_ == Component::Type::TreeView ||
+        type_ == Component::Type::TreeView || type_ == Component::Type::VirtualList ||
         type_ == Component::Type::TextField || type_ == Component::Type::NumberField ||
         type_ == Component::Type::PasswordField || type_ == Component::Type::TextArea ||
         type_ == Component::Type::Select || type_ == Component::Type::Autocomplete ||
@@ -997,12 +1004,18 @@ RenderNode* RenderNode::scrollTarget(const Point position) noexcept
     for (auto it = children_.rbegin(); it != children_.rend(); ++it)
         if (auto* target = (*it)->scrollTarget(position)) return target;
     return (type_ == Component::Type::ScrollView && on_scroll_) ||
-        ((type_ == Component::Type::Table || type_ == Component::Type::TreeView) && !disabled_) ?
+        ((type_ == Component::Type::Table || type_ == Component::Type::TreeView ||
+          type_ == Component::Type::VirtualList) && !disabled_) ?
         this : nullptr;
 }
 
 bool RenderNode::scrollBy(const int delta)
 {
+    if (type_ == Component::Type::VirtualList && !disabled_)
+    {
+        virtual_scroll_.advance(delta);
+        return true;
+    }
     if (type_ == Component::Type::TreeView && !disabled_)
     {
         tree_scroll_.advance(delta);
@@ -1855,6 +1868,35 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                 palette.surface,unicode,scrollbar_drag_.active() ? ScrollbarInteraction::Active :
                     hovered_id == std::to_string(id_) ? ScrollbarInteraction::Hover : ScrollbarInteraction::Normal);
         }
+        return;
+    }
+    if (type_ == Component::Type::VirtualList)
+    {
+        if (bounds_.width <= 0 || bounds_.height <= 0) return;
+        const Palette palette = theme ? theme->palette : Theme::dark().palette;
+        const Color base = effective_background.value_or(palette.background);
+        painter.fillBackground(bounds_,base);
+        Painter::ClipScope clip(painter,bounds_);
+        const Rect track = scrollbarTrack();
+        const int text_columns = std::max(0,bounds_.width-(track.width > 0 ? 1 : 0));
+        // IMPORTANT: no iteration over offscreen items, and no retained row nodes.
+        for (int row = 0; row < bounds_.height; ++row)
+        {
+            const int index = virtual_scroll_.offset()+row;
+            if (index >= virtual_item_count_) break;
+            const bool selected = index == virtual_selected_index_;
+            const Color row_background = selected ? blendColor(base,palette.primary,22) : base;
+            const int y = bounds_.y+row;
+            painter.fillBackground({.x = bounds_.x,.y = y,.width = text_columns,.height = 1},row_background);
+            const TextStyle row_style {.foreground = disabled_ ? palette.muted :
+                selected ? palette.primary : palette.foreground,.background = row_background,.bold = selected};
+            if (virtual_item_text_)
+                painter.text(bounds_.x,y,clipText(virtual_item_text_(index),text_columns),row_style);
+        }
+        if (track.height > 0)
+            paintScrollbar(painter,track,scrollbarThumb(),theme ? *theme : Theme::dark(),
+                palette.surface,unicode,scrollbar_drag_.active() ? ScrollbarInteraction::Active :
+                    hovered_id == std::to_string(id_) ? ScrollbarInteraction::Hover : ScrollbarInteraction::Normal);
         return;
     }
     if (type_ == Component::Type::Table)

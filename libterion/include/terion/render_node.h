@@ -77,6 +77,9 @@ public:
     bool handleTabsKey(const Event& event);
     bool handleTabsClick(Point position);
     bool updateTabsHover(Point position);
+    bool handleVirtualListKey(const Event& event);
+    bool handleVirtualListClick(Point position);
+    [[nodiscard]] int virtual_list_offset() const noexcept { return virtual_scroll_.offset(); }
     bool handleTableKey(const Event& event);
     bool handleTableClick(Point position);
     bool handleTreeKey(const Event& event);
@@ -231,6 +234,11 @@ private:
     ScrollController table_scroll_{};
     int table_sort_column_ = -1;
     bool table_sort_ascending_ = true;
+    int virtual_item_count_ = 0;
+    std::function<std::string(int)> virtual_item_text_;
+    int virtual_selected_index_ = -1;
+    std::function<void(int)> virtual_on_select_;
+    ScrollController virtual_scroll_{};
     std::vector<TreeItem> tree_items_;
     std::vector<std::string> tree_expanded_;
     std::function<void(std::string,bool)> tree_on_toggle_;

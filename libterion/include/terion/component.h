@@ -154,6 +154,7 @@ public:
         TabPanel,
         Table,
         TreeView,
+        VirtualList,
         ResizableSplit,
         Dialog,
         FocusScope,
@@ -218,6 +219,10 @@ public:
         std::vector<TableRow> table_rows = {};
         std::function<bool(const TableRow&)> table_filter = {};
         std::function<TableCellFormat(const TableRow&,std::size_t)> table_format_cell = {};
+        int virtual_item_count = 0;
+        std::function<std::string(int)> virtual_item_text = {};
+        int virtual_selected_index = -1;
+        std::function<void(int)> virtual_on_select = {};
         std::vector<TreeItem> tree_items = {};
         std::vector<std::string> tree_expanded = {};
         std::function<void(std::string,bool)> tree_on_toggle = {};

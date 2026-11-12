@@ -376,6 +376,16 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->table_rows_ = props.table_rows;
     node->table_filter_ = props.table_filter;
     node->table_format_cell_ = props.table_format_cell;
+    node->virtual_item_count_ = std::max(0,props.virtual_item_count);
+    node->virtual_item_text_ = props.virtual_item_text;
+    node->virtual_on_select_ = props.virtual_on_select;
+    const int previous_selected = node->virtual_selected_index_;
+    node->virtual_selected_index_ = props.virtual_selected_index;
+    node->virtual_scroll_.configure(node->virtual_item_count_,node->virtual_scroll_.viewport());
+    if (props.type == Component::Type::VirtualList && !created &&
+        previous_selected != node->virtual_selected_index_ && node->virtual_selected_index_ >= 0 &&
+        node->virtual_selected_index_ < node->virtual_item_count_)
+        node->virtual_scroll_.revealItem(node->virtual_selected_index_);
     node->tree_items_ = props.tree_items;
     node->tree_expanded_ = props.tree_expanded;
     node->tree_on_toggle_ = props.tree_on_toggle;
