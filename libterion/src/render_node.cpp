@@ -320,7 +320,12 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     const auto size = measure(constraints);
     bounds_ = {.x = origin.x,.y = origin.y,.width = size.width,.height = size.height};
     if (type_ == Component::Type::VirtualList)
+    {
+        const bool was_at_tail = virtual_scroll_.offset() == virtual_scroll_.maximum();
         virtual_scroll_.configure(virtual_item_count_,size.height);
+        if (virtual_follow_tail_ && was_at_tail)
+            virtual_scroll_.setOffset(virtual_scroll_.maximum());
+    }
     if (type_ == Component::Type::Table)
         table_scroll_.configure(static_cast<int>(table_order().size()),std::max(0,size.height-2));
     if (type_ == Component::Type::TreeView)
@@ -1890,7 +1895,24 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             painter.fillBackground({.x = bounds_.x,.y = y,.width = text_columns,.height = 1},row_background);
             const TextStyle row_style {.foreground = disabled_ ? palette.muted :
                 selected ? palette.primary : palette.foreground,.background = row_background,.bold = selected};
-            if (virtual_item_text_)
+            if (virtual_item_styled_)
+            {
+                int x = bounds_.x;
+                for (const auto& span : virtual_item_styled_(index))
+                {
+                    const int remaining = bounds_.x+text_columns-x;
+                    if (remaining <= 0) break;
+                    const std::string clipped = clipText(span.text,remaining);
+                    TextStyle span_style = row_style;
+                    if (!disabled_ && !selected && span.color != ColorVariant::Default)
+                        span_style.foreground = palette.resolve(span.color);
+                    span_style.bold = span_style.bold || span.bold;
+                    painter.text(x,y,clipped,span_style);
+                    x += textWidth(clipped);
+                    if (textWidth(clipped) < textWidth(span.text)) break;
+                }
+            }
+            else if (virtual_item_text_)
                 painter.text(bounds_.x,y,clipText(virtual_item_text_(index),text_columns),row_style);
         }
         if (track.height > 0)

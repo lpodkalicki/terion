@@ -21,7 +21,9 @@ public:
     {
         int item_count = 0;
         std::function<std::string(int)> item_text = {};
+        std::function<StyledText(int)> item_styled = {};
         int selected_index = -1;
+        bool follow_tail = false;
         std::function<void(int)> on_select = {};
         std::string key = {};
         LayoutStyle layout = {};
@@ -38,7 +40,9 @@ public:
             .scrollbar_visible = props.show_scrollbar,
             .virtual_item_count = std::max(0,props.item_count),
             .virtual_item_text = std::move(props.item_text),
+            .virtual_item_styled = std::move(props.item_styled),
             .virtual_selected_index = props.selected_index,
+            .virtual_follow_tail = props.follow_tail,
             .virtual_on_select = std::move(props.on_select)})
     {}
 }; /* End of class VirtualList */

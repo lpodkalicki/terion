@@ -53,6 +53,9 @@
 #include <terion/components/card.h>
 #include <terion/components/scroll_view.h>
 #include <terion/components/virtual_list.h>
+#include <terion/components/virtual_table.h>
+#include <terion/components/log_view.h>
+#include <terion/styled_text.h>
 #include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/layout.h>

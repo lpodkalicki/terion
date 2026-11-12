@@ -15,6 +15,7 @@
 #include <terion/render/color.h>
 #include <terion/theme.h>
 #include <terion/form_value.h>
+#include <terion/styled_text.h>
 
 namespace terion {
 
@@ -221,7 +222,9 @@ public:
         std::function<TableCellFormat(const TableRow&,std::size_t)> table_format_cell = {};
         int virtual_item_count = 0;
         std::function<std::string(int)> virtual_item_text = {};
+        std::function<StyledText(int)> virtual_item_styled = {};
         int virtual_selected_index = -1;
+        bool virtual_follow_tail = false;
         std::function<void(int)> virtual_on_select = {};
         std::vector<TreeItem> tree_items = {};
         std::vector<std::string> tree_expanded = {};

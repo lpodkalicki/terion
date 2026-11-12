@@ -236,7 +236,9 @@ private:
     bool table_sort_ascending_ = true;
     int virtual_item_count_ = 0;
     std::function<std::string(int)> virtual_item_text_;
+    std::function<StyledText(int)> virtual_item_styled_;
     int virtual_selected_index_ = -1;
+    bool virtual_follow_tail_ = false;
     std::function<void(int)> virtual_on_select_;
     ScrollController virtual_scroll_{};
     std::vector<TreeItem> tree_items_;
