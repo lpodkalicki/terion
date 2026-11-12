@@ -19,6 +19,7 @@ public:
         std::string placeholder = {};
         std::string key = {};
         bool disabled = false;
+        bool read_only = false;
         LayoutStyle layout = {};
         std::function<void(std::string)> on_change = {};
         std::function<std::optional<std::string>(const std::string&)> validator = {};
@@ -33,7 +34,7 @@ public:
             .text = std::move(props.value),.layout = props.layout,
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .on_change = std::move(props.on_change),.placeholder = std::move(props.placeholder),
-            .disabled = props.disabled,.button_size = props.size,.text_field_variant = props.variant,.form_default_value = props.default_value.value_or(props.value),
+            .disabled = props.disabled,.read_only = props.read_only,.button_size = props.size,.text_field_variant = props.variant,.form_default_value = props.default_value.value_or(props.value),
             .form_validator = [validator = std::move(props.validator)](const FormValue& value)
                 -> std::optional<std::string> {
                 if (validator) return validator(std::get<std::string>(value));

@@ -10,18 +10,18 @@ using namespace terion;
 TEST(MarkdownView, RendersHeadingsListsCodeAndLinks)
 {
     const auto lines = MarkdownView::render("# Heading\n- **bold** item\n> quote\n```cpp\nint x;\n```\n[site](https://example.org)");
-    ASSERT_EQ(lines.size(),7u);
+    ASSERT_EQ(lines.size(),5u);
     EXPECT_EQ(lines[0][1].text,"Heading");
     EXPECT_TRUE(lines[0][1].bold);
     EXPECT_EQ(lines[1][0].text,"  • ");
     EXPECT_EQ(lines[1][1].text,"bold");
     EXPECT_TRUE(lines[1][1].bold);
     EXPECT_EQ(lines[2][0].text,"│ ");
-    EXPECT_EQ(lines[4][0].text,"  ");
-    EXPECT_EQ(lines[4][1].text,"int");
-    EXPECT_EQ(lines[4][1].color,ColorVariant::Primary);
-    EXPECT_EQ(lines[6][0].text,"site");
-    EXPECT_EQ(lines[6][0].color,ColorVariant::Primary);
+    EXPECT_EQ(lines[3][0].text,"  ");
+    EXPECT_EQ(lines[3][1].text,"int");
+    EXPECT_EQ(lines[3][1].color,ColorVariant::Primary);
+    EXPECT_EQ(lines[4][0].text,"site");
+    EXPECT_EQ(lines[4][0].color,ColorVariant::Primary);
 }
 
 TEST(MarkdownView, HandlesBlankLinesAndWindowsNewlines)
@@ -52,8 +52,14 @@ TEST(DiffView, RecognizesHeadersWithoutConfusingWithChanges)
     ASSERT_EQ(lines.size(),5u);
     EXPECT_EQ(lines[0][0].color,ColorVariant::Primary);
     EXPECT_EQ(lines[1][0].color,ColorVariant::Primary);
-    EXPECT_EQ(lines[3][0].color,ColorVariant::Error);
-    EXPECT_EQ(lines[4][0].color,ColorVariant::Success);
+    ASSERT_EQ(lines[3].size(),2u);
+    ASSERT_EQ(lines[4].size(),2u);
+    EXPECT_EQ(lines[3][0].color,ColorVariant::Info);
+    EXPECT_EQ(lines[3][1].text,"-old");
+    EXPECT_EQ(lines[3][1].color,ColorVariant::Error);
+    EXPECT_EQ(lines[4][0].color,ColorVariant::Info);
+    EXPECT_EQ(lines[4][1].text,"+new");
+    EXPECT_EQ(lines[4][1].color,ColorVariant::Success);
 }
 
 TEST(TextViews, RenderThroughVirtualList)
@@ -84,7 +90,9 @@ TEST(MarkdownView, WrapsUtf8WithoutSplittingStyledSpans)
     EXPECT_EQ(lines[0][0].text,"  • ");
     EXPECT_TRUE(lines[0][1].bold);
     EXPECT_EQ(lines[0][1].text,"Polska");
-    EXPECT_EQ(lines[1][0].text,"    ");
+    ASSERT_FALSE(lines[1].empty());
+    EXPECT_EQ(lines[1][0].text.substr(0,4),"    ");
+    EXPECT_NE(lines[1][0].text.find("Warszawa"),std::string::npos);
     for (const auto& line : lines)
         for (const auto& span : line)
             EXPECT_TRUE(isValidUtf8(span.text));
@@ -93,12 +101,14 @@ TEST(MarkdownView, WrapsUtf8WithoutSplittingStyledSpans)
 TEST(MarkdownView, ColorsKeywordsStringsAndComments)
 {
     const auto lines = MarkdownView::render("```cpp\nint x = 42; // note\n```\n");
-    ASSERT_EQ(lines.size(),3u);
-    EXPECT_EQ(lines[1][1].text,"int");
-    EXPECT_EQ(lines[1][1].color,ColorVariant::Primary);
+    ASSERT_EQ(lines.size(),1u);
+    ASSERT_GE(lines[0].size(),2u);
+    EXPECT_EQ(lines[0][0].text,"  ");
+    EXPECT_EQ(lines[0][1].text,"int");
+    EXPECT_EQ(lines[0][1].color,ColorVariant::Primary);
     bool saw_number = false;
     bool saw_comment = false;
-    for (const auto& span : lines[1])
+    for (const auto& span : lines[0])
     {
         if (span.text == "42" && span.color == ColorVariant::Warning) saw_number = true;
         if (span.text == "// note" && span.color == ColorVariant::Success) saw_comment = true;
@@ -156,9 +166,11 @@ TEST(MarkdownView, NestedListIndentationAndWrapping)
 TEST(MarkdownView, FencedCodeKeepsSyntaxHighlighting)
 {
     const auto lines = MarkdownView::render("```cpp\nconst int n = 12;\n```",60);
-    ASSERT_EQ(lines.size(),3u);
-    EXPECT_EQ(lines[1][1].text,"const");
-    EXPECT_EQ(lines[1][1].color,ColorVariant::Primary);
+    ASSERT_EQ(lines.size(),1u);
+    ASSERT_GE(lines[0].size(),2u);
+    EXPECT_EQ(lines[0][0].text,"  ");
+    EXPECT_EQ(lines[0][1].text,"const");
+    EXPECT_EQ(lines[0][1].color,ColorVariant::Primary);
 }
 
 TEST(MarkdownView, ReflowsOnResizeWithoutLosingContent)
@@ -177,4 +189,16 @@ TEST(MarkdownView, ReflowsOnResizeWithoutLosingContent)
     view.root()->paint(narrow_painter);
     EXPECT_EQ(narrow.at(0,0).grapheme,"f");
     EXPECT_EQ(narrow.at(0,1).grapheme,"w");
+}
+
+TEST(MarkdownView, HidesFencesAndHighlightsCodeInPreview)
+{
+    const auto lines = MarkdownView::render("```cpp\nint main() {}\n```\n```python\nprint(42)\n```");
+    ASSERT_EQ(lines.size(),2u);
+    EXPECT_EQ(lines[0][0].text,"  ");
+    EXPECT_EQ(lines[0][1].text,"int");
+    EXPECT_EQ(lines[0][1].color,ColorVariant::Primary);
+    for (const auto& line : lines)
+        for (const auto& span : line)
+            EXPECT_EQ(span.text.find("```"),std::string::npos);
 }

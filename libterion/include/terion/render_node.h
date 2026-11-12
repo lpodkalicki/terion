@@ -110,6 +110,7 @@ public:
     void setCursorFromX(int x);
     void setTextCursor(Point position);
     void extendTextAreaSelection(Point position);
+    void extendTextFieldSelection(Point position);
     void paintTextArea(Painter& painter, std::string_view focused_id, const Theme* theme) const;
     bool scrollTextArea(int rows);
     [[nodiscard]] bool selectOpen() const noexcept
@@ -208,6 +209,21 @@ private:
     std::function<void(ComponentEvent&)> on_event_;
     std::function<void(std::string)> on_change_;
     std::string placeholder_;
+    struct EditSnapshot
+    {
+        std::string text;
+        std::size_t cursor = 0;
+        std::size_t anchor = 0;
+        bool selected = false;
+    };
+    enum class EditKind { None, Typing, Backspace, Delete, Other };
+    std::vector<EditSnapshot> undo_stack_;
+    std::vector<EditSnapshot> redo_stack_;
+    EditKind edit_kind_ = EditKind::None;
+    std::size_t last_edit_cursor_ = 0;
+    static constexpr std::size_t max_history_ = 128;
+    void recordEdit(EditKind kind);
+    bool restoreEdit(bool redo);
     std::size_t cursor_byte_ = 0;
     std::size_t selection_anchor_ = 0;
     bool selection_active_ = false;

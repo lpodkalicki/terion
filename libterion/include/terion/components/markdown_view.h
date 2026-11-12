@@ -200,7 +200,7 @@ private:
                     fenced = !fenced;
                     fence_marker = fenced ? marker : std::string{};
                     language = fenced ? std::string(trim(trimmed.substr(3))) : std::string{};
-                    emit({{.text = std::string(trimmed),.color = ColorVariant::Info}},i);
+                    // Fence delimiters are Markdown syntax, not visible preview text.
                     continue;
                 }
             }

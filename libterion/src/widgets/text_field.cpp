@@ -5,6 +5,7 @@
 #include <terion/render_node.h>
 #include <terion/utf8.h>
 #include <terion/text_editor_core.h>
+#include <terion/clipboard.h>
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -15,6 +16,39 @@ using namespace terion;
 using terion::detail::previousBoundary;
 using terion::detail::nextBoundary;
 using terion::detail::encodeUtf8;
+
+void RenderNode::recordEdit(EditKind kind)
+{
+    const bool merge = kind != EditKind::Other && kind != EditKind::None &&
+        kind == edit_kind_ && cursor_byte_ == last_edit_cursor_ &&
+        !selection_active_ && !undo_stack_.empty();
+    if (!merge)
+    {
+        if (undo_stack_.size() >= max_history_) undo_stack_.erase(undo_stack_.begin());
+        undo_stack_.push_back({text_,cursor_byte_,selection_anchor_,selection_active_});
+    }
+    redo_stack_.clear();
+    edit_kind_ = kind;
+}
+
+bool RenderNode::restoreEdit(bool redo)
+{
+    auto& source = redo ? redo_stack_ : undo_stack_;
+    auto& destination = redo ? undo_stack_ : redo_stack_;
+    edit_kind_ = EditKind::None;
+    if (source.empty()) return true;
+    if (destination.size() >= max_history_) destination.erase(destination.begin());
+    destination.push_back({text_,cursor_byte_,selection_anchor_,selection_active_});
+    auto state = std::move(source.back());
+    source.pop_back();
+    text_ = std::move(state.text);
+    cursor_byte_ = state.cursor;
+    selection_anchor_ = state.anchor;
+    selection_active_ = state.selected;
+    text_area_preferred_column_ = -1;
+    if (on_change_) on_change_(text_);
+    return true;
+}
 
 bool RenderNode::handleTextInput(const Event& event)
 {
@@ -31,11 +65,13 @@ bool RenderNode::handleTextInput(const Event& event)
         const double delta = event.key == Key::Up ? number_step_ : -number_step_;
         const double next = std::clamp(current+delta,number_min_,number_max_);
         if (!std::isfinite(next)) return true;
+        recordEdit(EditKind::Other);
         text_ = std::to_string(next);
         while (text_.find('.') != std::string::npos && text_.back() == '0') text_.pop_back();
         if (!text_.empty() && text_.back() == '.') text_.pop_back();
         cursor_byte_ = text_.size();
         selection_active_ = false;
+        last_edit_cursor_ = cursor_byte_;
         if (on_change_) on_change_(text_);
         return true;
     }
@@ -50,20 +86,59 @@ bool RenderNode::handleTextInput(const Event& event)
         return true;
     };
     const auto move_cursor = [&](std::size_t new_cursor) {
-        if (multiline && event.shift)
+        if (event.shift)
         {
             if (!selection_active_) selection_anchor_ = cursor_byte_;
             selection_active_ = true;
         }
         else selection_active_ = false;
+        edit_kind_ = EditKind::None;
         cursor_byte_ = new_cursor;
     };
+    if (event.ctrl && !event.alt && event.key == Key::Character &&
+        (event.character == U'z' || event.character == U'Z' ||
+         event.character == U'y' || event.character == U'Y'))
+    {
+        if (read_only_) return true;
+        const bool redo = event.character == U'y' || event.character == U'Y' || event.shift;
+        return restoreEdit(redo);
+    }
     if (event.ctrl && event.key == Key::Character && (event.character == U'a' || event.character == U'A'))
     {
+        edit_kind_ = EditKind::None;
         selection_anchor_ = 0;
         cursor_byte_ = text_.size();
         selection_active_ = true;
         return true;
+    }
+    // Clipboard shortcuts operate on UTF-8 byte boundaries maintained by the editor.
+    // Never export PasswordField contents, even when the password is revealed.
+    if (event.ctrl && !event.alt && event.key == Key::Character)
+    {
+        const auto ch = event.character;
+        if (ch == U'c' || ch == U'C' || ch == U'x' || ch == U'X')
+        {
+            if (type_ == Component::Type::PasswordField) return true;
+            if (selection_active_ && selection_anchor_ != cursor_byte_)
+            {
+                const auto begin = std::min(selection_anchor_,cursor_byte_);
+                const auto end = std::max(selection_anchor_,cursor_byte_);
+                Clipboard::set(std::string_view(text_).substr(begin,end-begin));
+                if ((ch == U'x' || ch == U'X') && !read_only_)
+                {
+                    recordEdit(EditKind::Other);
+                    (void)remove_selection();
+                    last_edit_cursor_ = cursor_byte_;
+            if (on_change_) on_change_(text_);
+                }
+            }
+            return true;
+        }
+        if (ch == U'v' || ch == U'V')
+        {
+            Event paste {.key = Key::Paste,.text = Clipboard::get()};
+            return handleTextInput(paste);
+        }
     }
     if (multiline && (event.key == Key::Up || event.key == Key::Down))
     {
@@ -115,10 +190,12 @@ bool RenderNode::handleTextInput(const Event& event)
     if (multiline && event.key == Key::Enter)
     {
         if (read_only_) return true;
+        recordEdit(EditKind::Other);
         (void)remove_selection();
         text_.insert(cursor_byte_,1,'\n');
         ++cursor_byte_;
-        if (on_change_) on_change_(text_);
+        last_edit_cursor_ = cursor_byte_;
+            if (on_change_) on_change_(text_);
         return true;
     }
     if (multiline && event.key == Key::PageUp)
@@ -171,9 +248,11 @@ bool RenderNode::handleTextInput(const Event& event)
             if (read_only_) return true;
             const auto sanitized = detail::sanitizePaste(event.text,multiline);
             if (sanitized.empty()) return true;
+            recordEdit(EditKind::Other);
             (void)remove_selection();
             text_.insert(cursor_byte_,sanitized);
             cursor_byte_ += sanitized.size();
+            last_edit_cursor_ = cursor_byte_;
             if (on_change_) on_change_(text_);
             return true;
         }
@@ -184,6 +263,8 @@ bool RenderNode::handleTextInput(const Event& event)
         case Key::Backspace:
         {
             if (read_only_) return true;
+            if ((!selection_active_ || selection_anchor_ == cursor_byte_) && cursor_byte_ == 0) return true;
+            recordEdit(selection_active_ && selection_anchor_ != cursor_byte_ ? EditKind::Other : EditKind::Backspace);
             if (!remove_selection())
             {
                 if (cursor_byte_ == 0) return true;
@@ -191,17 +272,21 @@ bool RenderNode::handleTextInput(const Event& event)
                 text_.erase(previous,cursor_byte_-previous);
                 cursor_byte_ = previous;
             }
+            last_edit_cursor_ = cursor_byte_;
             if (on_change_) on_change_(text_);
             return true;
         }
         case Key::Delete:
         {
             if (read_only_) return true;
+            if ((!selection_active_ || selection_anchor_ == cursor_byte_) && cursor_byte_ == text_.size()) return true;
+            recordEdit(selection_active_ && selection_anchor_ != cursor_byte_ ? EditKind::Other : EditKind::Delete);
             if (!remove_selection())
             {
                 if (cursor_byte_ == text_.size()) return true;
                 text_.erase(cursor_byte_,detail::nextBoundary(text_,cursor_byte_)-cursor_byte_);
             }
+            last_edit_cursor_ = cursor_byte_;
             if (on_change_) on_change_(text_);
             return true;
         }
@@ -210,9 +295,11 @@ bool RenderNode::handleTextInput(const Event& event)
             if (event.character < 32 || event.character == 127 || event.ctrl || event.alt) return false;
             if (read_only_) return true;
             const auto encoded = encodeUtf8(event.character);
+            recordEdit(selection_active_ && selection_anchor_ != cursor_byte_ ? EditKind::Other : EditKind::Typing);
             (void)remove_selection();
             text_.insert(cursor_byte_,encoded);
             cursor_byte_ += encoded.size();
+            last_edit_cursor_ = cursor_byte_;
             if (on_change_) on_change_(text_);
             return true;
         }
@@ -236,4 +323,14 @@ void RenderNode::setCursorFromX(const int x)
         columns += masked ? 1 : codePointWidth(decoded.code_point);
         cursor_byte_ += decoded.bytes;
     }
+}
+
+void RenderNode::extendTextFieldSelection(const Point position)
+{
+    if ((type_ != Component::Type::TextField && type_ != Component::Type::NumberField &&
+        type_ != Component::Type::PasswordField) || disabled_) return;
+    const auto previous = cursor_byte_;
+    if (!selection_active_) selection_anchor_ = previous;
+    setCursorFromX(position.x);
+    selection_active_ = selection_anchor_ != cursor_byte_;
 }

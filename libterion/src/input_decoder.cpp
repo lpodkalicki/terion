@@ -33,9 +33,7 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
                 }
                 for (std::size_t i = 0; i < end_marker.size(); ++i) bytes_.pop_front();
                 pasting_ = false;
-                // A TextField is single-line: paste content is normalized once, atomically.
-                for (char& c : paste_buffer_)
-                    if (c == '\r' || c == '\n' || c == '\t') c = ' ';
+                // Preserve multiline paste. Individual editors sanitize their own input.
                 Event event{.key = Key::Paste,.text = std::move(paste_buffer_)};
                 paste_buffer_.clear();
                 return event;

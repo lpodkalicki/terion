@@ -68,3 +68,17 @@ TEST(TextArea, MouseDragSelectsAcrossLinesAndUnicode)
     EXPECT_EQ(buffer.at(1,2).style.background,Theme::dark().palette.primary);
     EXPECT_NE(buffer.at(7,2).style.background,Theme::dark().palette.primary);
 }
+
+TEST(TextArea, ShiftArrowsExtendSelectionAndCopyUtf8)
+{
+    Clipboard::clear();
+    Reconciler reconciler;
+    reconciler.update(TextArea({.value = "ażół",.key = "editor"}));
+    auto* node = reconciler.root();
+    ASSERT_TRUE(node->handleTextInput({.key = Key::End}));
+    ASSERT_TRUE(node->handleTextInput({.key = Key::Left,.shift = true}));
+    ASSERT_TRUE(node->handleTextInput({.key = Key::Left,.shift = true}));
+    ASSERT_TRUE(node->handleTextInput({.key = Key::Character,.character = U'c',.ctrl = true}));
+    EXPECT_EQ(Clipboard::get(),"ół");
+    Clipboard::clear();
+}

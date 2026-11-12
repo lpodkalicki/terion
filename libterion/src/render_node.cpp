@@ -2322,6 +2322,29 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             masked ? std::string_view(mask_text) : std::string_view(text_);
         painter.text(bounds_.x+inset,bounds_.y+bounds_.height/2,
             clipWindow(display,scroll_columns_,columns),content_style);
+        if (focused && columns > 0 && selection_active_ && selection_anchor_ != cursor_byte_)
+        {
+            const auto lower = std::min(selection_anchor_,cursor_byte_);
+            const auto upper = std::max(selection_anchor_,cursor_byte_);
+            int column = 0;
+            for (std::size_t i = 0; i < text_.size();)
+            {
+                const auto decoded = decodeUtf8(text_,i);
+                if (!decoded.bytes) break;
+                const int glyph_width = masked ? 1 : codePointWidth(decoded.code_point);
+                if (i >= lower && i < upper && column >= scroll_columns_ &&
+                    column + glyph_width <= scroll_columns_ + columns)
+                {
+                    const TextStyle highlight {.foreground = palette.on_primary,
+                        .background = palette.primary};
+                    for (int x = 0; x < glyph_width; ++x)
+                        painter.styleAt(bounds_.x+inset+column-scroll_columns_+x,
+                            bounds_.y+bounds_.height/2,highlight);
+                }
+                column += glyph_width;
+                i += decoded.bytes;
+            }
+        }
         if (focused && columns > 0)
         {
             TextStyle caret_style = field_style;

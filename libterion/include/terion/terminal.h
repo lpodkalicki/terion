@@ -135,6 +135,9 @@ public:
     [[nodiscard]] virtual Size size() const = 0;
     virtual void write(std::string_view bytes) = 0;
     virtual void flush() = 0;
+    // OSC 52 is write-only and may be ignored by terminal/security settings.
+    // No-op for headless/custom backends unless explicitly implemented.
+    virtual void copyToSystemClipboard(std::string_view) {}
     virtual std::optional<Event> pollEvent() = 0;
     [[nodiscard]] virtual TerminalCapabilities capabilities() const { return {}; }
 
@@ -188,6 +191,7 @@ public:
     [[nodiscard]] TerminalCapabilities capabilities() const override { return capabilities_; }
     void write(std::string_view bytes) override;
     void flush() override;
+    void copyToSystemClipboard(std::string_view text) override;
     std::optional<Event> pollEvent() override;
     void setMousePointerShape(MousePointerShape shape) override;
 

@@ -6,6 +6,7 @@
 #define TERION_TERION_H
 
 #include <terion/application.h>
+#include <terion/clipboard.h>
 #include <terion/component.h>
 #include <terion/hooks.h>
 #include <terion/context.h>

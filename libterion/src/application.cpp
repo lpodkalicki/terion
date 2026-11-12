@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <charconv>
 #include <terion/application.h>
+#include <terion/clipboard.h>
 #include <terion/theme_provider.h>
 
 using namespace terion;
@@ -350,7 +351,9 @@ bool Application::handleMouse(const MouseEvent& mouse)
             if (component_ && reconciler_.root())
                 if (auto* target = reconciler_.root()->findById(text_selection_drag_id_))
                 {
-                    target->extendTextAreaSelection(mouse.position);
+                    if (target->type() == Component::Type::TextArea)
+                        target->extendTextAreaSelection(mouse.position);
+                    else target->extendTextFieldSelection(mouse.position);
                     return true;
                 }
             text_selection_drag_id_ = 0;
@@ -492,8 +495,7 @@ bool Application::handleMouse(const MouseEvent& mouse)
             hit->type() == Component::Type::TextArea))
         {
             hit->setTextCursor(mouse.position);
-            if (hit->type() == Component::Type::TextArea)
-                text_selection_drag_id_ = hit->id();
+            text_selection_drag_id_ = hit->id();
             pressed_button_id_.clear();
         }
         if (hit && hit->sliderInteractive())
@@ -617,6 +619,9 @@ void Application::updateMousePointer(const MouseEvent& mouse)
 
 bool Application::dispatchEvent(const Event& event)
 {
+    Clipboard::ScopedWriter clipboard_writer([this](std::string_view text) {
+        backend_->copyToSystemClipboard(text);
+    });
     if (event.key == Key::Resize) renderer_.invalidate();
     invalidate();
     if (component_ && reconciler_.root() && event.key != Key::Resize)

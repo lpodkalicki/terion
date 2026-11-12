@@ -49,7 +49,7 @@ TEST(InputDecoder, BracketedPasteIsAtomicAndNormalizesNewlines)
     const auto pasted = decoder.nextEvent();
     ASSERT_TRUE(pasted.has_value());
     EXPECT_EQ(pasted->key,Key::Paste);
-    EXPECT_EQ(pasted->text,"first second");
+    EXPECT_EQ(pasted->text,"first\nsecond");
     ASSERT_TRUE(decoder.nextEvent().has_value());
     EXPECT_EQ(decoder.nextEvent(),std::nullopt);
 }

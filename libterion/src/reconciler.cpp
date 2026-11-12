@@ -312,6 +312,14 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         node->progress_indeterminate_ != props.progress_indeterminate ||
         node->slider_min_ != props.slider_min || node->slider_max_ != props.slider_max ||
         node->slider_step_ != props.slider_step;
+    if (message_changed && !created &&
+        (props.type == Component::Type::TextArea || props.type == Component::Type::TextField ||
+         props.type == Component::Type::NumberField || props.type == Component::Type::PasswordField))
+    {
+        node->undo_stack_.clear();
+        node->redo_stack_.clear();
+        node->edit_kind_ = RenderNode::EditKind::None;
+    }
     node->text_ = props.text;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
