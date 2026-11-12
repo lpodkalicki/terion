@@ -105,6 +105,9 @@ public:
     [[nodiscard]] bool editable() const noexcept { return static_cast<bool>(on_change_) && !disabled_; }
     bool handleTextInput(const Event& event);
     void setCursorFromX(int x);
+    void setTextCursor(Point position);
+    void paintTextArea(Painter& painter, std::string_view focused_id, const Theme* theme) const;
+    bool scrollTextArea(int rows);
     [[nodiscard]] bool selectOpen() const noexcept
     {
         return (type_ == Component::Type::Select || type_ == Component::Type::DropdownMenu ||
@@ -193,6 +196,13 @@ private:
     std::function<void(std::string)> on_change_;
     std::string placeholder_;
     std::size_t cursor_byte_ = 0;
+    std::size_t selection_anchor_ = 0;
+    bool selection_active_ = false;
+    int text_area_min_rows_ = 4;
+    bool read_only_ = false;
+    mutable int text_area_first_row_ = 0;
+    mutable int text_area_first_column_ = 0;
+    int text_area_preferred_column_ = -1;
     mutable int scroll_columns_ = 0;
     ScrollController scroll_{};
     bool scrollbar_visible_ = true;

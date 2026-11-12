@@ -140,6 +140,7 @@ public:
         Radio,
         RadioGroup,
         TextField,
+        TextArea,
         Select,
         DropdownMenu,
         ContextMenu,
@@ -184,6 +185,8 @@ public:
         std::function<void(std::string)> on_change = {};
         std::string placeholder = {};
         bool disabled = false;
+        bool read_only = false;
+        int text_area_min_rows = 4;
         std::optional<BorderStyle> border = std::nullopt;
         std::optional<Color> background = std::nullopt;
         ButtonVariant button_variant = ButtonVariant::Outlined;

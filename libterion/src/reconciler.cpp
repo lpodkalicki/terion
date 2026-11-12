@@ -323,6 +323,8 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->button_size_ = props.button_size;
     node->checkbox_variant_ = props.checkbox_variant;
     node->text_field_variant_ = props.text_field_variant;
+    node->text_area_min_rows_ = std::max(1,props.text_area_min_rows);
+    node->read_only_ = props.read_only;
     node->scroll_.setRequestedOffset(props.scroll_offset);
     node->on_scroll_ = props.on_scroll;
     node->scrollbar_visible_ = props.scrollbar_visible;

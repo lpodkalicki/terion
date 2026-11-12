@@ -204,7 +204,8 @@ void Application::syncFocusTargets()
             },scope);
             component_focus_ids_.push_back(id);
         }
-        else if (node.type() == Component::Type::TextField && node.editable())
+        else if ((node.type() == Component::Type::TextField ||
+            node.type() == Component::Type::TextArea) && !node.disabled())
         {
             const auto id = std::to_string(node.id());
             focus_.add(id,[&node](const Event& event) { return node.handleTextInput(event); },scope);
@@ -399,6 +400,9 @@ bool Application::handleMouse(const MouseEvent& mouse)
     }
     if (mouse.action == MouseAction::Scroll && component_ && reconciler_.root())
     {
+        if (auto* hit = reconciler_.root()->hitTest(mouse.position);
+            hit && hit->type() == Component::Type::TextArea)
+            return hit->scrollTextArea(-mouse.scroll_y*3);
         if (auto* target = reconciler_.root()->scrollTarget(mouse.position))
             return target->scrollBy(-mouse.scroll_y * 3);
     }
@@ -423,7 +427,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
     if (hit && !(((hit->type() == Component::Type::Select ||
         hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
         (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
-        (hit->type() == Component::Type::TextField && hit->editable()) ||
+        ((hit->type() == Component::Type::TextField ||
+            hit->type() == Component::Type::TextArea) && !hit->disabled()) ||
         (hit->type() == Component::Type::Tabs && !hit->disabled()) ||
         ((hit->type() == Component::Type::Table || hit->type() == Component::Type::TreeView) &&
             !hit->disabled()) ||
@@ -449,9 +454,10 @@ bool Application::handleMouse(const MouseEvent& mouse)
                 return true;
             }
         }
-        if (hit && hit->type() == Component::Type::TextField)
+        if (hit && (hit->type() == Component::Type::TextField ||
+            hit->type() == Component::Type::TextArea))
         {
-            hit->setCursorFromX(mouse.position.x);
+            hit->setTextCursor(mouse.position);
             pressed_button_id_.clear();
         }
         if (hit && hit->sliderInteractive())
@@ -509,7 +515,8 @@ void Application::updateHover(const MouseEvent& mouse)
                 if (((hit->type() == Component::Type::Select ||
                     hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
                     (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
-                    (hit->type() == Component::Type::TextField && hit->editable()) ||
+                    ((hit->type() == Component::Type::TextField ||
+            hit->type() == Component::Type::TextArea) && !hit->disabled()) ||
                     hit->interactiveControl() || hit->sliderInteractive() ||
                     (hit->type() == Component::Type::Tabs && !hit->disabled()))
                     hovered = std::to_string(hit->id());
@@ -544,7 +551,8 @@ void Application::updateMousePointer(const MouseEvent& mouse)
         {
             if (const auto* hit = root->hitTest(mouse.position))
             {
-                if (hit->type() == Component::Type::TextField || hit->type() == Component::Type::Text)
+                if (hit->type() == Component::Type::TextField ||
+                    hit->type() == Component::Type::TextArea || hit->type() == Component::Type::Text)
                     shape = MousePointerShape::Text;
                 else if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
                     ((hit->type() == Component::Type::Select ||

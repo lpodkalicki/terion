@@ -4,125 +4,171 @@
 
 #include <terion/render_node.h>
 #include <terion/utf8.h>
+#include <terion/text_editor_core.h>
 #include <algorithm>
 
 using namespace terion;
 
-namespace {
-
-std::size_t previousCodepoint(const std::string_view text, const std::size_t cursor)
-{
-    std::size_t previous = 0;
-    for (std::size_t i = 0; i < cursor;)
-    {
-        const auto decoded = decodeUtf8(text,i);
-        if (!decoded.bytes || i + decoded.bytes >= cursor) return i;
-        previous = i;
-        i += decoded.bytes;
-    }
-    return previous;
-}
-
-std::size_t nextCodepoint(const std::string_view text, const std::size_t cursor)
-{
-    if (cursor >= text.size()) return text.size();
-    const auto decoded = decodeUtf8(text,cursor);
-    return std::min(text.size(),cursor + std::max<std::size_t>(1,decoded.bytes));
-}
-
-std::size_t previousBoundary(const std::string_view text, const std::size_t cursor)
-{
-    std::size_t start = previousCodepoint(text,cursor);
-    while (start > 0 && codePointWidth(decodeUtf8(text,start).code_point) == 0)
-        start = previousCodepoint(text,start);
-    return start;
-}
-
-std::size_t nextBoundary(const std::string_view text, const std::size_t cursor)
-{
-    std::size_t end = nextCodepoint(text,cursor);
-    while (end < text.size() && codePointWidth(decodeUtf8(text,end).code_point) == 0)
-        end = nextCodepoint(text,end);
-    return end;
-}
-
-std::string encodeUtf8(const char32_t code_point)
-{
-    const char32_t c = code_point > 0x10FFFF || (code_point >= 0xD800 && code_point <= 0xDFFF) ? 0xFFFD : code_point;
-    std::string result;
-    if (c < 0x80) result += static_cast<char>(c);
-    else if (c < 0x800)
-    {
-        result += static_cast<char>(0xC0 | (c >> 6));
-        result += static_cast<char>(0x80 | (c & 0x3F));
-    }
-    else if (c < 0x10000)
-    {
-        result += static_cast<char>(0xE0 | (c >> 12));
-        result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
-        result += static_cast<char>(0x80 | (c & 0x3F));
-    }
-    else
-    {
-        result += static_cast<char>(0xF0 | (c >> 18));
-        result += static_cast<char>(0x80 | ((c >> 12) & 0x3F));
-        result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
-        result += static_cast<char>(0x80 | (c & 0x3F));
-    }
-    return result;
-}
-
-} /* End of anonymous namespace */
+using terion::detail::previousBoundary;
+using terion::detail::nextBoundary;
+using terion::detail::encodeUtf8;
 
 bool RenderNode::handleTextInput(const Event& event)
 {
-    if (type_ != Component::Type::TextField || !editable()) return false;
+    if (type_ != Component::Type::TextField && type_ != Component::Type::TextArea) return false;
+    if (disabled_) return false;
+    const bool multiline = type_ == Component::Type::TextArea;
+    const auto remove_selection = [&]() {
+        if (!selection_active_ || selection_anchor_ == cursor_byte_) return false;
+        const auto start = std::min(selection_anchor_,cursor_byte_);
+        const auto end = std::max(selection_anchor_,cursor_byte_);
+        text_.erase(start,end-start);
+        cursor_byte_ = start;
+        selection_active_ = false;
+        return true;
+    };
+    const auto move_cursor = [&](std::size_t new_cursor) {
+        if (multiline && event.shift)
+        {
+            if (!selection_active_) selection_anchor_ = cursor_byte_;
+            selection_active_ = true;
+        }
+        else selection_active_ = false;
+        cursor_byte_ = new_cursor;
+    };
+    if (event.ctrl && event.key == Key::Character && (event.character == U'a' || event.character == U'A'))
+    {
+        selection_anchor_ = 0;
+        cursor_byte_ = text_.size();
+        selection_active_ = true;
+        return true;
+    }
+    if (multiline && (event.key == Key::Up || event.key == Key::Down))
+    {
+        const std::size_t start = text_.rfind('\n',cursor_byte_ == 0 ? 0 : cursor_byte_-1);
+        const std::size_t line_begin = start == std::string::npos ? 0 : start+1;
+        const std::size_t ending = text_.find('\n',cursor_byte_);
+        const std::size_t line_end = ending == std::string::npos ? text_.size() : ending;
+        if (text_area_preferred_column_ < 0)
+            {
+                int column = 0;
+                for (std::size_t i = line_begin; i < cursor_byte_;)
+                {
+                    const auto decoded = decodeUtf8(text_,i);
+                    if (!decoded.bytes) break;
+                    column += codePointWidth(decoded.code_point);
+                    i += decoded.bytes;
+                }
+                text_area_preferred_column_ = column;
+            }
+        std::size_t target_begin = line_begin;
+        std::size_t target_end = line_end;
+        if (event.key == Key::Up)
+        {
+            if (line_begin == 0) { move_cursor(0); return true; }
+            const auto previous = text_.rfind('\n',line_begin-2);
+            target_begin = previous == std::string::npos ? 0 : previous+1;
+            target_end = line_begin-1;
+        }
+        else
+        {
+            if (line_end == text_.size()) { move_cursor(text_.size()); return true; }
+            target_begin = line_end+1;
+            target_end = text_.find('\n',target_begin);
+            if (target_end == std::string::npos) target_end = text_.size();
+        }
+        std::size_t target = target_begin;
+        int column = 0;
+        while (target < target_end)
+        {
+            const auto decoded = decodeUtf8(text_,target);
+            if (!decoded.bytes || column + codePointWidth(decoded.code_point) > text_area_preferred_column_) break;
+            column += codePointWidth(decoded.code_point);
+            target += decoded.bytes;
+        }
+        move_cursor(target);
+        return true;
+    }
+    if (event.key != Key::Up && event.key != Key::Down) text_area_preferred_column_ = -1;
+    if (multiline && event.key == Key::Enter)
+    {
+        if (read_only_) return true;
+        (void)remove_selection();
+        text_.insert(cursor_byte_,1,'\n');
+        ++cursor_byte_;
+        if (on_change_) on_change_(text_);
+        return true;
+    }
+    if (multiline && event.key == Key::PageUp)
+    {
+        (void)scrollTextArea(-std::max(1,bounds_.height-2));
+        return true;
+    }
+    if (multiline && event.key == Key::PageDown)
+    {
+        (void)scrollTextArea(std::max(1,bounds_.height-2));
+        return true;
+    }
+    if (multiline && (event.key == Key::Home || event.key == Key::End) && !event.ctrl)
+    {
+        const auto start = text_.rfind('\n',cursor_byte_ == 0 ? 0 : cursor_byte_-1);
+        const auto end = text_.find('\n',cursor_byte_);
+        move_cursor(event.key == Key::Home ? (start == std::string::npos ? 0 : start+1) :
+            (end == std::string::npos ? text_.size() : end));
+        return true;
+    }
     switch (event.key)
     {
         case Key::Paste:
         {
-            std::string sanitized;
-            for (std::size_t i = 0; i < event.text.size();)
-            {
-                const auto decoded = decodeUtf8(event.text,i);
-                if (!decoded.bytes) break;
-                if (decoded.code_point >= 32 && decoded.code_point != 127 &&
-                    decoded.code_point != 0xFFFD)
-                    sanitized.append(event.text,i,decoded.bytes);
-                i += decoded.bytes;
-            }
+            if (read_only_) return true;
+            const auto sanitized = detail::sanitizePaste(event.text,multiline);
+            if (sanitized.empty()) return true;
+            (void)remove_selection();
             text_.insert(cursor_byte_,sanitized);
             cursor_byte_ += sanitized.size();
-            if (!sanitized.empty() && on_change_) on_change_(text_);
+            if (on_change_) on_change_(text_);
             return true;
         }
-        case Key::Left: cursor_byte_ = previousBoundary(text_,cursor_byte_); return true;
-        case Key::Right: cursor_byte_ = nextBoundary(text_,cursor_byte_); return true;
-        case Key::Home: cursor_byte_ = 0; return true;
-        case Key::End: cursor_byte_ = text_.size(); return true;
+        case Key::Left: move_cursor(detail::previousBoundary(text_,cursor_byte_)); return true;
+        case Key::Right: move_cursor(detail::nextBoundary(text_,cursor_byte_)); return true;
+        case Key::Home: move_cursor(0); return true;
+        case Key::End: move_cursor(text_.size()); return true;
         case Key::Backspace:
-            if (cursor_byte_ == 0) return true;
+        {
+            if (read_only_) return true;
+            if (!remove_selection())
             {
-                const auto previous = previousBoundary(text_,cursor_byte_);
-                text_.erase(previous,cursor_byte_ - previous);
+                if (cursor_byte_ == 0) return true;
+                const auto previous = detail::previousBoundary(text_,cursor_byte_);
+                text_.erase(previous,cursor_byte_-previous);
                 cursor_byte_ = previous;
-                on_change_(text_);
-                return true;
             }
-        case Key::Delete:
-            if (cursor_byte_ == text_.size()) return true;
-            text_.erase(cursor_byte_,nextBoundary(text_,cursor_byte_) - cursor_byte_);
-            on_change_(text_);
+            if (on_change_) on_change_(text_);
             return true;
-        case Key::Character:
-            if (event.character < 32 || event.character == 127) return false;
+        }
+        case Key::Delete:
+        {
+            if (read_only_) return true;
+            if (!remove_selection())
             {
-                const auto encoded = encodeUtf8(event.character);
-                text_.insert(cursor_byte_,encoded);
-                cursor_byte_ += encoded.size();
-                on_change_(text_);
-                return true;
+                if (cursor_byte_ == text_.size()) return true;
+                text_.erase(cursor_byte_,detail::nextBoundary(text_,cursor_byte_)-cursor_byte_);
             }
+            if (on_change_) on_change_(text_);
+            return true;
+        }
+        case Key::Character:
+        {
+            if (event.character < 32 || event.character == 127 || event.ctrl || event.alt) return false;
+            if (read_only_) return true;
+            const auto encoded = encodeUtf8(event.character);
+            (void)remove_selection();
+            text_.insert(cursor_byte_,encoded);
+            cursor_byte_ += encoded.size();
+            if (on_change_) on_change_(text_);
+            return true;
+        }
         default: return false;
     }
 }

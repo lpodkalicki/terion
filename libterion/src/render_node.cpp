@@ -202,6 +202,10 @@ Size RenderNode::measure(const Constraints& constraints) const
                 textWidth(entry.item->label));
         content = {.width = width,.height = static_cast<int>(visible.size())};
     }
+    else if (type_ == Component::Type::TextArea)
+    {
+        content = {.width = 32,.height = text_area_min_rows_+2};
+    }
     else if (type_ == Component::Type::TextField || type_ == Component::Type::Select)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
@@ -350,7 +354,8 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
         type_ == Component::Type::Tabs || type_ == Component::Type::Table ||
         type_ == Component::Type::TreeView ||
-        type_ == Component::Type::TextField || type_ == Component::Type::Select ||
+        type_ == Component::Type::TextField || type_ == Component::Type::TextArea ||
+        type_ == Component::Type::Select ||
         type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress || type_ == Component::Type::Slider) return;
 
@@ -1534,8 +1539,9 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
         if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
         {
             dialog_pressed_child_ = child->id();
-            if (child->type() == Component::Type::TextField)
-                child->setCursorFromX(mouse.position.x);
+            if (child->type() == Component::Type::TextField ||
+                child->type() == Component::Type::TextArea)
+                child->setTextCursor(mouse.position);
             return true;
         }
         if (mouse.action == MouseAction::Release)
@@ -2047,6 +2053,11 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         painter.text(bounds_.x+2,bounds_.y+bounds_.height/2,clipText(label,std::max(0,bounds_.width-6)),label_style);
         if (bounds_.width >= 3) painter.put(bounds_.x+bounds_.width-3,bounds_.y+bounds_.height/2,
             select_open_ ? "▴" : "▾",style);
+        return;
+    }
+    if (type_ == Component::Type::TextArea)
+    {
+        paintTextArea(painter,focused_id,theme);
         return;
     }
     if (type_ == Component::Type::TextField)
