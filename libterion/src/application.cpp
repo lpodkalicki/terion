@@ -205,6 +205,8 @@ void Application::syncFocusTargets()
             component_focus_ids_.push_back(id);
         }
         else if ((node.type() == Component::Type::TextField ||
+            node.type() == Component::Type::NumberField ||
+            node.type() == Component::Type::PasswordField ||
             node.type() == Component::Type::TextArea) && !node.disabled())
         {
             const auto id = std::to_string(node.id());
@@ -428,6 +430,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
         hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
         (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
         ((hit->type() == Component::Type::TextField ||
+            hit->type() == Component::Type::NumberField ||
+            hit->type() == Component::Type::PasswordField ||
             hit->type() == Component::Type::TextArea) && !hit->disabled()) ||
         (hit->type() == Component::Type::Tabs && !hit->disabled()) ||
         ((hit->type() == Component::Type::Table || hit->type() == Component::Type::TreeView) &&
@@ -455,6 +459,8 @@ bool Application::handleMouse(const MouseEvent& mouse)
             }
         }
         if (hit && (hit->type() == Component::Type::TextField ||
+            hit->type() == Component::Type::NumberField ||
+            hit->type() == Component::Type::PasswordField ||
             hit->type() == Component::Type::TextArea))
         {
             hit->setTextCursor(mouse.position);
@@ -516,6 +522,8 @@ void Application::updateHover(const MouseEvent& mouse)
                     hit->type() == Component::Type::DropdownMenu) && !hit->disabled()) ||
                     (hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||
                     ((hit->type() == Component::Type::TextField ||
+            hit->type() == Component::Type::NumberField ||
+            hit->type() == Component::Type::PasswordField ||
             hit->type() == Component::Type::TextArea) && !hit->disabled()) ||
                     hit->interactiveControl() || hit->sliderInteractive() ||
                     (hit->type() == Component::Type::Tabs && !hit->disabled()))
@@ -552,6 +560,8 @@ void Application::updateMousePointer(const MouseEvent& mouse)
             if (const auto* hit = root->hitTest(mouse.position))
             {
                 if (hit->type() == Component::Type::TextField ||
+            hit->type() == Component::Type::NumberField ||
+            hit->type() == Component::Type::PasswordField ||
                     hit->type() == Component::Type::TextArea || hit->type() == Component::Type::Text)
                     shape = MousePointerShape::Text;
                 else if ((hit->type() == Component::Type::Button && !hit->disabled() && hit->onClick()) ||

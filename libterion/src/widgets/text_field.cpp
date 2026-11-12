@@ -6,6 +6,9 @@
 #include <terion/utf8.h>
 #include <terion/text_editor_core.h>
 #include <algorithm>
+#include <charconv>
+#include <cmath>
+#include <limits>
 
 using namespace terion;
 
@@ -15,8 +18,27 @@ using terion::detail::encodeUtf8;
 
 bool RenderNode::handleTextInput(const Event& event)
 {
-    if (type_ != Component::Type::TextField && type_ != Component::Type::TextArea) return false;
+    if (type_ != Component::Type::TextField && type_ != Component::Type::TextArea &&
+        type_ != Component::Type::NumberField && type_ != Component::Type::PasswordField) return false;
     if (disabled_) return false;
+    const bool number_field = type_ == Component::Type::NumberField;
+    if (number_field && (event.key == Key::Up || event.key == Key::Down))
+    {
+        if (read_only_) return true;
+        double current = 0.0;
+        const auto [end,err] = std::from_chars(text_.data(),text_.data()+text_.size(),current);
+        if (err != std::errc{} || end != text_.data()+text_.size() || !std::isfinite(current)) current = 0.0;
+        const double delta = event.key == Key::Up ? number_step_ : -number_step_;
+        const double next = std::clamp(current+delta,number_min_,number_max_);
+        if (!std::isfinite(next)) return true;
+        text_ = std::to_string(next);
+        while (text_.find('.') != std::string::npos && text_.back() == '0') text_.pop_back();
+        if (!text_.empty() && text_.back() == '.') text_.pop_back();
+        cursor_byte_ = text_.size();
+        selection_active_ = false;
+        if (on_change_) on_change_(text_);
+        return true;
+    }
     const bool multiline = type_ == Component::Type::TextArea;
     const auto remove_selection = [&]() {
         if (!selection_active_ || selection_anchor_ == cursor_byte_) return false;
@@ -117,6 +139,31 @@ bool RenderNode::handleTextInput(const Event& event)
             (end == std::string::npos ? text_.size() : end));
         return true;
     }
+    if (number_field && !read_only_ && (event.key == Key::Character || event.key == Key::Paste))
+    {
+        std::string inserted;
+        if (event.key == Key::Character)
+        {
+            if (event.ctrl || event.alt || event.character > 127) return true;
+            inserted = static_cast<char>(event.character);
+        }
+        else inserted = detail::sanitizePaste(event.text,false);
+        if (inserted.empty()) return true;
+        if (inserted.find_first_not_of("0123456789+-.eE") != std::string::npos) return true;
+        std::string candidate = text_;
+        const auto first = selection_active_ ? std::min(selection_anchor_,cursor_byte_) : cursor_byte_;
+        const auto last = selection_active_ ? std::max(selection_anchor_,cursor_byte_) : cursor_byte_;
+        candidate.replace(first,last-first,inserted);
+        const auto exponent = candidate.find_first_of("eE");
+        const auto significand = candidate.substr(0,exponent);
+        const bool valid_sign = significand.find_first_of("+-",1) == std::string::npos;
+        const bool valid_dot = significand.find('.') == significand.rfind('.');
+        const bool valid_exponent = exponent == std::string::npos ||
+            (candidate.find_first_of("eE",exponent+1) == std::string::npos &&
+             candidate.substr(exponent+1).find_first_of("+-",1) == std::string::npos &&
+             candidate.substr(exponent+1).find('.') == std::string::npos);
+        if (!valid_sign || !valid_dot || !valid_exponent) return true;
+    }
     switch (event.key)
     {
         case Key::Paste:
@@ -175,16 +222,18 @@ bool RenderNode::handleTextInput(const Event& event)
 
 void RenderNode::setCursorFromX(const int x)
 {
-    if (type_ != Component::Type::TextField) return;
+    if (type_ != Component::Type::TextField && type_ != Component::Type::PasswordField &&
+        type_ != Component::Type::NumberField) return;
     const int inset = text_field_variant_ == TextFieldVariant::Outlined ? 2 : 1;
     const int desired = std::max(0,x - bounds_.x - inset + scroll_columns_);
+    const bool masked = type_ == Component::Type::PasswordField && !password_reveal_;
     int columns = 0;
     cursor_byte_ = 0;
     while (cursor_byte_ < text_.size())
     {
         const auto decoded = decodeUtf8(text_,cursor_byte_);
-        if (!decoded.bytes || columns + codePointWidth(decoded.code_point) > desired) break;
-        columns += codePointWidth(decoded.code_point);
+        if (!decoded.bytes || columns + (masked ? 1 : codePointWidth(decoded.code_point)) > desired) break;
+        columns += masked ? 1 : codePointWidth(decoded.code_point);
         cursor_byte_ += decoded.bytes;
     }
 }

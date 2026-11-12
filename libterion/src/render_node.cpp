@@ -3,6 +3,7 @@
  */
 
 #include <terion/render_node.h>
+#include <terion/text_editor_core.h>
 #include <terion/utf8.h>
 #include <algorithm>
 #include <cmath>
@@ -206,7 +207,8 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         content = {.width = 32,.height = text_area_min_rows_+2};
     }
-    else if (type_ == Component::Type::TextField || type_ == Component::Type::Select)
+    else if (type_ == Component::Type::TextField || type_ == Component::Type::NumberField ||
+        type_ == Component::Type::PasswordField || type_ == Component::Type::Select)
     {
         const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
         int content_width = std::max(textWidth(text_),textWidth(placeholder_));
@@ -354,7 +356,8 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         type_ == Component::Type::Radio || type_ == Component::Type::RadioGroup ||
         type_ == Component::Type::Tabs || type_ == Component::Type::Table ||
         type_ == Component::Type::TreeView ||
-        type_ == Component::Type::TextField || type_ == Component::Type::TextArea ||
+        type_ == Component::Type::TextField || type_ == Component::Type::NumberField ||
+        type_ == Component::Type::PasswordField || type_ == Component::Type::TextArea ||
         type_ == Component::Type::Select ||
         type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress || type_ == Component::Type::Slider) return;
@@ -1540,6 +1543,8 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
         {
             dialog_pressed_child_ = child->id();
             if (child->type() == Component::Type::TextField ||
+                child->type() == Component::Type::NumberField ||
+                child->type() == Component::Type::PasswordField ||
                 child->type() == Component::Type::TextArea)
                 child->setTextCursor(mouse.position);
             return true;
@@ -2060,7 +2065,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         paintTextArea(painter,focused_id,theme);
         return;
     }
-    if (type_ == Component::Type::TextField)
+    if (type_ == Component::Type::TextField || type_ == Component::Type::NumberField ||
+        type_ == Component::Type::PasswordField)
     {
         if (bounds_.width <= 0 || bounds_.height <= 0) return;
         const Palette palette = theme ? theme->palette : Theme::dark().palette;
@@ -2094,11 +2100,28 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         }
         const int inset = outlined ? 2 : 1;
         const int columns = std::max(0,bounds_.width - inset * 2);
-        const int cursor_columns = textWidth(std::string_view(text_).substr(0,cursor_byte_));
+        const bool masked = type_ == Component::Type::PasswordField && !password_reveal_;
+        const int cursor_columns = masked ? static_cast<int>(std::count_if(text_.begin(),
+            text_.begin()+static_cast<std::ptrdiff_t>(std::min(cursor_byte_,text_.size())),
+            [](unsigned char byte) { return (byte & 0xC0) != 0x80; })) :
+            textWidth(std::string_view(text_).substr(0,cursor_byte_));
         scroll_columns_ = focused ? std::max(0,cursor_columns - std::max(0,columns - 1)) : 0;
         TextStyle content_style = field_style;
         if (text_.empty()) content_style.foreground = palette.muted;
-        const std::string_view display = text_.empty() ? std::string_view(placeholder_) : std::string_view(text_);
+        std::string mask_text;
+        if (masked && !text_.empty())
+        {
+            const auto mask_glyph = detail::encodeUtf8(password_mask_);
+            for (std::size_t i = 0; i < text_.size();)
+            {
+                const auto decoded = decodeUtf8(text_,i);
+                if (!decoded.bytes) break;
+                mask_text += mask_glyph;
+                i += decoded.bytes;
+            }
+        }
+        const std::string_view display = text_.empty() ? std::string_view(placeholder_) :
+            masked ? std::string_view(mask_text) : std::string_view(text_);
         painter.text(bounds_.x+inset,bounds_.y+bounds_.height/2,
             clipWindow(display,scroll_columns_,columns),content_style);
         if (focused && columns > 0)

@@ -141,6 +141,8 @@ public:
         RadioGroup,
         TextField,
         TextArea,
+        NumberField,
+        PasswordField,
         Select,
         DropdownMenu,
         ContextMenu,
@@ -187,6 +189,11 @@ public:
         bool disabled = false;
         bool read_only = false;
         int text_area_min_rows = 4;
+        bool password_reveal = false;
+        char32_t password_mask = U'•';
+        double number_min = -1.0e100;
+        double number_max = 1.0e100;
+        double number_step = 1.0;
         std::optional<BorderStyle> border = std::nullopt;
         std::optional<Color> background = std::nullopt;
         ButtonVariant button_variant = ButtonVariant::Outlined;

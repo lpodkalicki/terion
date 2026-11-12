@@ -178,6 +178,11 @@ private:
     ButtonSize button_size_ = ButtonSize::Medium;
     CheckboxVariant checkbox_variant_ = CheckboxVariant::Default;
     TextFieldVariant text_field_variant_ = TextFieldVariant::Outlined;
+    bool password_reveal_ = false;
+    char32_t password_mask_ = U'•';
+    double number_min_ = -1.0e100;
+    double number_max_ = 1.0e100;
+    double number_step_ = 1.0;
     double value_ = 0.0;
     ProgressVariant progress_variant_ = ProgressVariant::Blocks;
     bool progress_indeterminate_ = false;

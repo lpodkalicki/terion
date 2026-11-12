@@ -71,7 +71,8 @@ int cursorColumn(std::string_view text, Line line, std::size_t cursor)
 
 void RenderNode::setTextCursor(Point position)
 {
-    if (type_ == Component::Type::TextField) { setCursorFromX(position.x); return; }
+    if (type_ == Component::Type::TextField || type_ == Component::Type::NumberField ||
+        type_ == Component::Type::PasswordField) { setCursorFromX(position.x); return; }
     if (type_ != Component::Type::TextArea) return;
     const auto lines = linesOf(text_);
     const int row = std::clamp(position.y-bounds_.y-1+text_area_first_row_,0,static_cast<int>(lines.size())-1);
