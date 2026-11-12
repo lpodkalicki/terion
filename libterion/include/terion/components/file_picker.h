@@ -308,7 +308,7 @@ private:
                 switch (icon_style)
                 {
                 case FilePickerIconStyle::Unicode:
-                    prefix = entry.is_directory ? "  📁    " : "  📄    ";
+                    prefix = entry.is_directory ? "  📁    " : "  ·     ";
                     break;
                 case FilePickerIconStyle::Ascii:
                     prefix = entry.is_directory ? "  [DIR]   " : "  [FILE]  ";
@@ -327,7 +327,7 @@ private:
                 switch (icon_style)
                 {
                 case FilePickerIconStyle::Unicode:
-                    result.push_back({.text = entry.is_directory ? "  📁    " : "  📄    ",
+                    result.push_back({.text = entry.is_directory ? "  📁    " : "  ·     ",
                         .color = entry.is_directory ? ColorVariant::Info : ColorVariant::Default});
                     break;
                 case FilePickerIconStyle::Ascii:
@@ -347,7 +347,7 @@ private:
                 return result;
             },
             .selected_index = selected_index,
-            .row_height = 2,
+            .row_height = 1,
             .on_select = [listing,on_selection_change](const int index) {
                 if (index < 0 || static_cast<std::size_t>(index) >= listing->entries.size()) return;
                 if (on_selection_change) on_selection_change(listing->entries[static_cast<std::size_t>(index)].path);

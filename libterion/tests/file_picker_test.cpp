@@ -89,8 +89,8 @@ TEST(FilePicker, BrowsesAndConfirmsSelectedFile)
     const auto& list = dialog.children[4].props();
     EXPECT_EQ(list.type,Component::Type::VirtualList);
     ASSERT_EQ(list.virtual_item_count,1);
-    EXPECT_EQ(list.virtual_item_text(0),"  📄    a.txt");
-    EXPECT_EQ(list.virtual_row_height,2);
+    EXPECT_EQ(list.virtual_item_text(0),"  ·     a.txt");
+    EXPECT_EQ(list.virtual_row_height,1);
     ASSERT_TRUE(static_cast<bool>(list.virtual_on_select));
     list.virtual_on_select(0);
     EXPECT_EQ(selection,file);
@@ -189,8 +189,8 @@ TEST(FilePicker, ShowsUnicodeIconsForDirectoriesAndFiles)
         .icon_style = FilePickerIconStyle::Unicode});
     const auto& list = picker.props().children[4].props();
     ASSERT_EQ(list.virtual_item_count,2);
-    EXPECT_EQ(list.virtual_item_text(0),"📁  folder");
-    EXPECT_EQ(list.virtual_item_text(1),"📄  example.txt");
+    EXPECT_EQ(list.virtual_item_text(0),"  📁    folder");
+    EXPECT_EQ(list.virtual_item_text(1),"  ·     example.txt");
 }
 
 TEST(FilePicker, SupportsAsciiAndIconFreeFallbacks)
@@ -201,8 +201,8 @@ TEST(FilePicker, SupportsAsciiAndIconFreeFallbacks)
     const FilePicker ascii_picker({.open = true,.directory = temporary.path(),
         .icon_style = FilePickerIconStyle::Ascii});
     const auto& ascii_list = ascii_picker.props().children[4].props();
-    EXPECT_EQ(ascii_list.virtual_item_text(0),"[DIR] folder");
-    EXPECT_EQ(ascii_list.virtual_item_text(1),"[FILE] example.txt");
+    EXPECT_EQ(ascii_list.virtual_item_text(0),"  [DIR]   folder");
+    EXPECT_EQ(ascii_list.virtual_item_text(1),"  [FILE]  example.txt");
 
     const FilePicker plain_picker({.open = true,.directory = temporary.path(),
         .icon_style = FilePickerIconStyle::None});
@@ -220,8 +220,8 @@ TEST(FilePicker, SymbolsUseStyledTextAndHighlightDirectories)
     const auto& list = picker.props().children[4].props();
     ASSERT_TRUE(static_cast<bool>(list.virtual_item_styled));
     ASSERT_EQ(list.virtual_item_count,2);
-    EXPECT_EQ(list.virtual_item_text(0),"▸  folder");
-    EXPECT_EQ(list.virtual_item_text(1),"·  example.txt");
+    EXPECT_EQ(list.virtual_item_text(0),"  ▸   folder");
+    EXPECT_EQ(list.virtual_item_text(1),"  ·   example.txt");
     const auto folder = list.virtual_item_styled(0);
     const auto file = list.virtual_item_styled(1);
     ASSERT_EQ(folder.size(),2U);
