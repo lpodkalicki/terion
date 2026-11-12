@@ -31,6 +31,7 @@
 #include <terion/components/select.h>
 #include <terion/components/autocomplete.h>
 #include <terion/components/command_palette.h>
+#include <terion/components/file_picker.h>
 #include <terion/form_value.h>
 #include <terion/components/form.h>
 #include <terion/components/form_field.h>

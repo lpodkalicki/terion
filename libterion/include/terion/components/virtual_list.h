@@ -23,8 +23,10 @@ public:
         std::function<std::string(int)> item_text = {};
         std::function<StyledText(int)> item_styled = {};
         int selected_index = -1;
+        int row_height = 1;
         bool follow_tail = false;
         std::function<void(int)> on_select = {};
+        std::function<void(int)> on_activate = {};
         std::string key = {};
         LayoutStyle layout = {};
         bool disabled = false;
@@ -42,8 +44,10 @@ public:
             .virtual_item_text = std::move(props.item_text),
             .virtual_item_styled = std::move(props.item_styled),
             .virtual_selected_index = props.selected_index,
+            .virtual_row_height = std::max(1,props.row_height),
             .virtual_follow_tail = props.follow_tail,
-            .virtual_on_select = std::move(props.on_select)})
+            .virtual_on_select = std::move(props.on_select),
+            .virtual_on_activate = std::move(props.on_activate)})
     {}
 }; /* End of class VirtualList */
 

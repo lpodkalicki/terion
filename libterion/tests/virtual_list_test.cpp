@@ -90,3 +90,64 @@ TEST(VirtualList, EmptyAndDisabledListsDoNotSelect)
     EXPECT_FALSE(tree.root()->handleVirtualListClick({.x = 1,.y = 0}));
     EXPECT_EQ(selected,-1);
 }
+
+TEST(VirtualList, EnterActivatesSelectedRow)
+{
+    int selected = 2;
+    int activated = -1;
+    Reconciler tree;
+    tree.update(VirtualList({.item_count = 5,.selected_index = selected,
+        .on_select = [&](int index) { selected = index; },
+        .on_activate = [&](int index) { activated = index; },
+        .layout = {.width = 20,.height = 4}}));
+    tree.root()->layout({.maximum = {.width = 25,.height = 10}});
+    EXPECT_TRUE(tree.root()->handleVirtualListKey({.key = Key::Enter}));
+    EXPECT_EQ(activated,2);
+}
+
+TEST(VirtualList, DoubleClickActivatesSameRow)
+{
+    int selected = -1;
+    int activated = -1;
+    Reconciler tree;
+    tree.update(VirtualList({.item_count = 5,
+        .on_select = [&](int index) { selected = index; },
+        .on_activate = [&](int index) { activated = index; },
+        .layout = {.width = 20,.height = 4}}));
+    tree.root()->layout({.maximum = {.width = 25,.height = 10}});
+    ASSERT_TRUE(tree.root()->handleVirtualListClick({.x = 1,.y = 2}));
+    EXPECT_EQ(selected,2);
+    EXPECT_EQ(activated,-1);
+    ASSERT_TRUE(tree.root()->handleVirtualListClick({.x = 1,.y = 2}));
+    EXPECT_EQ(activated,2);
+}
+
+TEST(VirtualList, SpacedRowsKeepScrollAndMouseSelectionInItemCoordinates)
+{
+    int selected = -1;
+    std::vector<int> painted;
+    Reconciler tree;
+    tree.update(VirtualList({.item_count = 100,
+        .item_text = [&](int index) { painted.push_back(index); return std::to_string(index); },
+        .row_height = 2,
+        .on_select = [&](int index) { selected = index; },
+        .layout = {.width = 16,.height = 6}}));
+    ASSERT_NE(tree.root(),nullptr);
+    tree.root()->layout({.maximum = {.width = 16,.height = 6}});
+    ScreenBuffer screen({.width = 16,.height = 6});
+    Painter painter(screen);
+    tree.root()->paint(painter);
+    EXPECT_EQ(painted,(std::vector<int>{0,1,2}));
+    EXPECT_EQ(screen.at(0,0).grapheme,"0");
+    EXPECT_EQ(screen.at(0,1).grapheme," ");
+    EXPECT_EQ(screen.at(0,2).grapheme,"1");
+    EXPECT_TRUE(tree.root()->handleVirtualListClick({.x = 1,.y = 3}));
+    EXPECT_EQ(selected,1);
+    EXPECT_TRUE(tree.root()->scrollBy(10));
+    EXPECT_EQ(tree.root()->virtual_list_offset(),10);
+    painted.clear();
+    tree.root()->paint(painter);
+    EXPECT_EQ(painted,(std::vector<int>{10,11,12}));
+    EXPECT_TRUE(tree.root()->handleVirtualListClick({.x = 1,.y = 5}));
+    EXPECT_EQ(selected,12);
+}

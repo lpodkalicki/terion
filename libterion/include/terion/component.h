@@ -224,8 +224,10 @@ public:
         std::function<std::string(int)> virtual_item_text = {};
         std::function<StyledText(int)> virtual_item_styled = {};
         int virtual_selected_index = -1;
+        int virtual_row_height = 1;
         bool virtual_follow_tail = false;
         std::function<void(int)> virtual_on_select = {};
+        std::function<void(int)> virtual_on_activate = {};
         std::vector<TreeItem> tree_items = {};
         std::vector<std::string> tree_expanded = {};
         std::function<void(std::string,bool)> tree_on_toggle = {};

@@ -380,9 +380,11 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     const bool was_at_tail = node->virtual_scroll_.offset() == node->virtual_scroll_.maximum();
     node->virtual_item_count_ = std::max(0,props.virtual_item_count);
     node->virtual_follow_tail_ = props.virtual_follow_tail;
+    node->virtual_row_height_ = std::max(1,props.virtual_row_height);
     node->virtual_item_text_ = props.virtual_item_text;
     node->virtual_item_styled_ = props.virtual_item_styled;
     node->virtual_on_select_ = props.virtual_on_select;
+    node->virtual_on_activate_ = props.virtual_on_activate;
     const int previous_selected = node->virtual_selected_index_;
     node->virtual_selected_index_ = props.virtual_selected_index;
     node->virtual_scroll_.configure(node->virtual_item_count_,node->virtual_scroll_.viewport());

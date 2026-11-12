@@ -197,7 +197,7 @@ Size RenderNode::measure(const Constraints& constraints) const
     else if (type_ == Component::Type::VirtualList)
     {
         // Never scan item_count to measure: only the viewport determines size.
-        content = {.width = 24,.height = std::min(virtual_item_count_,10)};
+        content = {.width = 24,.height = std::min(virtual_item_count_,10) * virtual_row_height_};
     }
     else if (type_ == Component::Type::TreeView)
     {
@@ -322,7 +322,8 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     if (type_ == Component::Type::VirtualList)
     {
         const bool was_at_tail = virtual_scroll_.offset() == virtual_scroll_.maximum();
-        virtual_scroll_.configure(virtual_item_count_,size.height);
+        const int visible_items = (size.height+virtual_row_height_-1)/virtual_row_height_;
+        virtual_scroll_.configure(virtual_item_count_,visible_items);
         if (virtual_follow_tail_ && was_at_tail)
             virtual_scroll_.setOffset(virtual_scroll_.maximum());
     }
@@ -1619,6 +1620,21 @@ bool RenderNode::handleDialogKey(const Event& event)
 bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
 {
     if (!dialog_open()) return false;
+    if (dialog_drag_child_ != 0)
+    {
+        auto* child = findById(dialog_drag_child_);
+        if (mouse.action == MouseAction::Release)
+        {
+            if (child) child->endScrollbarDrag();
+            dialog_drag_child_ = 0;
+            return true;
+        }
+        if (mouse.action == MouseAction::Move)
+        {
+            if (child) (void)child->moveScrollbarDrag(mouse.position.y);
+            return true;
+        }
+    }
     if (scrollbar_drag_.active())
     {
         if (mouse.action == MouseAction::Release) { scrollbar_drag_.end(); return true; }
@@ -1630,6 +1646,9 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
         mouse.position.y >= rect.y && mouse.position.y < rect.y+rect.height;
     if (mouse.action == MouseAction::Scroll)
     {
+        if (auto* child = dialogChildAt(mouse.position))
+            if (child->type() == Component::Type::VirtualList && child->scrollBy(-mouse.scroll_y*3))
+                return true;
         if (inside) (void)scrollDialog(-mouse.scroll_y*3,screen);
         return true;
     }
@@ -1643,6 +1662,12 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
     {
         if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left)
         {
+            if (child->type() == Component::Type::VirtualList && child->beginScrollbarDrag(mouse.position))
+            {
+                dialog_drag_child_ = child->id();
+                dialog_pressed_child_ = 0;
+                return true;
+            }
             dialog_pressed_child_ = child->id();
             if (child->type() == Component::Type::TextField ||
                 child->type() == Component::Type::NumberField ||
@@ -1657,6 +1682,12 @@ bool RenderNode::handleDialogMouse(const MouseEvent& mouse, const Size screen)
                 !child->disabled() && child->onClick()) child->onClick()();
             if (dialog_pressed_child_ == child->id() && child->interactiveControl())
                 child->handleChoiceClick(mouse.position);
+            if (dialog_pressed_child_ == child->id() && child->type() == Component::Type::VirtualList &&
+                !child->disabled()) child->handleVirtualListClick(mouse.position);
+            if (dialog_pressed_child_ == child->id() && child->type() == Component::Type::Table &&
+                !child->disabled()) child->handleTableClick(mouse.position);
+            if (dialog_pressed_child_ == child->id() && child->type() == Component::Type::TreeView &&
+                !child->disabled()) child->handleTreeClick(mouse.position);
             dialog_pressed_child_ = 0;
             return true;
         }
@@ -1885,14 +1916,15 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const Rect track = scrollbarTrack();
         const int text_columns = std::max(0,bounds_.width-(track.width > 0 ? 1 : 0));
         // IMPORTANT: no iteration over offscreen items, and no retained row nodes.
-        for (int row = 0; row < bounds_.height; ++row)
+        for (int row = 0; row < (bounds_.height+virtual_row_height_-1)/virtual_row_height_; ++row)
         {
             const int index = virtual_scroll_.offset()+row;
             if (index >= virtual_item_count_) break;
             const bool selected = index == virtual_selected_index_;
             const Color row_background = selected ? blendColor(base,palette.primary,22) : base;
-            const int y = bounds_.y+row;
-            painter.fillBackground({.x = bounds_.x,.y = y,.width = text_columns,.height = 1},row_background);
+            const int y = bounds_.y+row*virtual_row_height_;
+            const int row_height = std::min(virtual_row_height_,bounds_.y+bounds_.height-y);
+            painter.fillBackground({.x = bounds_.x,.y = y,.width = text_columns,.height = row_height},row_background);
             const TextStyle row_style {.foreground = disabled_ ? palette.muted :
                 selected ? palette.primary : palette.foreground,.background = row_background,.bold = selected};
             if (virtual_item_styled_)

@@ -238,8 +238,12 @@ private:
     std::function<std::string(int)> virtual_item_text_;
     std::function<StyledText(int)> virtual_item_styled_;
     int virtual_selected_index_ = -1;
+    int virtual_row_height_ = 1;
     bool virtual_follow_tail_ = false;
     std::function<void(int)> virtual_on_select_;
+    std::function<void(int)> virtual_on_activate_;
+    int virtual_last_click_index_ = -1;
+    std::chrono::steady_clock::time_point virtual_last_click_time_{};
     ScrollController virtual_scroll_{};
     std::vector<TreeItem> tree_items_;
     std::vector<std::string> tree_expanded_;
@@ -277,6 +281,7 @@ private:
     std::string dialog_cancel_text_;
     std::function<void()> dialog_on_close_;
     std::uint64_t dialog_pressed_child_ = 0;
+    std::uint64_t dialog_drag_child_ = 0;
     ScrollController dialog_scroll_{};
     Rect dialog_content_rect_{};
     Size dialog_screen_{};

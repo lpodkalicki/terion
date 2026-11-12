@@ -24,6 +24,9 @@ bool RenderNode::handleVirtualListKey(const Event& event)
         case Key::PageDown: next = current < 0 ? 0 : next+page; break;
         case Key::Home: next = 0; break;
         case Key::End: next = virtual_item_count_-1; break;
+        case Key::Enter:
+            if (current >= 0 && virtual_on_activate_) virtual_on_activate_(current);
+            return current >= 0;
         default: return false;
     }
     next = std::clamp(next,0LL,static_cast<long long>(virtual_item_count_-1));
@@ -39,8 +42,14 @@ bool RenderNode::handleVirtualListClick(const Point position)
         position.x < bounds_.x || position.y < bounds_.y ||
         position.x >= bounds_.x+bounds_.width || position.y >= bounds_.y+bounds_.height ||
         (scrollbarTrack().width > 0 && position.x == scrollbarTrack().x)) return false;
-    const int index = virtual_scroll_.offset()+position.y-bounds_.y;
+    const int index = virtual_scroll_.offset()+(position.y-bounds_.y)/virtual_row_height_;
     if (index < 0 || index >= virtual_item_count_) return false;
-    if (index != virtual_selected_index_ && virtual_on_select_) virtual_on_select_(index);
+    const auto now = std::chrono::steady_clock::now();
+    const bool double_click = index == virtual_last_click_index_ &&
+        now-virtual_last_click_time_ <= std::chrono::milliseconds(450);
+    virtual_last_click_index_ = double_click ? -1 : index;
+    virtual_last_click_time_ = now;
+    if (virtual_on_select_) virtual_on_select_(index);
+    if (double_click && virtual_on_activate_) virtual_on_activate_(index);
     return true;
 }
