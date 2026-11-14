@@ -22,7 +22,9 @@ public:
         std::string key = {};
         bool disabled = false;
         LayoutStyle layout = {};
+        int horizontal_offset = -1;
         std::function<void(std::string)> on_change = {};
+        std::function<void(int)> on_horizontal_scroll = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
@@ -33,7 +35,9 @@ public:
             .on_event = std::move(props.on_event),.on_change = std::move(props.on_change),
             .disabled = props.disabled,.table_columns = std::move(props.columns),
             .table_rows = std::move(props.rows),.table_filter = std::move(props.filter),
-            .table_format_cell = std::move(props.format_cell)})
+            .table_format_cell = std::move(props.format_cell),
+            .table_horizontal_offset = props.horizontal_offset,
+            .table_on_horizontal_scroll = std::move(props.on_horizontal_scroll)})
     {}
 }; /* End of class Table */
 

@@ -24,6 +24,7 @@ public:
         std::function<StyledText(int)> item_styled = {};
         std::function<std::pair<int,int>(int,int)> on_width_change = {};
         int selected_index = -1;
+        std::function<bool(int)> item_is_selected = {};
         int row_height = 1;
         bool follow_tail = false;
         std::function<void(int)> on_select = {};
@@ -47,6 +48,7 @@ public:
             .virtual_item_styled = std::move(props.item_styled),
             .virtual_on_width_change = std::move(props.on_width_change),
             .virtual_selected_index = props.selected_index,
+            .virtual_item_is_selected = std::move(props.item_is_selected),
             .virtual_row_height = std::max(1,props.row_height),
             .virtual_follow_tail = props.follow_tail,
             .virtual_on_select = std::move(props.on_select),

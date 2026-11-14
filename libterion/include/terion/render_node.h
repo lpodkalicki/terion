@@ -82,6 +82,8 @@ public:
     [[nodiscard]] int virtual_list_offset() const noexcept { return virtual_scroll_.offset(); }
     bool handleTableKey(const Event& event);
     bool handleTableClick(Point position);
+    bool scrollTableHorizontal(int delta);
+    [[nodiscard]] int table_horizontal_offset() const noexcept { return table_horizontal_offset_; }
     bool handleTreeKey(const Event& event);
     bool handleTreeClick(Point position);
     [[nodiscard]] Rect split_handle() const noexcept;
@@ -255,6 +257,10 @@ private:
     std::function<bool(const TableRow&)> table_filter_;
     std::function<TableCellFormat(const TableRow&,std::size_t)> table_format_cell_;
     ScrollController table_scroll_{};
+    int table_horizontal_offset_ = 0;
+    std::function<void(int)> table_on_horizontal_scroll_;
+    [[nodiscard]] std::vector<int> tableColumnWidths() const;
+    [[nodiscard]] int tableHorizontalMaximum() const;
     int table_sort_column_ = -1;
     bool table_sort_ascending_ = true;
     int virtual_item_count_ = 0;
@@ -263,6 +269,7 @@ private:
     std::function<std::string(int)> virtual_item_text_;
     std::function<StyledText(int)> virtual_item_styled_;
     int virtual_selected_index_ = -1;
+    std::function<bool(int)> virtual_item_is_selected_;
     int virtual_row_height_ = 1;
     bool virtual_follow_tail_ = false;
     std::function<void(int)> virtual_on_select_;

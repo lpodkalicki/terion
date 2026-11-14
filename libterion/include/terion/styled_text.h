@@ -22,6 +22,9 @@ struct StyledSpan
     bool strikethrough = false;
     bool dim = false;
     std::optional<ColorVariant> background = std::nullopt;
+    // Explicit RGB overrides for table cells and other custom styled content.
+    std::optional<Color> foreground = std::nullopt;
+    std::optional<Color> background_color = std::nullopt;
 }; /* End of struct StyledSpan */
 
 using StyledText = std::vector<StyledSpan>;

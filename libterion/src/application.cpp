@@ -475,7 +475,13 @@ bool Application::handleMouse(const MouseEvent& mouse)
             hit && hit->type() == Component::Type::TextArea)
             return hit->scrollTextArea(-mouse.scroll_y*3);
         if (auto* target = reconciler_.root()->scrollTarget(mouse.position))
+        {
+            if (target->type() == Component::Type::Table &&
+                (mouse.scroll_x != 0 || mouse.shift))
+                return target->scrollTableHorizontal(mouse.scroll_x != 0 ?
+                    mouse.scroll_x*3 : -mouse.scroll_y*3);
             return target->scrollBy(-mouse.scroll_y * 3);
+        }
     }
     if (mouse.action == MouseAction::Press && mouse.button == MouseButton::Left &&
         component_ && reconciler_.root())

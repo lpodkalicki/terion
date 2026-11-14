@@ -52,7 +52,11 @@ void TerminalCapabilityProbe::process(const std::string_view sequence)
         const auto status = body.substr(separator+1);
         if (mode == "1006" || mode == "1003")
         {
-            if (status == "0") capabilities_.mouse = false;
+            // DECRQM status 0 means "not recognized by this *query*". It is
+            // not a reliable feature check: some terminals support setting
+            // SGR mouse mode but answer 0 (or do not answer) to DECRQM.
+            // Never disable click/wheel reporting based on this reply.
+            if (mode == "1003" && status == "0") capabilities_.mouse_all_motion = false;
             if (status == "0" || status == "1" || status == "2" || status == "3" || status == "4")
                 capabilities_.actively_probed = true;
         }
@@ -150,7 +154,10 @@ std::string TerminalCapabilityProbe::finish()
 void AnsiTerminalBackend::probeCapabilities()
 {
     TerminalCapabilityProbe probe(capabilities_);
-    write("\033P+q5463;524742\033\\\033[?1006$p\033[?1003$p");
+    // Mouse modes are enabled optimistically. Probing them with DECRQM is not
+    // portable (notably on some macOS terminals), and a false negative would
+    // prevent the whole UI from receiving clicks, drags, and wheel events.
+    write("\033P+q5463;524742\033\\");
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(85);
     while (std::chrono::steady_clock::now() < deadline)
     {
@@ -190,9 +197,19 @@ AnsiTerminalBackend::AnsiTerminalBackend()
     last_size_ = size();
     try
     {
-        probeCapabilities();
+        // Apple Terminal does not reliably implement XTGETTCAP queries;
+        // avoid sending DCS probes that can be displayed literally there.
+        // Defaults remain true-color + SGR mouse (best-effort).
+        if (!terminal_program || std::string_view(terminal_program) != "Apple_Terminal")
+            probeCapabilities();
         write("\033[?1049h\033[?25l\033[?2004h");
-        if (capabilities_.mouse) write("\033[?1003h\033[?1006h");
+        if (capabilities_.mouse)
+        {
+            // 1000 reports clicks and wheel, 1002 adds drag motion. Only
+            // enable 1003 when all-motion tracking is actually supported.
+            write("\033[?1000h\033[?1002h\033[?1006h");
+            if (capabilities_.mouse_all_motion) write("\033[?1003h");
+        }
     }
     catch (...) { ::tcsetattr(STDIN_FILENO,TCSAFLUSH,&previous_); active_ = false; throw; }
 }
@@ -204,7 +221,7 @@ AnsiTerminalBackend::~AnsiTerminalBackend()
         try
         {
             if (capabilities_.mouse_pointer_shape) write("\033]22;\033\\");
-            write("\033[?2004l\033[?1006l\033[?1003l\033[0m\033[?25h\033[?1049l");
+            write("\033[?2004l\033[?1003l\033[?1002l\033[?1000l\033[?1006l\033[0m\033[?25h\033[?1049l");
         }
         catch (...)
         {}

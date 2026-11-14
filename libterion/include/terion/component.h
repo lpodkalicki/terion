@@ -221,11 +221,14 @@ public:
         std::vector<TableRow> table_rows = {};
         std::function<bool(const TableRow&)> table_filter = {};
         std::function<TableCellFormat(const TableRow&,std::size_t)> table_format_cell = {};
+        int table_horizontal_offset = -1; // -1: retain internal offset across renders.
+        std::function<void(int)> table_on_horizontal_scroll = {};
         int virtual_item_count = 0;
         std::function<std::string(int)> virtual_item_text = {};
         std::function<StyledText(int)> virtual_item_styled = {};
         std::function<std::pair<int,int>(int,int)> virtual_on_width_change = {};
         int virtual_selected_index = -1;
+        std::function<bool(int)> virtual_item_is_selected = {};
         int virtual_row_height = 1;
         bool virtual_follow_tail = false;
         std::function<void(int)> virtual_on_select = {};

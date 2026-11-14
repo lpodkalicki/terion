@@ -391,6 +391,9 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->table_rows_ = props.table_rows;
     node->table_filter_ = props.table_filter;
     node->table_format_cell_ = props.table_format_cell;
+    node->table_on_horizontal_scroll_ = props.table_on_horizontal_scroll;
+    if (props.table_horizontal_offset >= 0)
+        node->table_horizontal_offset_ = props.table_horizontal_offset;
     const int previous_virtual_count = node->virtual_item_count_;
     const bool was_at_tail = node->virtual_scroll_.offset() == node->virtual_scroll_.maximum();
     node->virtual_item_count_ = std::max(0,props.virtual_item_count);
@@ -405,6 +408,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->virtual_on_click_position_ = props.virtual_on_click_position;
     const int previous_selected = node->virtual_selected_index_;
     node->virtual_selected_index_ = props.virtual_selected_index;
+    node->virtual_item_is_selected_ = props.virtual_item_is_selected;
     node->virtual_scroll_.configure(node->virtual_item_count_,node->virtual_scroll_.viewport());
     if (props.type == Component::Type::VirtualList && node->virtual_follow_tail_ &&
         node->virtual_item_count_ != previous_virtual_count && (created || was_at_tail))

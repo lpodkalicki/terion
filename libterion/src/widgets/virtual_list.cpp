@@ -13,8 +13,17 @@ bool RenderNode::handleVirtualListKey(const Event& event)
         return false;
 
     const int page = std::max(1,virtual_scroll_.viewport());
-    const int current = virtual_selected_index_ >= 0 && virtual_selected_index_ < virtual_item_count_ ?
+    int current = virtual_selected_index_ >= 0 && virtual_selected_index_ < virtual_item_count_ ?
         virtual_selected_index_ : -1;
+    // Key-based selection is determined lazily: search only the visible window,
+    // never the entire virtual data source (which may have millions of rows).
+    if (current < 0 && virtual_item_is_selected_)
+    {
+        const int first = virtual_scroll_.offset();
+        const int end = std::min(virtual_item_count_,first+virtual_scroll_.viewport());
+        for (int i = first; i < end; ++i)
+            if (virtual_item_is_selected_(i)) { current = i; break; }
+    }
     long long next = current;
     switch (event.key)
     {

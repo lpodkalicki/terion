@@ -82,6 +82,8 @@ struct TerminalCapabilities
     bool true_color = true;
     bool unicode = true;
     bool mouse = true;
+    // All-motion tracking (1003) is optional; wheel/click/drag need only 1006 + 1002.
+    bool mouse_all_motion = true;
     bool mouse_pointer_shape = false;
     bool actively_probed = false;
 }; /* End of struct TerminalCapabilities */

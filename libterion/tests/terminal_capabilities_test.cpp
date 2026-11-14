@@ -72,7 +72,47 @@ TEST(TerminalCapabilities, ProbeRecognizesSupportedAndUnsupportedResponses)
     EXPECT_TRUE(unsupported.feed("\033[?1006;0$y").empty());
     EXPECT_TRUE(unsupported.capabilities().actively_probed);
     EXPECT_FALSE(unsupported.capabilities().true_color);
-    EXPECT_FALSE(unsupported.capabilities().mouse);
+    // DECRQM status 0 is not sufficient evidence to turn mouse support off.
+    EXPECT_TRUE(unsupported.capabilities().mouse);
+}
+
+TEST(TerminalCapabilities, UnsupportedAllMotionDoesNotDisableWheelOrClick)
+{
+    TerminalCapabilityProbe probe(TerminalCapabilities{});
+    EXPECT_TRUE(probe.feed("\033[?1006;2$y\033[?1003;0$y").empty());
+    EXPECT_TRUE(probe.capabilities().actively_probed);
+    EXPECT_TRUE(probe.capabilities().mouse);
+    EXPECT_FALSE(probe.capabilities().mouse_all_motion);
+
+    // Terminal responses may arrive in either order.
+    TerminalCapabilityProbe reverse(TerminalCapabilities{});
+    EXPECT_TRUE(reverse.feed("\033[?1003;0$y\033[?1006;1$y").empty());
+    EXPECT_TRUE(reverse.capabilities().mouse);
+    EXPECT_FALSE(reverse.capabilities().mouse_all_motion);
+
+    // A terminal can support enabling SGR mouse even if it does not
+    // implement DECRQM queries. Such responses must not disable mouse input.
+    TerminalCapabilityProbe unknown_query(TerminalCapabilities{});
+    EXPECT_TRUE(unknown_query.feed("\033[?1003;2$y\033[?1006;0$y").empty());
+    EXPECT_TRUE(unknown_query.capabilities().mouse);
+
+    InputDecoder decoder;
+    decoder.feed("\033[<0;4;3M\033[<0;4;3m\033[<64;4;3M");
+    const auto press = decoder.nextEvent();
+    ASSERT_TRUE(press);
+    EXPECT_EQ(press->key, Key::Mouse);
+    EXPECT_EQ(press->mouse.action, MouseAction::Press);
+    EXPECT_EQ(press->mouse.position.x, 3);
+    EXPECT_EQ(press->mouse.position.y, 2);
+    const auto release = decoder.nextEvent();
+    ASSERT_TRUE(release);
+    EXPECT_EQ(release->key, Key::Mouse);
+    EXPECT_EQ(release->mouse.action, MouseAction::Release);
+    const auto scroll = decoder.nextEvent();
+    ASSERT_TRUE(scroll);
+    EXPECT_EQ(scroll->key, Key::Mouse);
+    EXPECT_EQ(scroll->mouse.action, MouseAction::Scroll);
+    EXPECT_EQ(scroll->mouse.scroll_y, 1);
 }
 
 TEST(TerminalCapabilities, ProbePreservesUserInputAndSplitReplies)
