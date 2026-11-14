@@ -184,3 +184,35 @@ interactive example; `grapheme_styled_text_test.cpp` contains headless tests.
 The built-in Unicode property tables cover common grapheme cases and emoji,
 but **do not implement the complete, versioned Unicode UAX #29 database**.
 Terminal emoji widths are estimates and may differ with terminal/font settings.
+
+### FilePicker 2.0 (asynchronous mode)
+
+`FilePicker` supports opening files, selecting directories, and `FilePickerMode::SaveFile`
+(which **returns a destination path**, without writing the file). Its new clickable
+breadcrumbs, optional location input and `Refresh` button simplify navigation.
+An existing destination is rejected in save mode unless `allow_overwrite` is
+explicitly enabled; the application should still re-check before actually writing.
+
+Pass a long-lived `std::shared_ptr<FilePickerAsyncBrowser>` in the picker props
+to scan directories on a worker thread. Cache entries use immutable shared
+snapshots, a bounded LRU and an expiry time; new queued searches replace older
+queued searches. Refresh calls `invalidate(directory)`. The synchronous path
+remains the default for existing applications.
+
+The worker does **not** call UI callbacks. Poll for updates from the UI thread:
+
+```cpp
+const auto browser = std::make_shared<terion::FilePickerAsyncBrowser>();
+app.addInterval(std::chrono::milliseconds(40), [&, browser] {
+    if (browser->consumeUpdates()) app.invalidate();
+});
+// Inside the component render callback:
+terion::FilePicker({.open = true, .directory = current_directory,
+                    .async_browser = browser});
+```
+
+See `examples/file_picker_advanced.cpp` for the complete controlled-state
+example, including path entry, file names and overwrite confirmation. A scan
+already in progress cannot be cancelled: destroying the provider waits for
+that scan to finish, which can take time on a slow or disconnected network
+filesystem.
