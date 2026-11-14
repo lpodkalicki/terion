@@ -494,7 +494,24 @@ bool Application::handleMouse(const MouseEvent& mouse)
             hit->type() == Component::Type::PasswordField ||
             hit->type() == Component::Type::TextArea))
         {
-            hit->setTextCursor(mouse.position);
+            const auto now = std::chrono::steady_clock::now();
+            const bool repeated = !mouse.shift && text_last_click_id_ == hit->id() &&
+                now-text_last_click_time_ <= std::chrono::milliseconds(450) &&
+                std::abs(mouse.position.x-text_last_click_point_.x) <= 1 &&
+                std::abs(mouse.position.y-text_last_click_point_.y) <= 1;
+            text_click_count_ = repeated ? (text_click_count_ % 3)+1 : 1;
+            text_last_click_id_ = hit->id();
+            text_last_click_time_ = now;
+            text_last_click_point_ = mouse.position;
+            if (mouse.shift && text_click_count_ == 1)
+            {
+                if (hit->type() == Component::Type::TextArea)
+                    hit->extendTextAreaSelection(mouse.position);
+                else hit->extendTextFieldSelection(mouse.position);
+            }
+            else if (text_click_count_ == 2) hit->selectWordAt(mouse.position);
+            else if (text_click_count_ == 3) hit->selectLineAt(mouse.position);
+            else hit->setTextCursor(mouse.position);
             text_selection_drag_id_ = hit->id();
             pressed_button_id_.clear();
         }

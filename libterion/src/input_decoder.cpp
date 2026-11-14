@@ -60,6 +60,13 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
     {
         if (bytes_.size() == 1 && !flush_escape) return std::nullopt;
 
+        if (bytes_.size() >= 2 && (bytes_[1] == 127 || bytes_[1] == 8))
+        {
+            bytes_.pop_front();
+            bytes_.pop_front();
+            return Event{.key = Key::Backspace,.alt = true};
+        }
+
         if (bytes_.size() >= 2 && (bytes_[1] == '[' || bytes_[1] == 'O'))
         {
             std::size_t end = 2;

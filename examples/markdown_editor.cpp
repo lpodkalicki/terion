@@ -111,7 +111,7 @@ int main()
                     Typography({.text = "SOURCE  ·  Markdown"}),
                     TextArea({.value = markdown,.placeholder = "Type Markdown here...",
                         .key = "markdown-source",
-                        .min_rows = 1,
+                        .min_rows = 1,.soft_wrap = true,
                         .layout = {.width = std::max(1,first_width-2),
                             .height = std::max(1,pane_height-3)},
                         .on_change = [&](std::string value) { source.set(std::move(value)); }})
@@ -128,7 +128,7 @@ int main()
                 .key = "markdown-editor-split",
                 .layout = {.width = available_width,.height = pane_height},
                 .on_change = [&](int value) { left_width.set(value); }}),
-            Typography({.text = "Drag divider to resize  |  Tab: change focus  |  " +
+            Typography({.text = "Drag divider to resize  |  Alt+arrows: words  |  Double click: word  |  " +
                 std::to_string(countLines(markdown)) + " lines  ·  " +
                 std::to_string(markdown.size()) + " bytes"})
         },.layout = {.width = width,.height = height,.padding = 1,.gap = 0}});

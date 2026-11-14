@@ -337,6 +337,13 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->number_max_ = props.number_max;
     node->number_step_ = props.number_step;
     node->text_area_min_rows_ = std::max(1,props.text_area_min_rows);
+    if (node->text_area_soft_wrap_ != props.text_area_soft_wrap)
+    {
+        node->text_area_first_row_ = 0;
+        node->text_area_last_wrap_width_ = -1;
+        node->text_area_top_byte_ = 0;
+    }
+    node->text_area_soft_wrap_ = props.text_area_soft_wrap;
     node->read_only_ = props.read_only;
     node->scroll_.setRequestedOffset(props.scroll_offset);
     node->on_scroll_ = props.on_scroll;

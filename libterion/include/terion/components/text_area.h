@@ -21,6 +21,7 @@ public:
         bool disabled = false;
         bool read_only = false;
         int min_rows = 4;
+        bool soft_wrap = false;
         LayoutStyle layout = {};
         std::function<void(std::string)> on_change = {};
         std::function<std::optional<std::string>(const std::string&)> validator = {};
@@ -34,7 +35,8 @@ public:
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .on_change = std::move(props.on_change),.placeholder = std::move(props.placeholder),
             .disabled = props.disabled,.read_only = props.read_only,
-            .text_area_min_rows = props.min_rows,.form_default_value = props.default_value.value_or(props.value),
+            .text_area_min_rows = props.min_rows,.text_area_soft_wrap = props.soft_wrap,
+            .form_default_value = props.default_value.value_or(props.value),
             .form_validator = [validator = std::move(props.validator)](const FormValue& value)
                 -> std::optional<std::string> {
                 if (validator) return validator(std::get<std::string>(value));

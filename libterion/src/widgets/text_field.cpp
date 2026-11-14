@@ -5,6 +5,7 @@
 #include <terion/render_node.h>
 #include <terion/utf8.h>
 #include <terion/text_editor_core.h>
+#include <terion/text_editing.h>
 #include <terion/clipboard.h>
 #include <algorithm>
 #include <charconv>
@@ -46,6 +47,7 @@ bool RenderNode::restoreEdit(bool redo)
     selection_anchor_ = state.anchor;
     selection_active_ = state.selected;
     text_area_preferred_column_ = -1;
+    text_area_follow_cursor_ = true;
     if (on_change_) on_change_(text_);
     return true;
 }
@@ -76,6 +78,13 @@ bool RenderNode::handleTextInput(const Event& event)
         return true;
     }
     const bool multiline = type_ == Component::Type::TextArea;
+    if (multiline && event.key != Key::PageUp && event.key != Key::PageDown &&
+        (event.key == Key::Left || event.key == Key::Right || event.key == Key::Up ||
+         event.key == Key::Down || event.key == Key::Home || event.key == Key::End ||
+         event.key == Key::Backspace || event.key == Key::Delete || event.key == Key::Enter ||
+         (event.key == Key::Character && !event.ctrl && !event.alt) ||
+         event.key == Key::Paste))
+        text_area_follow_cursor_ = true;
     const auto remove_selection = [&]() {
         if (!selection_active_ || selection_anchor_ == cursor_byte_) return false;
         const auto start = std::min(selection_anchor_,cursor_byte_);
@@ -102,6 +111,17 @@ bool RenderNode::handleTextInput(const Event& event)
         if (read_only_) return true;
         const bool redo = event.character == U'y' || event.character == U'Y' || event.shift;
         return restoreEdit(redo);
+    }
+    // macOS Terminal.app and other terminals may encode Option+Left/Right as
+    // Escape+b / Escape+f instead of modified CSI arrow sequences.
+    if (event.alt && !event.ctrl && event.key == Key::Character &&
+        (event.character == U'b' || event.character == U'f'))
+    {
+        move_cursor(event.character == U'b' ? detail::previousWordBoundary(text_,cursor_byte_) :
+            detail::nextWordBoundary(text_,cursor_byte_));
+        text_area_follow_cursor_ = true;
+        text_area_preferred_column_ = -1;
+        return true;
     }
     if (event.ctrl && event.key == Key::Character && (event.character == U'a' || event.character == U'A'))
     {
@@ -142,48 +162,13 @@ bool RenderNode::handleTextInput(const Event& event)
     }
     if (multiline && (event.key == Key::Up || event.key == Key::Down))
     {
-        const std::size_t start = text_.rfind('\n',cursor_byte_ == 0 ? 0 : cursor_byte_-1);
-        const std::size_t line_begin = start == std::string::npos ? 0 : start+1;
-        const std::size_t ending = text_.find('\n',cursor_byte_);
-        const std::size_t line_end = ending == std::string::npos ? text_.size() : ending;
+        const auto lines = detail::visualTextLines(text_,std::max(1,bounds_.width-2),text_area_soft_wrap_);
+        const auto current = detail::visualLineIndex(lines,cursor_byte_);
         if (text_area_preferred_column_ < 0)
-            {
-                int column = 0;
-                for (std::size_t i = line_begin; i < cursor_byte_;)
-                {
-                    const auto decoded = decodeUtf8(text_,i);
-                    if (!decoded.bytes) break;
-                    column += codePointWidth(decoded.code_point);
-                    i += decoded.bytes;
-                }
-                text_area_preferred_column_ = column;
-            }
-        std::size_t target_begin = line_begin;
-        std::size_t target_end = line_end;
-        if (event.key == Key::Up)
-        {
-            if (line_begin == 0) { move_cursor(0); return true; }
-            const auto previous = text_.rfind('\n',line_begin-2);
-            target_begin = previous == std::string::npos ? 0 : previous+1;
-            target_end = line_begin-1;
-        }
-        else
-        {
-            if (line_end == text_.size()) { move_cursor(text_.size()); return true; }
-            target_begin = line_end+1;
-            target_end = text_.find('\n',target_begin);
-            if (target_end == std::string::npos) target_end = text_.size();
-        }
-        std::size_t target = target_begin;
-        int column = 0;
-        while (target < target_end)
-        {
-            const auto decoded = decodeUtf8(text_,target);
-            if (!decoded.bytes || column + codePointWidth(decoded.code_point) > text_area_preferred_column_) break;
-            column += codePointWidth(decoded.code_point);
-            target += decoded.bytes;
-        }
-        move_cursor(target);
+            text_area_preferred_column_ = detail::visualColumn(text_,lines[current],cursor_byte_);
+        const auto target = event.key == Key::Up ? (current == 0 ? 0 : current-1) :
+            std::min(current+1,lines.size()-1);
+        move_cursor(detail::visualOffset(text_,lines[target],text_area_preferred_column_));
         return true;
     }
     if (event.key != Key::Up && event.key != Key::Down) text_area_preferred_column_ = -1;
@@ -210,10 +195,9 @@ bool RenderNode::handleTextInput(const Event& event)
     }
     if (multiline && (event.key == Key::Home || event.key == Key::End) && !event.ctrl)
     {
-        const auto start = text_.rfind('\n',cursor_byte_ == 0 ? 0 : cursor_byte_-1);
-        const auto end = text_.find('\n',cursor_byte_);
-        move_cursor(event.key == Key::Home ? (start == std::string::npos ? 0 : start+1) :
-            (end == std::string::npos ? text_.size() : end));
+        const auto lines = detail::visualTextLines(text_,std::max(1,bounds_.width-2),text_area_soft_wrap_);
+        const auto current = detail::visualLineIndex(lines,cursor_byte_);
+        move_cursor(event.key == Key::Home ? lines[current].begin : lines[current].end);
         return true;
     }
     if (number_field && !read_only_ && (event.key == Key::Character || event.key == Key::Paste))
@@ -256,19 +240,28 @@ bool RenderNode::handleTextInput(const Event& event)
             if (on_change_) on_change_(text_);
             return true;
         }
-        case Key::Left: move_cursor(detail::previousBoundary(text_,cursor_byte_)); return true;
-        case Key::Right: move_cursor(detail::nextBoundary(text_,cursor_byte_)); return true;
+        case Key::Left:
+            move_cursor(event.ctrl || event.alt ? detail::previousWordBoundary(text_,cursor_byte_) :
+                detail::previousBoundary(text_,cursor_byte_));
+            return true;
+        case Key::Right:
+            move_cursor(event.ctrl || event.alt ? detail::nextWordBoundary(text_,cursor_byte_) :
+                detail::nextBoundary(text_,cursor_byte_));
+            return true;
         case Key::Home: move_cursor(0); return true;
         case Key::End: move_cursor(text_.size()); return true;
         case Key::Backspace:
         {
             if (read_only_) return true;
             if ((!selection_active_ || selection_anchor_ == cursor_byte_) && cursor_byte_ == 0) return true;
-            recordEdit(selection_active_ && selection_anchor_ != cursor_byte_ ? EditKind::Other : EditKind::Backspace);
+            recordEdit((event.ctrl || event.alt || (selection_active_ && selection_anchor_ != cursor_byte_)) ?
+                EditKind::Other : EditKind::Backspace);
             if (!remove_selection())
             {
                 if (cursor_byte_ == 0) return true;
-                const auto previous = detail::previousBoundary(text_,cursor_byte_);
+                const auto previous = event.ctrl || event.alt ?
+                    detail::previousWordBoundary(text_,cursor_byte_) :
+                    detail::previousBoundary(text_,cursor_byte_);
                 text_.erase(previous,cursor_byte_-previous);
                 cursor_byte_ = previous;
             }
@@ -280,11 +273,14 @@ bool RenderNode::handleTextInput(const Event& event)
         {
             if (read_only_) return true;
             if ((!selection_active_ || selection_anchor_ == cursor_byte_) && cursor_byte_ == text_.size()) return true;
-            recordEdit(selection_active_ && selection_anchor_ != cursor_byte_ ? EditKind::Other : EditKind::Delete);
+            recordEdit((event.ctrl || event.alt || (selection_active_ && selection_anchor_ != cursor_byte_)) ?
+                EditKind::Other : EditKind::Delete);
             if (!remove_selection())
             {
                 if (cursor_byte_ == text_.size()) return true;
-                text_.erase(cursor_byte_,detail::nextBoundary(text_,cursor_byte_)-cursor_byte_);
+                text_.erase(cursor_byte_,(event.ctrl || event.alt ?
+                    detail::nextWordBoundary(text_,cursor_byte_) :
+                    detail::nextBoundary(text_,cursor_byte_))-cursor_byte_);
             }
             last_edit_cursor_ = cursor_byte_;
             if (on_change_) on_change_(text_);

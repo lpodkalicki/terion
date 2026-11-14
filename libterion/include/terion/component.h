@@ -194,6 +194,7 @@ public:
         bool disabled = false;
         bool read_only = false;
         int text_area_min_rows = 4;
+        bool text_area_soft_wrap = false;
         bool password_reveal = false;
         char32_t password_mask = U'•';
         double number_min = -1.0e100;

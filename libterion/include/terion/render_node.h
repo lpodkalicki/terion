@@ -111,6 +111,8 @@ public:
     void setTextCursor(Point position);
     void extendTextAreaSelection(Point position);
     void extendTextFieldSelection(Point position);
+    void selectWordAt(Point position);
+    void selectLineAt(Point position);
     void paintTextArea(Painter& painter, std::string_view focused_id, const Theme* theme) const;
     bool scrollTextArea(int rows);
     [[nodiscard]] bool selectOpen() const noexcept
@@ -228,6 +230,10 @@ private:
     std::size_t selection_anchor_ = 0;
     bool selection_active_ = false;
     int text_area_min_rows_ = 4;
+    bool text_area_soft_wrap_ = false;
+    mutable int text_area_last_wrap_width_ = -1;
+    mutable std::size_t text_area_top_byte_ = 0;
+    bool text_area_follow_cursor_ = true;
     bool read_only_ = false;
     mutable int text_area_first_row_ = 0;
     mutable int text_area_first_column_ = 0;
