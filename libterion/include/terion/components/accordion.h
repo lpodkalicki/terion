@@ -13,6 +13,7 @@
 #include <terion/components/column.h>
 #include <terion/components/button.h>
 #include <terion/components/box.h>
+#include <terion/components/tab_panel.h>
 
 namespace terion {
 
@@ -25,6 +26,7 @@ public:
         std::string title;
         std::vector<Component> children = {};
         bool disabled = false;
+        std::string description = {};
     };
 
     struct Props
@@ -35,6 +37,8 @@ public:
         std::string key = {};
         LayoutStyle layout = {.gap = 0};
         std::function<void(std::vector<std::string>)> on_change = {};
+        // Keep content reconciled, but outside layout, painting, hit-testing and focus.
+        bool keep_mounted = false;
     };
 
     explicit Accordion(Props props) : Component(build(std::move(props))) {}
@@ -50,6 +54,17 @@ public:
         return result;
     }
 
+    [[nodiscard]] static std::vector<std::string> expandAll(const std::vector<Item>& items)
+    {
+        std::vector<std::string> ids;
+        ids.reserve(items.size());
+        for (const auto& item : items)
+            if (!item.disabled) ids.push_back(item.id);
+        return ids;
+    }
+
+    [[nodiscard]] static std::vector<std::string> collapseAll() { return {}; }
+
 private:
     static Component build(Props props)
     {
@@ -58,14 +73,19 @@ private:
         for (auto& item : props.items)
         {
             const bool open=std::find(props.expanded.begin(),props.expanded.end(),item.id)!=props.expanded.end();
-            auto id=item.id;
+            const auto id=item.id;
             std::vector<Component> section;
-            section.emplace_back(Button({.text=(open?"▾ ":"▸ ")+item.title,
+            section.emplace_back(Button({.text=(open?"▾ ":"▸ ")+item.title+
+                    (item.description.empty() ? "" : " — "+item.description),
                 .key="header",.variant=ButtonVariant::Text,.disabled=item.disabled,
-                .on_click=[expanded=props.expanded,id=std::move(id),multiple=props.multiple,
+                .on_click=[expanded=props.expanded,id,multiple=props.multiple,
                     callback=props.on_change] {if (callback) callback(toggle(expanded,id,multiple));},
                 .size=ButtonSize::Compact}));
-            if (open)
+            if (props.keep_mounted)
+                section.emplace_back(TabPanel({.children={Box({.children=std::move(item.children),
+                        .key="body",.layout={.padding=1,.gap=1}})},
+                    .key="content",.active=open}));
+            else if (open)
                 section.emplace_back(Box({.children=std::move(item.children),.key="content",
                     .layout={.padding=1,.gap=1}}));
             sections.emplace_back(Column({.children=std::move(section),.key="section-"+item.id}));

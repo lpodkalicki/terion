@@ -216,3 +216,31 @@ example, including path entry, file names and overwrite confirmation. A scan
 already in progress cannot be cancelled: destroying the provider waits for
 that scan to finish, which can take time on a slow or disconnected network
 filesystem.
+
+## Composite Components 2.0 (#136b)
+
+`Stepper` supports `StepStatus::{Auto,Pending,Active,Completed,Error,Skipped}`
+per step, optional descriptions, `StepperOrientation::Vertical`, a global
+`completed` flag for the final step, and `on_before_change(from,to)` returning
+`false` to reject a requested navigation. The legacy `active_step` and
+`on_change(index)` remain supported. `on_before_change` runs for navigation
+initiated through a Stepper button; callers implementing their own Next/Back
+buttons must apply their validation there as well.
+
+`Accordion` keeps its existing controlled `expanded` list and `multiple` mode.
+With `keep_mounted=true`, collapsed children remain reconciled inside an
+inactive `TabPanel`, so local component state and hook identity survive. Hidden
+children do not occupy layout space or participate in input/focus traversal.
+`Accordion::expandAll(items)` returns IDs of enabled items;
+`Accordion::collapseAll()` returns an empty list. For uncontrolled expansion,
+keep the state in the calling application.
+
+`Breadcrumbs` can collapse middle ancestors into a keyboard/mouse-accessible
+`DropdownMenu` (`max_visible_items >= 3`) and truncate labels by terminal
+columns (`max_label_width > 0`) without splitting grapheme clusters. Both
+options default to disabled to preserve the original presentation. A hidden
+item's `disabled` property is respected by the menu.
+
+See `examples/composite_components_advanced.cpp` for an interactive demo with
+validation, a vertical stepper, retained accordion content, and navigable
+breadcrumbs.
