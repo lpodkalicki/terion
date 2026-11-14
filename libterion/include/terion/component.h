@@ -229,6 +229,7 @@ public:
         bool virtual_follow_tail = false;
         std::function<void(int)> virtual_on_select = {};
         std::function<void(int)> virtual_on_activate = {};
+        std::function<void(int,int)> virtual_on_click_position = {};
         std::vector<TreeItem> tree_items = {};
         std::vector<std::string> tree_expanded = {};
         std::function<void(std::string,bool)> tree_on_toggle = {};

@@ -50,6 +50,7 @@ bool RenderNode::handleVirtualListClick(const Point position)
     virtual_last_click_index_ = double_click ? -1 : index;
     virtual_last_click_time_ = now;
     if (virtual_on_select_) virtual_on_select_(index);
+    if (virtual_on_click_position_) virtual_on_click_position_(position.x-bounds_.x,index);
     if (double_click && virtual_on_activate_) virtual_on_activate_(index);
     return true;
 }

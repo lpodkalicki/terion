@@ -6,6 +6,7 @@
 #define TERION_RENDER_CANVAS_H
 
 #include <cstdint>
+#include <string>
 #include <vector>
 #include <terion/render/painter.h>
 
@@ -24,6 +25,7 @@ public:
     void rectangle(Rect rect);
     void circle(Point center, int radius);
     void paint(Painter& painter, Point origin = {}, TextStyle style = {}) const;
+    [[nodiscard]] std::vector<std::string> rows() const;
 
 private:
     int width_;

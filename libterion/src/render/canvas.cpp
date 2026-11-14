@@ -113,6 +113,22 @@ void Canvas::circle(Point center, int radius)
     }
 }
 
+std::vector<std::string> Canvas::rows() const
+{
+    const int columns = (width_+1)/2;
+    const int rows = (height_+3)/4;
+    std::vector<std::string> result;
+    result.reserve(static_cast<std::size_t>(rows));
+    for (int y = 0; y < rows; ++y)
+    {
+        std::string row;
+        for (int x = 0; x < columns; ++x)
+            row += braille(cells_[static_cast<std::size_t>(y*columns+x)]);
+        result.push_back(std::move(row));
+    }
+    return result;
+}
+
 void Canvas::paint(Painter& painter, Point origin, TextStyle style) const
 {
     const auto columns = (width_ + 1) / 2;

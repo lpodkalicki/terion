@@ -705,6 +705,23 @@ bool Application::dispatchEvent(const Event& event)
     return false;
 }
 
+std::uint64_t Application::addInterval(std::chrono::milliseconds period,
+    std::function<void()> callback)
+{
+    if (period.count() <= 0 || !callback)
+        throw std::invalid_argument("interval requires positive period and callback");
+    const auto id = next_interval_id_++;
+    intervals_.push_back({id,period,std::chrono::steady_clock::now()+period,std::move(callback)});
+    return id;
+}
+
+bool Application::removeInterval(std::uint64_t id)
+{
+    const auto previous = intervals_.size();
+    std::erase_if(intervals_,[id](const IntervalEntry& entry) { return entry.id == id; });
+    return previous != intervals_.size();
+}
+
 int Application::run()
 {
     running_ = true;
@@ -712,6 +729,16 @@ int Application::run()
     auto next_progress_frame = std::chrono::steady_clock::now();
     while (running_)
     {
+        // Copy due callbacks to allow addInterval/removeInterval during dispatch.
+        std::vector<std::function<void()>> due;
+        const auto tick_now = std::chrono::steady_clock::now();
+        for (auto& entry : intervals_)
+        {
+            if (tick_now < entry.next) continue;
+            entry.next = tick_now+entry.period; // skip missed ticks, never burst
+            due.push_back(entry.callback);
+        }
+        for (const auto& callback : due) callback();
         if (overlays_.tick()) invalidate();
         (void)toasts_.tick();
         const auto now = std::chrono::steady_clock::now();

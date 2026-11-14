@@ -395,6 +395,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->virtual_item_styled_ = props.virtual_item_styled;
     node->virtual_on_select_ = props.virtual_on_select;
     node->virtual_on_activate_ = props.virtual_on_activate;
+    node->virtual_on_click_position_ = props.virtual_on_click_position;
     const int previous_selected = node->virtual_selected_index_;
     node->virtual_selected_index_ = props.virtual_selected_index;
     node->virtual_scroll_.configure(node->virtual_item_count_,node->virtual_scroll_.viewport());

@@ -58,6 +58,9 @@ public:
     std::uint64_t addShortcut(Shortcut shortcut, std::function<void()> callback);
     bool removeShortcut(std::uint64_t id);
     bool dispatchEvent(const Event& event);
+    // Runs callbacks on the application event-loop thread; no worker thread is created.
+    std::uint64_t addInterval(std::chrono::milliseconds period, std::function<void()> callback);
+    bool removeInterval(std::uint64_t id);
     int run();
 
     [[nodiscard]] FocusManager& focus() noexcept { return focus_; }
@@ -121,6 +124,15 @@ private:
     };
     std::vector<ShortcutEntry> shortcuts_;
     std::uint64_t next_shortcut_id_ = 1;
+    struct IntervalEntry
+    {
+        std::uint64_t id;
+        std::chrono::milliseconds period;
+        std::chrono::steady_clock::time_point next;
+        std::function<void()> callback;
+    };
+    std::vector<IntervalEntry> intervals_;
+    std::uint64_t next_interval_id_ = 1;
     FocusManager focus_;
     Theme theme_;
     std::vector<std::string> component_focus_ids_;

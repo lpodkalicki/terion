@@ -28,6 +28,7 @@ public:
         bool follow_tail = false;
         std::function<void(int)> on_select = {};
         std::function<void(int)> on_activate = {};
+        std::function<void(int,int)> on_click_position = {};
         std::string key = {};
         LayoutStyle layout = {};
         bool disabled = false;
@@ -49,7 +50,8 @@ public:
             .virtual_row_height = std::max(1,props.row_height),
             .virtual_follow_tail = props.follow_tail,
             .virtual_on_select = std::move(props.on_select),
-            .virtual_on_activate = std::move(props.on_activate)})
+            .virtual_on_activate = std::move(props.on_activate),
+            .virtual_on_click_position = std::move(props.on_click_position)})
     {}
 }; /* End of class VirtualList */
 

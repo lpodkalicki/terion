@@ -261,6 +261,7 @@ private:
     bool virtual_follow_tail_ = false;
     std::function<void(int)> virtual_on_select_;
     std::function<void(int)> virtual_on_activate_;
+    std::function<void(int,int)> virtual_on_click_position_;
     int virtual_last_click_index_ = -1;
     std::chrono::steady_clock::time_point virtual_last_click_time_{};
     ScrollController virtual_scroll_{};
