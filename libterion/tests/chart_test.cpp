@@ -3,12 +3,32 @@
  */
 
 #include <cmath>
+#include <cstddef>
 #include <limits>
+#include <string>
 #include <gtest/gtest.h>
 #include <terion/terion.h>
 #include <terion/chart_buffer.h>
 
 using namespace terion;
+
+namespace {
+
+void expectBrailleRow(const std::string& row,std::size_t columns)
+{
+    // U+2800..U+28FF uses exactly three UTF-8 bytes per terminal cell.
+    ASSERT_EQ(row.size(),columns*3u);
+    for (std::size_t i=0;i<row.size();i+=3)
+    {
+        EXPECT_EQ(static_cast<unsigned char>(row[i]),0xe2u);
+        EXPECT_GE(static_cast<unsigned char>(row[i+1]),0xa0u);
+        EXPECT_LE(static_cast<unsigned char>(row[i+1]),0xa3u);
+        EXPECT_GE(static_cast<unsigned char>(row[i+2]),0x80u);
+        EXPECT_LE(static_cast<unsigned char>(row[i+2]),0xbfu);
+    }
+}
+
+} /* End of anonymous namespace */
 
 TEST(Sparkline, RendersAtRequestedWidth)
 {
@@ -28,7 +48,7 @@ TEST(Chart, HasBrailleResolutionAndFiniteBounds)
 {
     const auto rows = Chart::render({0,1,0},10,4);
     ASSERT_EQ(rows.size(),4u);
-    for (const auto& row : rows) EXPECT_EQ(row.size(),60u);
+    for (const auto& row : rows) expectBrailleRow(row,10u);
     EXPECT_NE(rows[0],rows[3]);
     EXPECT_TRUE(Chart::render({},0,3).empty());
 }
@@ -40,7 +60,7 @@ TEST(Chart, HandlesNaNAndModes)
     {
         const auto rows = Chart::render({1,nan,3,-2},12,5,variant,true);
         ASSERT_EQ(rows.size(),5u);
-        for (const auto& row : rows) EXPECT_EQ(row.size(),72u);
+        for (const auto& row : rows) expectBrailleRow(row,12u);
     }
 }
 

@@ -6,6 +6,7 @@
 #include <terion/utf8.h>
 #include <limits>
 #include <algorithm>
+#include <array>
 
 using namespace terion;
 
@@ -75,6 +76,54 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
             if (end < bytes_.size() && end < 64)
             {
                 const auto final = bytes_[end];
+                // Numeric CSI parameters are also used by CSI-u and modifyOtherKeys.
+                std::array<int,3> parameters{};
+                std::size_t parameter_count = 0;
+                bool numeric = bytes_[1] == '[';
+                bool has_digit = false;
+                for (std::size_t i = 2; numeric && i < end; ++i)
+                {
+                    const auto c = bytes_[i];
+                    if (c >= '0' && c <= '9' &&
+                        parameters[parameter_count] <= (std::numeric_limits<int>::max() - (c-'0')) / 10)
+                    {
+                        parameters[parameter_count] = parameters[parameter_count] * 10 + c-'0';
+                        has_digit = true;
+                    }
+                    else if (c == ';' && has_digit && parameter_count + 1 < parameters.size())
+                    {
+                        ++parameter_count;
+                        has_digit = false;
+                    }
+                    else numeric = false;
+                }
+                numeric = numeric && has_digit;
+                if (numeric) ++parameter_count;
+                const auto modifier_flags = [](const int modifier) {
+                    return modifier >= 1 && modifier <= 8 ? modifier-1 : -1;
+                };
+                if (numeric && ((final == 'u' && parameter_count <= 2) ||
+                    (final == '~' && parameter_count == 3 && parameters[0] == 27)))
+                {
+                    const int value = final == 'u' ? parameters[0] : parameters[2];
+                    const int modifier = parameter_count >= 2 ? parameters[1] : 1;
+                    const int flags = modifier_flags(modifier);
+                    Key key = Key::Character;
+                    char32_t character = static_cast<char32_t>(value);
+                    if (value == 9) key = (flags & 1) ? Key::BackTab : Key::Tab;
+                    else if (value == 13 || value == 10) key = Key::Enter;
+                    else if (value == 27) key = Key::Escape;
+                    else if (value == 8 || value == 127) key = Key::Backspace;
+                    else if (value < 32 || value > 0x10FFFF ||
+                        (value >= 0xD800 && value <= 0xDFFF)) key = Key::Unknown;
+                    if (key == Key::Character && (flags & 4) && character >= U'A' && character <= U'Z')
+                        character += 32;
+                    for (std::size_t i = 0; i <= end; ++i) bytes_.pop_front();
+                    if (flags < 0) key = Key::Unknown;
+                    return Event{.key = key,.character = key == Key::Character ? character : 0,
+                        .shift = (flags & 1) != 0,.alt = (flags & 2) != 0,
+                        .ctrl = (flags & 4) != 0};
+                }
                 if (bytes_.size() > 3 && bytes_[2] == '<' && (final == 'M' || final == 'm'))
                 {
                     int fields[3] = {};
@@ -130,9 +179,11 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
                     case 'D': key = Key::Left; break;
                     case 'H': key = Key::Home; break;
                     case 'F': key = Key::End; break;
-                    case 'Z':
-                        if (bytes_[1] == '[' && end == 2) key = Key::BackTab;
-                        break;
+                    case 'P': if (bytes_[1] == 'O' || bytes_[1] == '[') key = Key::F1; break;
+                    case 'Q': if (bytes_[1] == 'O' || bytes_[1] == '[') key = Key::F2; break;
+                    case 'R': if (bytes_[1] == 'O' || bytes_[1] == '[') key = Key::F3; break;
+                    case 'S': if (bytes_[1] == 'O' || bytes_[1] == '[') key = Key::F4; break;
+                    case 'Z': if (bytes_[1] == '[') key = Key::BackTab; break;
                     case '~':
                     {
                         int number = 0;
@@ -151,6 +202,18 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
                             case 4: case 8: key = Key::End; break;
                             case 5: key = Key::PageUp; break;
                             case 6: key = Key::PageDown; break;
+                            case 11: key = Key::F1; break;
+                            case 12: key = Key::F2; break;
+                            case 13: key = Key::F3; break;
+                            case 14: key = Key::F4; break;
+                            case 15: key = Key::F5; break;
+                            case 17: key = Key::F6; break;
+                            case 18: key = Key::F7; break;
+                            case 19: key = Key::F8; break;
+                            case 20: key = Key::F9; break;
+                            case 21: key = Key::F10; break;
+                            case 23: key = Key::F11; break;
+                            case 24: key = Key::F12; break;
                             default: break;
                         }
                         break;
@@ -188,6 +251,26 @@ std::optional<Event> InputDecoder::nextEvent(const bool flush_escape)
             bytes_.pop_front();
             bytes_.pop_front();
             return Event{.key = Key::Character,.character = character,.alt = true};
+        }
+
+        // Option/Alt+Unicode is commonly encoded as ESC followed by UTF-8.
+        if (bytes_.size() >= 2 && bytes_[1] >= 0xC2 && bytes_[1] <= 0xF4)
+        {
+            const auto lead = bytes_[1];
+            const std::size_t length = lead <= 0xDF ? 2 : lead <= 0xEF ? 3 : 4;
+            if (bytes_.size() < length+1 && !flush_escape) return std::nullopt;
+            if (bytes_.size() >= length+1)
+            {
+                std::string encoded;
+                for (std::size_t i = 1; i <= length; ++i)
+                    encoded += static_cast<char>(bytes_[i]);
+                const auto decoded = decodeUtf8(encoded,0);
+                if (decoded.bytes == length && decoded.code_point != 0xFFFD)
+                {
+                    for (std::size_t i = 0; i <= length; ++i) bytes_.pop_front();
+                    return Event{.key = Key::Character,.character = decoded.code_point,.alt = true};
+                }
+            }
         }
 
         bytes_.pop_front();

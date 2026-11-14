@@ -37,7 +37,19 @@ enum class Key
     PageDown,
     Resize,
     Mouse,
-    Paste
+    Paste,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12
 }; /* End of enum Key */
 
 enum class MouseButton
@@ -108,8 +120,17 @@ struct Shortcut
 
     [[nodiscard]] bool matches(const Event& event) const noexcept
     {
-        return event.key == key && (key != Key::Character || event.character == character) &&
-            event.shift == shift && event.alt == alt && event.ctrl == ctrl;
+        // Many terminals encode Shift+Tab as BackTab without a separate shift flag.
+        const bool back_tab = key == Key::BackTab || (key == Key::Tab && shift);
+        if (back_tab)
+            return (event.key == Key::BackTab || (event.key == Key::Tab && event.shift)) &&
+                event.alt == alt && event.ctrl == ctrl;
+        if (event.key != key || event.shift != shift || event.alt != alt || event.ctrl != ctrl)
+            return false;
+        if (key != Key::Character) return true;
+        // Control/Option key combinations may arrive as uppercase ASCII via CSI-u.
+        const auto fold = [](char32_t c) { return c >= U'A' && c <= U'Z' ? c + 32 : c; };
+        return (ctrl || alt) ? fold(event.character) == fold(character) : event.character == character;
     }
 }; /* End of struct Shortcut */
 

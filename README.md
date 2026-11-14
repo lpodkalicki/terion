@@ -123,3 +123,34 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 ## License
 
 Apache-2.0. See `LICENSE`.
+
+## Keyboard shortcuts and terminal input (#135b)
+
+Keyboard input is first offered to component capture/bubble handlers and active
+popups/dialogs. By default, the focused control then handles editing and focus
+traversal before application shortcuts. This prevents application-level `Ctrl+C`,
+`Ctrl+V` or `Ctrl+Z` bindings from stealing text editing commands.
+
+```cpp
+app.addShortcut({.key = Key::Character,.character = U's',.ctrl = true},onSave);
+app.addShortcut({.key = Key::Character,.character = U'k',.ctrl = true},onEditorCommand,
+    {.scope = ShortcutScope::FocusedControl,.target = "editor"});
+app.addShortcut({.key = Key::Character,.character = U'r',.ctrl = true},onWorkspaceCommand,
+    {.scope = ShortcutScope::FocusScope,.target = "workspace"});
+```
+
+`target` can be a component's `.key` or its runtime node ID. `FocusScope`
+requires the target scope to be active; `FocusedControl` requires the exact
+control to hold focus. To *deliberately* preempt a focused control, pass
+`{.priority = ShortcutPriority::BeforeFocused}`. Component capture handlers
+and modal overlays still take precedence.
+
+`Tab` and `Shift+Tab` traverse within the active focus scope. Modified
+`Ctrl+Tab`/`Alt+Tab` are not interpreted as focus traversal and may be assigned
+to shortcuts if the host terminal forwards them. Supported decoding includes
+xterm-style modified arrows, Shift+Tab, F1–F12, basic CSI-u, xterm
+modifyOtherKeys and Alt-prefixed Unicode. Host OS/terminal reservations cannot
+be bypassed, and full Kitty enhanced-keyboard event negotiation is not enabled.
+
+Run `shortcuts` for a live demo and `terminal_compatibility` to inspect input
+received from your terminal.

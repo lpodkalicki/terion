@@ -26,6 +26,29 @@
 
 namespace terion {
 
+// Shortcut handlers run after the focused control by default. Explicit pre-focus
+// handlers are intended for commands that deliberately override editing keys.
+enum class ShortcutPriority
+{
+    AfterFocused,
+    BeforeFocused
+}; /* End of enum ShortcutPriority */
+
+enum class ShortcutScope
+{
+    Global,
+    FocusScope,
+    FocusedControl
+}; /* End of enum ShortcutScope */
+
+struct ShortcutOptions
+{
+    ShortcutPriority priority = ShortcutPriority::AfterFocused;
+    ShortcutScope scope = ShortcutScope::Global;
+    // FocusScope: scope key or runtime id; FocusedControl: component key or runtime id.
+    std::string target = {};
+}; /* End of struct ShortcutOptions */
+
 class Application
 {
 public:
@@ -56,6 +79,8 @@ public:
     [[nodiscard]] bool needsRender() const noexcept { return dirty_->load(); }
     void on_event(EventCallback callback) { on_event_ = std::move(callback); }
     std::uint64_t addShortcut(Shortcut shortcut, std::function<void()> callback);
+    std::uint64_t addShortcut(Shortcut shortcut, std::function<void()> callback,
+        ShortcutOptions options);
     bool removeShortcut(std::uint64_t id);
     bool dispatchEvent(const Event& event);
     // Runs callbacks on the application event-loop thread; no worker thread is created.
@@ -102,6 +127,8 @@ public:
 private:
     void syncFocusTargets();
     bool handleMouse(const MouseEvent& mouse);
+    bool dispatchShortcuts(const Event& event, ShortcutPriority priority);
+    [[nodiscard]] bool shortcutTargetMatches(const ShortcutOptions& options) const;
     void updateHover(const MouseEvent& mouse);
     void updateMousePointer(const MouseEvent& mouse);
 
@@ -121,6 +148,7 @@ private:
         std::uint64_t id;
         Shortcut shortcut;
         std::function<void()> callback;
+        ShortcutOptions options;
     };
     std::vector<ShortcutEntry> shortcuts_;
     std::uint64_t next_shortcut_id_ = 1;

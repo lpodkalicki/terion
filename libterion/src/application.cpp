@@ -50,12 +50,53 @@ bool Application::hasFocus(const std::string_view component_key) const
 
 std::uint64_t Application::addShortcut(const Shortcut shortcut, std::function<void()> callback)
 {
+    return addShortcut(shortcut,std::move(callback),{});
+}
+
+std::uint64_t Application::addShortcut(const Shortcut shortcut, std::function<void()> callback,
+    ShortcutOptions options)
+{
     if (!callback || shortcut.key == Key::Unknown || shortcut.key == Key::Mouse ||
-        shortcut.key == Key::Resize)
+        shortcut.key == Key::Resize || shortcut.key == Key::Paste)
         throw std::invalid_argument("shortcut requires a keyboard key and callback");
+    if (options.scope != ShortcutScope::Global && options.target.empty())
+        throw std::invalid_argument("scoped shortcut requires a target key or id");
     const auto id = next_shortcut_id_++;
-    shortcuts_.push_back({.id = id,.shortcut = shortcut,.callback = std::move(callback)});
+    shortcuts_.push_back({.id = id,.shortcut = shortcut,.callback = std::move(callback),
+        .options = std::move(options)});
     return id;
+}
+
+bool Application::shortcutTargetMatches(const ShortcutOptions& options) const
+{
+    if (options.scope == ShortcutScope::Global) return true;
+    const std::string_view actual = options.scope == ShortcutScope::FocusScope ?
+        focus_.activeScope() : focus_.current();
+    // An empty focus identity must never match even if the target is "0".
+    if (actual.empty()) return false;
+    if (actual == options.target) return true;
+    if (!reconciler_.root()) return false;
+    const auto find = [&](const auto& self, const RenderNode& node) -> bool {
+        if (node.key() == options.target && std::to_string(node.id()) == actual) return true;
+        for (const auto& child : node.children())
+            if (self(self,*child)) return true;
+        return false;
+    };
+    return find(find,*reconciler_.root());
+}
+
+bool Application::dispatchShortcuts(const Event& event, const ShortcutPriority priority)
+{
+    for (const auto& shortcut : shortcuts_)
+    {
+        if (shortcut.options.priority != priority || !shortcut.shortcut.matches(event) ||
+            !shortcutTargetMatches(shortcut.options)) continue;
+        // A handler may remove or register shortcuts: do not retain an iterator or reference.
+        auto callback = shortcut.callback;
+        callback();
+        return true;
+    }
+    return false;
 }
 
 bool Application::removeShortcut(const std::uint64_t id)
@@ -686,16 +727,8 @@ bool Application::dispatchEvent(const Event& event)
     }
     if (event.key != Key::Resize && event.key != Key::Mouse && overlays_.handleKey(event)) return true;
     if (event.key == Key::Mouse && handleMouse(event.mouse)) return true;
-    if (event.key != Key::Resize && event.key != Key::Mouse)
-    {
-        for (const auto& shortcut : shortcuts_)
-        {
-            if (!shortcut.shortcut.matches(event)) continue;
-            const auto callback = shortcut.callback;
-            callback();
-            return true;
-        }
-    }
+    if (event.key != Key::Resize && event.key != Key::Mouse &&
+        dispatchShortcuts(event,ShortcutPriority::BeforeFocused)) return true;
     if (focus_.dispatch(event))
     {
         if (reconciler_.root())
@@ -713,6 +746,8 @@ bool Application::dispatchEvent(const Event& event)
         }
         return true;
     }
+    if (event.key != Key::Resize && event.key != Key::Mouse &&
+        dispatchShortcuts(event,ShortcutPriority::AfterFocused)) return true;
     if (on_event_ && on_event_(event)) return true;
     if (event.key == Key::Escape)
     {
