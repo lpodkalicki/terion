@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <string>
 #include <string_view>
-#include <terion/utf8.h>
+#include <terion/grapheme.h>
 
 namespace terion::detail {
 
@@ -33,24 +33,12 @@ inline std::size_t previousCodepoint(std::string_view text, std::size_t cursor)
 
 inline std::size_t previousBoundary(std::string_view text, std::size_t cursor)
 {
-    std::size_t start = previousCodepoint(text,cursor);
-    while (start > 0 && codePointWidth(decodeUtf8(text,start).code_point) == 0 &&
-        decodeUtf8(text,start).code_point != U'\n' &&
-        decodeUtf8(text,start).code_point != U'\t' &&
-        decodeUtf8(text,start).code_point != U'\r')
-        start = previousCodepoint(text,start);
-    return start;
+    return previousGraphemeBoundary(text,cursor);
 }
 
 inline std::size_t nextBoundary(std::string_view text, std::size_t cursor)
 {
-    std::size_t end = nextCodepoint(text,cursor);
-    while (end < text.size() && codePointWidth(decodeUtf8(text,end).code_point) == 0 &&
-        decodeUtf8(text,end).code_point != U'\n' &&
-        decodeUtf8(text,end).code_point != U'\t' &&
-        decodeUtf8(text,end).code_point != U'\r')
-        end = nextCodepoint(text,end);
-    return end;
+    return nextGraphemeBoundary(text,cursor);
 }
 
 inline std::string encodeUtf8(char32_t code_point)

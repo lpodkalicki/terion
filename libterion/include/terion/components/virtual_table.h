@@ -16,7 +16,7 @@
 #include <terion/components/column.h>
 #include <terion/components/row.h>
 #include <terion/components/virtual_list.h>
-#include <terion/utf8.h>
+#include <terion/grapheme.h>
 
 namespace terion {
 
@@ -47,31 +47,16 @@ public:
     explicit VirtualTable(Props props) : Component(create(std::move(props))) {}
 
 private:
-    static int displayWidth(const std::string_view text)
-    {
-        int width = 0;
-        for (std::size_t pos = 0; pos < text.size();)
-        {
-            const auto decoded = decodeUtf8(text,pos);
-            if (decoded.bytes == 0) break;
-            width += codePointWidth(decoded.code_point);
-            pos += decoded.bytes;
-        }
-        return width;
-    }
-
     static std::string clip(const std::string_view text, const int max_width)
     {
         std::size_t end = 0;
         int width = 0;
         while (end < text.size())
         {
-            const auto decoded = decodeUtf8(text,end);
-            if (decoded.bytes == 0) break;
-            const int glyph_width = codePointWidth(decoded.code_point);
-            if (width+glyph_width > max_width) break;
-            width += glyph_width;
-            end += decoded.bytes;
+            const auto cluster = nextGrapheme(text,end);
+            if (!cluster.bytes || width + cluster.columns > max_width) break;
+            width += cluster.columns;
+            end += cluster.bytes;
         }
         return std::string(text.substr(0,end));
     }

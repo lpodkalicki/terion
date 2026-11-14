@@ -3,7 +3,7 @@
  */
 
 #include <terion/toast_manager.h>
-#include <terion/utf8.h>
+#include <terion/grapheme.h>
 #include <algorithm>
 #include <utility>
 
@@ -13,15 +13,7 @@ namespace {
 
 int textWidth(const std::string_view value)
 {
-    int width = 0;
-    for (std::size_t i = 0; i < value.size();)
-    {
-        const auto decoded = decodeUtf8(value,i);
-        if (!decoded.bytes) break;
-        width += codePointWidth(decoded.code_point);
-        i += decoded.bytes;
-    }
-    return width;
+    return displayWidth(value);
 }
 
 std::string clipText(const std::string_view value, const int limit)
@@ -30,11 +22,11 @@ std::string clipText(const std::string_view value, const int limit)
     int width = 0;
     for (std::size_t i = 0; i < value.size();)
     {
-        const auto decoded = decodeUtf8(value,i);
-        if (!decoded.bytes || width+codePointWidth(decoded.code_point) > limit) break;
-        result.append(value.substr(i,decoded.bytes));
-        width += codePointWidth(decoded.code_point);
-        i += decoded.bytes;
+        const auto cluster = nextGrapheme(value,i);
+        if (!cluster.bytes || width+cluster.columns > limit) break;
+        result.append(value.substr(i,cluster.bytes));
+        width += cluster.columns;
+        i += cluster.bytes;
     }
     return result;
 }

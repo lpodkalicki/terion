@@ -33,6 +33,9 @@ struct TextStyle
     Color background = {.red = 0,.green = 0,.blue = 0};
     bool bold = false;
     bool underline = false;
+    bool italic = false;
+    bool strikethrough = false;
+    bool dim = false;
     bool operator==(const TextStyle&) const = default;
 }; /* End of struct TextStyle */
 

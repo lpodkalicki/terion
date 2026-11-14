@@ -119,16 +119,20 @@ private:
             std::string bytes;
             for (std::size_t i = 0; i < span.text.size();)
             {
-                const auto glyph = decodeUtf8(span.text,i);
+                const auto glyph = nextGrapheme(span.text,i);
                 if (!glyph.bytes) break;
-                const int cells = codePointWidth(glyph.code_point);
+                const int cells = glyph.columns;
                 if (used+cells > width) break;
                 bytes += span.text.substr(i,glyph.bytes);
                 used += cells;
                 i += glyph.bytes;
             }
-            if (!bytes.empty()) result.push_back({.text = std::move(bytes),
-                .color = span.color,.bold = span.bold});
+            if (!bytes.empty())
+            {
+                auto clipped = span;
+                clipped.text = std::move(bytes);
+                result.push_back(std::move(clipped));
+            }
             if (used >= width) break;
         }
         return result;
@@ -317,7 +321,7 @@ private:
                 {
                     flush();
                     spans.push_back({.text = std::string(text.substr(cursor+2,close-cursor-2)),
-                        .color = ColorVariant::Warning});
+                        .color = ColorVariant::Warning,.strikethrough = true});
                     cursor = close+2;
                     continue;
                 }
@@ -329,7 +333,7 @@ private:
                 {
                     flush();
                     spans.push_back({.text = std::string(text.substr(cursor+1,close-cursor-1)),
-                        .color = ColorVariant::Info,.bold = base_bold});
+                        .color = ColorVariant::Info,.bold = base_bold,.italic = true});
                     cursor = close+1;
                     continue;
                 }
@@ -344,7 +348,7 @@ private:
                     {
                         flush();
                         spans.push_back({.text = std::string(text.substr(cursor+1,bracket-cursor-1)),
-                            .color = ColorVariant::Primary});
+                            .color = ColorVariant::Primary,.underline = true});
                         cursor = end+1;
                         continue;
                     }

@@ -3,7 +3,7 @@
  */
 
 #include <algorithm>
-#include <terion/utf8.h>
+#include <terion/grapheme.h>
 #include <terion/render/painter.h>
 
 using namespace terion;
@@ -52,8 +52,7 @@ void Painter::eraseGlyphAt(const int x, const int y) const
 void Painter::put(const int x, const int y, const std::string_view grapheme, const TextStyle style) const
 {
     if (grapheme.empty() || !visible(x,y)) return;
-    const auto [code_point, bytes] = decodeUtf8(grapheme,0);
-    const int width = codePointWidth(code_point);
+    const int width = graphemeWidth(grapheme);
     if (width < 1 || (width == 2 && !visible(x+1,y))) return;
     eraseGlyphAt(x,y);
     if (width == 2) eraseGlyphAt(x+1,y);
@@ -63,27 +62,17 @@ void Painter::put(const int x, const int y, const std::string_view grapheme, con
 
 void Painter::text(int x, const int y, const std::string_view text, const TextStyle style) const
 {
-    int last_x = -1;
     for (std::size_t i = 0; i < text.size();)
     {
-        const auto [code_point, bytes] = decodeUtf8(text,i);
-        if (bytes == 0) break;
-        const int width = codePointWidth(code_point);
-        if (width == 0 && last_x >= 0)
+        const auto grapheme = nextGrapheme(text,i);
+        if (!grapheme.bytes) break;
+        if (grapheme.columns > 0)
         {
-            if (visible(last_x,y)) buffer_.at(last_x,y).grapheme.append(text.substr(i,bytes));
+            if (visible(x,y) && (grapheme.columns == 1 || visible(x+1,y)))
+                put(x,y,text.substr(i,grapheme.bytes),style);
+            x += grapheme.columns;
         }
-        else if (width > 0)
-        {
-            if (visible(x,y) && (width == 1 || visible(x+1,y)))
-            {
-                put(x,y,text.substr(i,bytes),style);
-                last_x = x;
-            }
-            else last_x = -1;
-            x += width;
-        }
-        i += bytes;
+        i += grapheme.bytes;
     }
 }
 

@@ -117,7 +117,7 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 - Event handlers support capture → target → bubble propagation (`on_event_capture`, `on_event`) with `stopPropagation()` and `preventDefault()`.
 - `FocusScope` confines keyboard focus to one active subtree (for example a form). An open `Dialog` automatically creates a modal focus scope and restores the previously focused background element when closed.
 - `Dialog::Props::children` accepts arbitrary nested components; the overlay lays them out and paints them inside the dialog. See `examples/architecture.cpp` for a composed dialog with a `TextField` and a `Button`.
-- UTF-8 decoder and preliminary codepoint display-width estimation. Full grapheme cluster handling, Unicode emoji sequences, and key-sequence parsing are **not implemented yet**.
+- UTF-8 decoder, grapheme-aware editing/rendering (combining marks, ZWJ emoji, flags, emoji modifiers) and terminal cell-width estimation. Unicode segmentation is currently table-based, not full Unicode-version-pinned UAX #29 compliance.
 - Cmdly integration will be an optional `Console` component in a later milestone.
 
 ## License
@@ -154,3 +154,33 @@ be bypassed, and full Kitty enhanced-keyboard event negotiation is not enabled.
 
 Run `shortcuts` for a live demo and `terminal_compatibility` to inspect input
 received from your terminal.
+
+## StyledText & Unicode (#135c)
+
+Use `#include <terion/grapheme.h>` for `nextGrapheme`, `nextGraphemeBoundary`,
+`previousGraphemeBoundary`, `graphemeWidth`, and `displayWidth`. These helpers
+are shared by `Painter`, editable text controls, Markdown wrapping and table
+clipping. Movement, deletion, selection and visual wrapping do not split common
+multi-codepoint graphemes such as `é`, `👍🏽`, `🇵🇱` and `👨‍👩‍👧`.
+
+Rich text supports `bold`, `italic`, `underline`, `strikethrough`, `dim` and
+optional `background` in addition to theme-based foreground `color`:
+
+```cpp
+StyledText message = {
+    {.text = "Added ", .color = ColorVariant::Success, .bold = true},
+    {.text = "documentation", .underline = true, .italic = true,
+        .background = ColorVariant::Info},
+};
+VirtualList({.item_count = 1,
+    .item_styled = [message](int) { return message; }});
+```
+
+Rendering uses ANSI SGR 1/2/3/4/9 (bold/dim/italic/underline/strike) plus true
+color. Support varies between terminal emulators. Markdown emphasis, deletion
+and links now use the corresponding text attributes. `unicode_styled` is an
+interactive example; `grapheme_styled_text_test.cpp` contains headless tests.
+
+The built-in Unicode property tables cover common grapheme cases and emoji,
+but **do not implement the complete, versioned Unicode UAX #29 database**.
+Terminal emoji widths are estimates and may differ with terminal/font settings.

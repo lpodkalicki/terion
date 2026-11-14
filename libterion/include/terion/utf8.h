@@ -48,11 +48,12 @@ inline bool isValidUtf8(const std::string_view s)
     return true;
 }
 
-// MVP width heuristic. Full UAX #29 grapheme segmentation is planned.
+// Codepoint width heuristic; use grapheme.h for cluster boundaries and terminal widths.
 inline int codePointWidth(char32_t c)
 {
     if (!c || c < 32 || (c >= 0x7F && c < 0xA0)) return 0;
-    if ((c >= 0x300 && c <= 0x36F) || (c >= 0xFE00 && c <= 0xFE0F)) return 0;
+    if ((c >= 0x300 && c <= 0x36F) || (c >= 0xFE00 && c <= 0xFE0F) ||
+        c == 0x200D || c == 0x200C || c == 0x20E3 || (c >= 0x1F3FB && c <= 0x1F3FF)) return 0;
     const auto within = [c](const char32_t lo, const char32_t hi) { return c >= lo && c <= hi; };
     // Emoji presented as double-width glyphs in common terminals, including Terminal.app.
     // These symbols sit outside the broad supplementary emoji ranges below.

@@ -105,9 +105,9 @@ inline std::vector<VisualTextLine> visualTextLines(std::string_view text, int wi
             columns = 0;
             continue;
         }
-        const auto decoded = decodeUtf8(text,i);
-        const std::size_t bytes = std::max<std::size_t>(1,decoded.bytes);
-        const int cell_width = std::max(0,codePointWidth(decoded.code_point));
+        const auto cluster = nextGrapheme(text,i);
+        const std::size_t bytes = std::max<std::size_t>(1,cluster.bytes);
+        const int cell_width = cluster.columns;
         if (wrap && columns + cell_width > width && i > start)
         {
             result.push_back({start,i});
@@ -138,10 +138,10 @@ inline int visualColumn(std::string_view text, VisualTextLine line, std::size_t 
     int column = 0;
     for (std::size_t i = line.begin; i < std::min(line.end,byte);)
     {
-        const auto decoded = decodeUtf8(text,i);
-        if (!decoded.bytes) break;
-        column += std::max(0,codePointWidth(decoded.code_point));
-        i += decoded.bytes;
+        const auto cluster = nextGrapheme(text,i);
+        if (!cluster.bytes) break;
+        column += cluster.columns;
+        i += cluster.bytes;
     }
     return column;
 }
@@ -152,10 +152,10 @@ inline std::size_t visualOffset(std::string_view text, VisualTextLine line, int 
     std::size_t byte = line.begin;
     while (byte < line.end)
     {
-        const auto decoded = decodeUtf8(text,byte);
-        if (!decoded.bytes || width + codePointWidth(decoded.code_point) > column) break;
-        width += std::max(0,codePointWidth(decoded.code_point));
-        byte += decoded.bytes;
+        const auto cluster = nextGrapheme(text,byte);
+        if (!cluster.bytes || width + cluster.columns > column) break;
+        width += cluster.columns;
+        byte += cluster.bytes;
     }
     return byte;
 }

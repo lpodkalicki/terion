@@ -166,9 +166,9 @@ void RenderNode::paintTextArea(Painter& painter, std::string_view focused_id, co
             int column = 0;
             for (std::size_t i = line.begin; i < line.end;)
             {
-                const auto decoded = decodeUtf8(text_,i);
-                if (!decoded.bytes) break;
-                const int width = codePointWidth(decoded.code_point);
+                const auto cluster = nextGrapheme(text_,i);
+                if (!cluster.bytes) break;
+                const int width = cluster.columns;
                 if (column >= text_area_first_column_ &&
                     column+width <= text_area_first_column_+content.width)
                 {
@@ -180,10 +180,10 @@ void RenderNode::paintTextArea(Painter& painter, std::string_view focused_id, co
                         style.foreground = palette.on_primary;
                     }
                     painter.put(content.x+column-text_area_first_column_,content.y+row,
-                        std::string_view(text_).substr(i,decoded.bytes),style);
+                        std::string_view(text_).substr(i,cluster.bytes),style);
                 }
                 column += width;
-                i += decoded.bytes;
+                i += cluster.bytes;
             }
         }
     }

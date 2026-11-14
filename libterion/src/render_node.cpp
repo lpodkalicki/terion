@@ -4,7 +4,7 @@
 
 #include <terion/render_node.h>
 #include <terion/text_editor_core.h>
-#include <terion/utf8.h>
+#include <terion/grapheme.h>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -27,32 +27,21 @@ int addBounded(int a, int b);
 
 int textWidth(const std::string_view text)
 {
-    int width = 0;
-    for (std::size_t i = 0; i < text.size();)
-    {
-        const auto [code_point,bytes] = decodeUtf8(text,i);
-        if (!bytes) break;
-        width = addBounded(width,codePointWidth(code_point));
-        i += bytes;
-    }
-    return width;
+    return displayWidth(text);
 }
 
 std::string clipText(const std::string_view text, const int columns)
 {
-    std::string clipped;
+    std::size_t end = 0;
     int width = 0;
-    for (std::size_t i = 0; i < text.size();)
+    while (end < text.size())
     {
-        const auto [code_point,bytes] = decodeUtf8(text,i);
-        if (!bytes) break;
-        const int current = codePointWidth(code_point);
-        if (current > columns - width) break;
-        if (current > 0 || !clipped.empty()) clipped.append(text.substr(i,bytes));
-        width += current;
-        i += bytes;
+        const auto grapheme = nextGrapheme(text,end);
+        if (!grapheme.bytes || grapheme.columns > columns-width) break;
+        width += grapheme.columns;
+        end += grapheme.bytes;
     }
-    return clipped;
+    return std::string(text.substr(0,end));
 }
 
 std::string clipWindow(const std::string_view text, const int offset, const int columns)
@@ -62,16 +51,15 @@ std::string clipWindow(const std::string_view text, const int offset, const int 
     int drawn = 0;
     for (std::size_t i = 0; i < text.size();)
     {
-        const auto [code_point,bytes] = decodeUtf8(text,i);
-        if (!bytes) break;
-        const int width = codePointWidth(code_point);
-        if (position >= offset && drawn + width <= columns)
+        const auto grapheme = nextGrapheme(text,i);
+        if (!grapheme.bytes) break;
+        if (position >= offset && drawn + grapheme.columns <= columns)
         {
-            result.append(text.substr(i,bytes));
-            drawn += width;
+            result.append(text.substr(i,grapheme.bytes));
+            drawn += grapheme.columns;
         }
-        if (width > 0) position += width;
-        i += bytes;
+        position += grapheme.columns;
+        i += grapheme.bytes;
         if (drawn >= columns) break;
     }
     return result;
@@ -1950,6 +1938,12 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                     if (!disabled_ && !selected && span.color != ColorVariant::Default)
                         span_style.foreground = palette.resolve(span.color);
                     span_style.bold = span_style.bold || span.bold;
+                    span_style.italic = span.italic;
+                    span_style.underline = span.underline;
+                    span_style.strikethrough = span.strikethrough;
+                    span_style.dim = span.dim;
+                    if (span.background && !selected && !disabled_)
+                        span_style.background = palette.resolve(*span.background);
                     painter.text(x,y,clipped,span_style);
                     x += textWidth(clipped);
                     if (textWidth(clipped) < textWidth(span.text)) break;
@@ -2299,10 +2293,16 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const int inset = outlined ? 2 : 1;
         const int columns = std::max(0,bounds_.width - inset * 2);
         const bool masked = type_ == Component::Type::PasswordField && !password_reveal_;
-        const int cursor_columns = masked ? static_cast<int>(std::count_if(text_.begin(),
-            text_.begin()+static_cast<std::ptrdiff_t>(std::min(cursor_byte_,text_.size())),
-            [](unsigned char byte) { return (byte & 0xC0) != 0x80; })) :
-            textWidth(std::string_view(text_).substr(0,cursor_byte_));
+        int cursor_columns = 0;
+        if (masked)
+            for (std::size_t i = 0; i < cursor_byte_ && i < text_.size();)
+            {
+                const auto cluster = nextGrapheme(text_,i);
+                if (!cluster.bytes) break;
+                ++cursor_columns;
+                i += cluster.bytes;
+            }
+        else cursor_columns = textWidth(std::string_view(text_).substr(0,cursor_byte_));
         scroll_columns_ = focused ? std::max(0,cursor_columns - std::max(0,columns - 1)) : 0;
         TextStyle content_style = field_style;
         if (text_.empty()) content_style.foreground = palette.muted;
@@ -2312,10 +2312,10 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             const auto mask_glyph = detail::encodeUtf8(password_mask_);
             for (std::size_t i = 0; i < text_.size();)
             {
-                const auto decoded = decodeUtf8(text_,i);
-                if (!decoded.bytes) break;
+                const auto cluster = nextGrapheme(text_,i);
+                if (!cluster.bytes) break;
                 mask_text += mask_glyph;
-                i += decoded.bytes;
+                i += cluster.bytes;
             }
         }
         const std::string_view display = text_.empty() ? std::string_view(placeholder_) :
@@ -2329,9 +2329,9 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             int column = 0;
             for (std::size_t i = 0; i < text_.size();)
             {
-                const auto decoded = decodeUtf8(text_,i);
-                if (!decoded.bytes) break;
-                const int glyph_width = masked ? 1 : codePointWidth(decoded.code_point);
+                const auto cluster = nextGrapheme(text_,i);
+                if (!cluster.bytes) break;
+                const int glyph_width = masked ? 1 : cluster.columns;
                 if (i >= lower && i < upper && column >= scroll_columns_ &&
                     column + glyph_width <= scroll_columns_ + columns)
                 {
@@ -2342,7 +2342,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                             bounds_.y+bounds_.height/2,highlight);
                 }
                 column += glyph_width;
-                i += decoded.bytes;
+                i += cluster.bytes;
             }
         }
         if (focused && columns > 0)

@@ -12,33 +12,33 @@
 #include <string_view>
 #include <vector>
 #include <terion/styled_text.h>
-#include <terion/utf8.h>
+#include <terion/grapheme.h>
 
 namespace terion::detail {
 
 inline int textCells(std::string_view value)
 {
-    int cells = 0;
-    for (std::size_t pos = 0; pos < value.size();)
-    {
-        const auto glyph = decodeUtf8(value,pos);
-        if (!glyph.bytes) break;
-        cells += codePointWidth(glyph.code_point);
-        pos += glyph.bytes;
-    }
-    return cells;
+    return displayWidth(value);
+}
+
+inline void appendSpan(StyledText& target,StyledSpan span)
+{
+    if (span.text.empty()) return;
+    if (!target.empty() && target.back().color == span.color &&
+        target.back().bold == span.bold && target.back().italic == span.italic &&
+        target.back().underline == span.underline &&
+        target.back().strikethrough == span.strikethrough &&
+        target.back().dim == span.dim && target.back().background == span.background)
+        target.back().text += span.text;
+    else target.push_back(std::move(span));
 }
 
 inline void appendSpan(StyledText& target,std::string text,const ColorVariant color,const bool bold)
 {
-    if (text.empty()) return;
-    if (!target.empty() && target.back().color == color && target.back().bold == bold)
-        target.back().text += text;
-    else target.push_back({.text = std::move(text),.color = color,.bold = bold});
+    appendSpan(target,{.text = std::move(text),.color = color,.bold = bold});
 }
 
-// UTF-8-aware, style-preserving wrapping. Prefer word boundaries and keep
-// indentation on continuation lines. A too-wide glyph is never split.
+// Word-wrap never splits an extended grapheme cluster or drops its styling.
 inline std::vector<StyledText> wrapStyled(const StyledText& source,int width,int hanging = 0)
 {
     if (width <= 0) return {source};
@@ -58,19 +58,19 @@ inline std::vector<StyledText> wrapStyled(const StyledText& source,int width,int
             used = hanging;
         }
     };
-    // Collect word tokens across styling boundaries, retaining original spans.
-    struct Glyph { std::string bytes; int cells; ColorVariant color; bool bold; bool space; };
+    struct Glyph { StyledSpan span; int cells; bool space; };
     std::vector<Glyph> glyphs;
     for (const auto& span : source)
         for (std::size_t pos = 0; pos < span.text.size();)
         {
-            const auto decoded = decodeUtf8(span.text,pos);
-            if (decoded.bytes == 0) break;
-            const bool space = decoded.code_point == ' ' || decoded.code_point == '\t';
-            glyphs.push_back({span.text.substr(pos,decoded.bytes),
-                decoded.code_point == '\t' ? 4 : codePointWidth(decoded.code_point),
-                span.color,span.bold,space});
-            pos += decoded.bytes;
+            const auto cluster = nextGrapheme(span.text,pos);
+            if (!cluster.bytes) break;
+            const auto bytes = span.text.substr(pos,cluster.bytes);
+            const bool space = bytes == " " || bytes == "\t";
+            StyledSpan styled = span;
+            styled.text = bytes == "\t" ? "    " : bytes;
+            glyphs.push_back({std::move(styled),bytes == "\t" ? 4 : cluster.columns,space});
+            pos += cluster.bytes;
         }
     for (std::size_t i = 0; i < glyphs.size();)
     {
@@ -99,7 +99,7 @@ inline std::vector<StyledText> wrapStyled(const StyledText& source,int width,int
         {
             const auto& glyph = glyphs[i];
             if (used > 0 && used+glyph.cells > width) nextLine();
-            appendSpan(result.back(),glyph.bytes == "\t" ? "    " : glyph.bytes,glyph.color,glyph.bold);
+            appendSpan(result.back(),glyph.span);
             used += glyph.cells;
         }
     }
@@ -121,9 +121,10 @@ inline std::vector<StyledText> wrapLines(const std::vector<StyledText>& lines,in
                 (prefix.size() >= 4 && prefix.substr(0,2) == "  " && prefix.back() == ' '))
                 for (std::size_t i = 0; i < prefix.size();)
                 {
-                    const auto d = decodeUtf8(prefix,i);
-                    hanging += codePointWidth(d.code_point);
-                    i += d.bytes;
+                    const auto cluster = nextGrapheme(prefix,i);
+                    if (!cluster.bytes) break;
+                    hanging += cluster.columns;
+                    i += cluster.bytes;
                 }
         }
         auto rows = wrapStyled(line,width,hanging);

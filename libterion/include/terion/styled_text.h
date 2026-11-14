@@ -5,6 +5,7 @@
 #ifndef TERION_STYLED_TEXT_H
 #define TERION_STYLED_TEXT_H
 
+#include <optional>
 #include <string>
 #include <vector>
 #include <terion/theme.h>
@@ -16,6 +17,11 @@ struct StyledSpan
     std::string text;
     ColorVariant color = ColorVariant::Default;
     bool bold = false;
+    bool italic = false;
+    bool underline = false;
+    bool strikethrough = false;
+    bool dim = false;
+    std::optional<ColorVariant> background = std::nullopt;
 }; /* End of struct StyledSpan */
 
 using StyledText = std::vector<StyledSpan>;

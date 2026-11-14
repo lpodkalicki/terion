@@ -314,10 +314,10 @@ void RenderNode::setCursorFromX(const int x)
     cursor_byte_ = 0;
     while (cursor_byte_ < text_.size())
     {
-        const auto decoded = decodeUtf8(text_,cursor_byte_);
-        if (!decoded.bytes || columns + (masked ? 1 : codePointWidth(decoded.code_point)) > desired) break;
-        columns += masked ? 1 : codePointWidth(decoded.code_point);
-        cursor_byte_ += decoded.bytes;
+        const auto cluster = nextGrapheme(text_,cursor_byte_);
+        if (!cluster.bytes || columns + (masked ? 1 : cluster.columns) > desired) break;
+        columns += masked ? 1 : cluster.columns;
+        cursor_byte_ += cluster.bytes;
     }
 }
 

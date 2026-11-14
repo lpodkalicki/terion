@@ -7,6 +7,7 @@
 
 #include <terion/application.h>
 #include <terion/clipboard.h>
+#include <terion/grapheme.h>
 #include <terion/component.h>
 #include <terion/hooks.h>
 #include <terion/context.h>

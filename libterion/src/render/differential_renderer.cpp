@@ -3,6 +3,8 @@
  */
 
 #include <terion/render/differential_renderer.h>
+#include <terion/grapheme.h>
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -10,7 +12,8 @@ using namespace terion;
 
 static std::string styleSequence(const TextStyle& s)
 {
-    return "\033[0;" + std::string(s.bold ? "1;" : "") + (s.underline ? "4;" : "") +
+    return "\033[0;" + std::string(s.bold ? "1;" : "") + (s.underline ? "4;" : "") + (s.italic ? "3;" : "") +
+        (s.strikethrough ? "9;" : "") + (s.dim ? "2;" : "") +
         "38;2;" + std::to_string(s.foreground.red) + ";" + std::to_string(s.foreground.green) + ";" + std::to_string(s.foreground.blue) +
         ";48;2;" + std::to_string(s.background.red) + ";" + std::to_string(s.background.green) + ";" + std::to_string(s.background.blue) + "m";
 
@@ -34,6 +37,30 @@ void DifferentialRenderer::render(const ScreenBuffer& current, TerminalBackend& 
             {
                 dirty[x] = current.at(x,y) != previous_->at(x,y);
             }
+        }
+
+        // A terminal is not required to compose every emoji sequence into exactly
+        // the width our grapheme table predicts. When a wide glyph is inserted,
+        // removed or moved, clear and repaint the complete row. Otherwise terminal
+        // remnants may survive outside the changed cell range after Backspace.
+        bool repaint_row = false;
+        if (!full)
+        {
+            for (int x = 0; x < size.width; ++x)
+            {
+                if (dirty[x] && (current.at(x,y).width != 1 || previous_->at(x,y).width != 1))
+                {
+                    repaint_row = true;
+                    break;
+                }
+            }
+        }
+        if (repaint_row)
+        {
+            output += "\033[" + std::to_string(y+1) + ";1H\033[2K";
+            std::fill(dirty.begin(),dirty.end(),true);
+            style.reset();
+            cursor = {.x = -1,.y = -1};
         }
 
         // A continuation cell cannot be drawn independently. Account for both frames:
@@ -60,7 +87,13 @@ void DifferentialRenderer::render(const ScreenBuffer& current, TerminalBackend& 
             }
 
             output += cell.grapheme;
-            cursor = {.x = x + cell.width,.y = y};
+            // Do not trust the terminal's cursor advance after a wide or
+            // multi-codepoint grapheme (ZWJ, flags, combining marks, etc.).
+            // Reposition absolutely before the next changed cell so cursor
+            // styles and subsequent characters cannot drift on Terminal.app.
+            const auto first = decodeUtf8(cell.grapheme,0);
+            const bool complex = cell.width == 2 || (first.bytes && first.bytes < cell.grapheme.size());
+            cursor = {.x = complex ? -1 : x+cell.width,.y = y};
             x += cell.width;
         }
     }
