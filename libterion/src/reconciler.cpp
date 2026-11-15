@@ -363,6 +363,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->on_toggle_ = props.on_toggle;
     node->on_event_capture_ = props.on_event_capture;
     node->on_event_ = props.on_event;
+    node->on_blur_ = props.on_blur;
     node->on_change_ = props.on_change;
     node->placeholder_ = props.placeholder;
     node->disabled_ = props.disabled;

@@ -18,13 +18,14 @@ class FocusManager
 public:
     using EventHandler = std::function<bool(const Event&)>;
 
-    void add(std::string id, EventHandler handler, std::string scope = {});
+    void add(std::string id, EventHandler handler, std::string scope = {},
+        std::function<void()> on_blur = {});
     bool remove(std::string_view id);
     // Reorders managed targets without recreating handlers or changing focus identity.
     void reorder(const std::vector<std::string>& ids);
     bool focus(std::string_view id);
     bool focusFirstInScope();
-    void blur() noexcept { focused_ = entries_.size(); }
+    void blur() noexcept { changeFocus(entries_.size()); }
     bool next();
     bool previous();
     bool dispatch(const Event& event);
@@ -41,8 +42,10 @@ private:
         std::string id;
         EventHandler handler;
         std::string scope;
+        std::function<void()> on_blur;
     }; /* End of struct Entry */
 
+    void changeFocus(std::size_t index) noexcept;
     std::vector<Entry> entries_;
     std::size_t focused_ = 0;
     std::string active_scope_;

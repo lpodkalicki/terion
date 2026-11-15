@@ -57,6 +57,7 @@ public:
     [[nodiscard]] bool scrollable() const noexcept { return static_cast<bool>(on_scroll_); }
     [[nodiscard]] bool disabled() const noexcept { return disabled_; }
     [[nodiscard]] const std::function<void()>& onClick() const noexcept { return on_click_; }
+    [[nodiscard]] std::function<void()> onBlur() const { return on_blur_; }
     [[nodiscard]] bool checkable() const noexcept
     {
         return type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
@@ -211,6 +212,7 @@ private:
     std::function<void(bool)> on_toggle_;
     std::function<void(ComponentEvent&)> on_event_capture_;
     std::function<void(ComponentEvent&)> on_event_;
+    std::function<void()> on_blur_;
     std::function<void(std::string)> on_change_;
     std::string placeholder_;
     struct EditSnapshot

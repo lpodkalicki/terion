@@ -25,14 +25,16 @@ Application::Application(std::unique_ptr<TerminalBackend> backend) :
 bool Application::focus(const std::string_view component_key)
 {
     if (!reconciler_.root() || component_key.empty()) return false;
-    const auto find = [&](const auto& self, const RenderNode& node) -> const RenderNode* {
-        if (node.key() == component_key) return &node;
+    // Composite components may have a keyed non-focusable wrapper and an input
+    // with the same key. Prefer the first matching *focusable* node, not the
+    // first matching node in tree order.
+    const auto find = [&](const auto& self, const RenderNode& node) -> bool {
+        if (node.key() == component_key && focus_.focus(std::to_string(node.id()))) return true;
         for (const auto& child : node.children())
-            if (const auto* found = self(self,*child)) return found;
-        return nullptr;
+            if (self(self,*child)) return true;
+        return false;
     };
-    const auto* node = find(find,*reconciler_.root());
-    if (!node || !focus_.focus(std::to_string(node->id()))) return false;
+    if (!find(find,*reconciler_.root())) return false;
     invalidate();
     return true;
 }
@@ -252,7 +254,8 @@ void Application::syncFocusTargets()
             node.type() == Component::Type::TextArea) && !node.disabled())
         {
             const auto id = std::to_string(node.id());
-            focus_.add(id,[&node](const Event& event) { return node.handleTextInput(event); },scope);
+            focus_.add(id,[&node](const Event& event) { return node.handleTextInput(event); },
+                scope,node.onBlur());
             component_focus_ids_.push_back(id);
         }
         else if (node.type() == Component::Type::ScrollView && node.scrollable())
@@ -266,13 +269,15 @@ void Application::syncFocusTargets()
             !node.disabled())
         {
             const auto id = std::to_string(node.id());
-            focus_.add(id,[this,&node](const Event& event) { return node.handleSelectKey(event,backend_->size()); },scope);
+            focus_.add(id,[this,&node](const Event& event) { return node.handleSelectKey(event,backend_->size()); },
+                scope,node.onBlur());
             component_focus_ids_.push_back(id);
         }
         else if (node.interactiveControl())
         {
             const auto id = std::to_string(node.id());
-            focus_.add(id,[&node](const Event& event) { return node.handleChoiceKey(event); },scope);
+            focus_.add(id,[&node](const Event& event) { return node.handleChoiceKey(event); },
+                scope,node.onBlur());
             component_focus_ids_.push_back(id);
         }
         else if (node.sliderInteractive())

@@ -9,7 +9,8 @@
 
 using namespace terion;
 
-void FocusManager::add(std::string id, EventHandler handler, std::string scope)
+void FocusManager::add(std::string id, EventHandler handler, std::string scope,
+    std::function<void()> on_blur)
 {
     if (id.empty() || !handler) throw std::invalid_argument("focus target needs an id and handler");
     const bool needs_focus = current().empty() && scope == active_scope_;
@@ -18,23 +19,45 @@ void FocusManager::add(std::string id, EventHandler handler, std::string scope)
     {
         it->handler = std::move(handler);
         it->scope = std::move(scope);
+        it->on_blur = std::move(on_blur);
         return;
     }
-    entries_.push_back({.id = std::move(id),.handler = std::move(handler),.scope = std::move(scope)});
+    entries_.push_back({.id = std::move(id),.handler = std::move(handler),
+        .scope = std::move(scope),.on_blur = std::move(on_blur)});
     if (needs_focus) focused_ = entries_.size()-1;
+}
+
+void FocusManager::changeFocus(const std::size_t index) noexcept
+{
+    if (focused_ == index) return;
+    const auto previous = focused_;
+    focused_ = index;
+    // A blur callback may update Form state; do not allow it to break focus transitions.
+    if (previous < entries_.size() && entries_[previous].on_blur)
+    {
+        try { entries_[previous].on_blur(); }
+        catch (...) { /* Focus transitions must stay usable. */ }
+    }
 }
 
 bool FocusManager::remove(const std::string_view id)
 {
-    const auto it = std::find_if(entries_.begin(),entries_.end(),[&](const Entry& entry) { return entry.id == id; });
+    const auto it = std::find_if(entries_.begin(),entries_.end(),
+        [&](const Entry& entry) { return entry.id == id; });
     if (it == entries_.end()) return false;
     const auto index = static_cast<std::size_t>(std::distance(entries_.begin(),it));
-    const bool blurred = focused_ >= entries_.size();
+    const bool removed_focused = focused_ == index;
+    const bool was_blurred = focused_ >= entries_.size();
+    if (removed_focused) changeFocus(entries_.size());
     entries_.erase(it);
-    if (blurred) focused_ = entries_.size();
-    else if (entries_.empty()) focused_ = 0;
+    if (removed_focused)
+    {
+        // Retain the original behavior: use the next (or previous) control.
+        if (!entries_.empty()) focused_ = std::min(index,entries_.size()-1);
+        else focused_ = entries_.size();
+    }
+    else if (was_blurred) focused_ = entries_.size();
     else if (index < focused_) --focused_;
-    else if (focused_ >= entries_.size()) --focused_;
     return true;
 }
 
@@ -57,14 +80,17 @@ void FocusManager::reorder(const std::vector<std::string>& ids)
     });
     for (std::size_t i = 0; i < positions.size(); ++i)
         entries_[positions[i]] = std::move(managed[i]);
-    if (!selected.empty()) (void)focus(selected);
+    // Reordering does not change focus identity and must not emit a blur event.
+    if (!selected.empty())
+        for (std::size_t i = 0; i < entries_.size(); ++i)
+            if (entries_[i].id == selected) { focused_ = i; break; }
 }
 
 bool FocusManager::focus(const std::string_view id)
 {
     for (std::size_t i = 0; i < entries_.size(); ++i)
     {
-        if (entries_[i].id == id && entries_[i].scope == active_scope_) { focused_ = i; return true; }
+        if (entries_[i].id == id && entries_[i].scope == active_scope_) { changeFocus(i); return true; }
     }
     return false;
 }
@@ -74,10 +100,10 @@ bool FocusManager::focusFirstInScope()
     for (std::size_t i = 0; i < entries_.size(); ++i)
         if (entries_[i].scope == active_scope_)
         {
-            focused_ = i;
+            changeFocus(i);
             return true;
         }
-    focused_ = entries_.size();
+    changeFocus(entries_.size());
     return false;
 }
 
@@ -87,7 +113,7 @@ bool FocusManager::next()
     for (std::size_t n = 1; n <= entries_.size(); ++n)
     {
         const auto index = focused_ >= entries_.size() ? n-1 : (focused_ + n) % entries_.size();
-        if (entries_[index].scope == active_scope_) { focused_ = index; return true; }
+        if (entries_[index].scope == active_scope_) { changeFocus(index); return true; }
     }
     return false;
 }
@@ -99,7 +125,7 @@ bool FocusManager::previous()
     {
         const auto index = focused_ >= entries_.size() ? entries_.size()-n :
             (focused_ + entries_.size() - n % entries_.size()) % entries_.size();
-        if (entries_[index].scope == active_scope_) { focused_ = index; return true; }
+        if (entries_[index].scope == active_scope_) { changeFocus(index); return true; }
     }
     return false;
 }
@@ -131,7 +157,14 @@ void FocusManager::setActiveScope(std::string scope)
     active_scope_ = std::move(scope);
     if (current().empty())
     {
+        bool found = false;
         for (std::size_t i = 0; i < entries_.size(); ++i)
-            if (entries_[i].scope == active_scope_) { focused_ = i; break; }
+            if (entries_[i].scope == active_scope_)
+            {
+                changeFocus(i);
+                found = true;
+                break;
+            }
+        if (!found) changeFocus(entries_.size());
     }
 }

@@ -21,6 +21,7 @@ public:
         std::string label = {};
         bool required = false;
         Component control = Component::text("");
+        std::function<std::optional<std::string>(const FormValue&,const FormValues&)> validator = {};
         std::string key = {};
         LayoutStyle layout = {};
     }; /* End of struct Props */
@@ -35,7 +36,8 @@ private:
             .children = {std::move(props.control)},.layout = props.layout,
             .form_field_name = std::move(props.name),
             .form_field_label = std::move(props.label),
-            .form_field_required = props.required});
+            .form_field_required = props.required,
+            .form_field_validator = std::move(props.validator)});
     }
 }; /* End of class FormField */
 

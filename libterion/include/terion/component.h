@@ -189,6 +189,7 @@ public:
         std::function<void(bool)> on_toggle = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
+        std::function<void()> on_blur = {};
         std::function<void(std::string)> on_change = {};
         std::string placeholder = {};
         bool disabled = false;
@@ -270,6 +271,8 @@ public:
         std::string form_field_name = {};
         std::string form_field_label = {};
         bool form_field_required = false;
+        std::function<std::optional<std::string>(const FormValue&,const FormValues&)>
+            form_field_validator = {};
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

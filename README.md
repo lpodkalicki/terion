@@ -244,3 +244,53 @@ item's `disabled` property is respected by the menu.
 See `examples/composite_components_advanced.cpp` for an interactive demo with
 validation, a vertical stepper, retained accordion content, and navigable
 breadcrumbs.
+
+## Forms & Validation 2.0 (#136c)
+
+`Form` keeps its existing declarative `FormField` bindings and supports three
+validation policies: `FormValidationMode::{OnChange,OnBlur,OnSubmit}`. Errors are
+computed for all fields (so `FormStatus.valid` is up-to-date) but are only
+*shown* after the configured interaction: changing a field, leaving the field,
+or submitting. A failed submit always reveals the errors. `touched` is updated
+when focus leaves an input; `changed` tracks edits separately. The default
+policy remains `OnChange`.
+
+```cpp
+const auto controller = std::make_shared<FormController>();
+
+Form({
+    .children = {
+        FormField({.name = "name",.required = true,
+            .control = TextField({.default_value = "Terion"})}),
+        FormField({.name = "confirm",.required = true,
+            .control = TextField({}),
+            .validator = [](const FormValue& value, const FormValues& all)
+                -> std::optional<std::string> {
+                if (std::get<std::string>(value) != all.get<std::string>("name"))
+                    return "Values must match";
+                return std::nullopt;
+            }})
+    },
+    .validation_mode = FormValidationMode::OnBlur,
+    .controller = controller,
+    .on_invalid = [&](const std::string& field) { (void)app.focus(field); },
+    .on_submit = [](const FormValues& values) { /* persist values */ }
+});
+```
+
+`FormController` is a lightweight external handle. Once mounted, it exposes
+`values()`, `value(name)`, `setValue(name,value)`, `status()`, `dirty(name)`,
+`touched(name)`, `error(name)`, `errors()`, `firstError()`, `validateField(name)`,
+`validate()`, `submit(callback)`, `markTouched(name)` and `reset()`. Calls before
+mount or after unmount throw `std::logic_error`. `FormStatus` reports `dirty`,
+`valid`, `submitted`, `submitting`, `submit_count`, `touched_count` and
+`error_count`. Use `on_state_change(FormStatus)` to observe editing and reset.
+
+Input controls without explicit keys inherit their `FormField` name, making
+`on_invalid` easy to implement with `Application::focus(fieldName)`. With
+explicit input keys, the application should map field names to those keys.
+The `submitting` flag covers synchronous submit callbacks; asynchronous
+providers and asynchronous validators are not yet part of this API.
+
+Run `form_advanced` for a working demo of cross-field validation, state
+inspection, programmatic changes, focus, and reset.
