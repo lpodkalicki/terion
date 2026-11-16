@@ -23,8 +23,8 @@ public:
         bool reveal = false;
         char32_t mask = U'•';
         LayoutStyle layout = {};
-        TextFieldVariant variant = TextFieldVariant::Outlined;
-        ButtonSize size = ButtonSize::Medium;
+        InputVariant variant = InputVariant::Outlined;
+        ControlSize size = ControlSize::Medium;
         std::function<void(std::string)> on_change = {};
         std::function<std::optional<std::string>(const std::string&)> validator = {};
     }; /* End of struct Props */

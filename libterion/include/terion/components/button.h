@@ -22,7 +22,7 @@ public:
         std::function<void()> on_click = {};
         TextStyle style = {};
         LayoutStyle layout = {};
-        ButtonSize size = ButtonSize::Medium;
+        ControlSize size = ControlSize::Medium;
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */

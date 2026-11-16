@@ -13,6 +13,13 @@ ctest --test-dir build --output-on-failure
 
 Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true color.
 
+## Public API conventions
+
+See [docs/api-conventions.md](docs/api-conventions.md) for naming, component `Props`,
+callback conventions and compatibility guarantees. #139a introduces preferred
+`ControlSize` and `InputVariant` aliases while keeping `ButtonSize` and
+`TextFieldVariant` source-compatible.
+
 ## Design
 
 - Public rendering primitives: `Cell`, `ScreenBuffer`, `Painter`, `DifferentialRenderer`.

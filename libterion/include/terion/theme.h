@@ -17,7 +17,12 @@ enum class ColorVariant { Default, Primary, Success, Warning, Error, Info };
 // Component density is independent of terminal font size. Comfortable retains
 // the original measurements of all existing components.
 enum class ComponentDensity { Compact, Comfortable, Spacious };
+// The canonical name for the size of interactive controls. Keep ButtonSize as
+// the underlying enum in this release to preserve source and binary compatibility.
+// Future components should use ControlSize; the existing enumerators remain
+// Compact, Medium and Large (Compact is intentionally not renamed to Small).
 enum class ButtonSize { Compact, Medium, Large };
+using ControlSize = ButtonSize;
 
 struct ControlMetrics
 {
@@ -106,10 +111,10 @@ struct Theme
         return focus_color.value_or(palette.primary);
     }
 
-    [[nodiscard]] constexpr ControlMetrics controlMetrics(const ButtonSize size) const noexcept
+    [[nodiscard]] constexpr ControlMetrics controlMetrics(const ControlSize size) const noexcept
     {
-        const int height = size == ButtonSize::Compact ? 1 : size == ButtonSize::Large ? 5 : 3;
-        const int padding = size == ButtonSize::Compact ? 1 : size == ButtonSize::Large ? 3 : 2;
+        const int height = size == ControlSize::Compact ? 1 : size == ControlSize::Large ? 5 : 3;
+        const int padding = size == ControlSize::Compact ? 1 : size == ControlSize::Large ? 3 : 2;
         const int height_delta = density == ComponentDensity::Compact ? -2 :
             density == ComponentDensity::Spacious ? 2 : 0;
         const int padding_delta = density == ComponentDensity::Compact ? -1 :

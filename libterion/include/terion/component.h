@@ -39,6 +39,10 @@ enum class TextFieldVariant
     Filled
 }; /* End of enum TextFieldVariant */
 
+// InputVariant is the preferred public name for fields that share the same
+// outlined/filled appearance. TextFieldVariant remains for compatibility.
+using InputVariant = TextFieldVariant;
+
 enum class SurfaceTone
 {
     None,

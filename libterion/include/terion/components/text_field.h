@@ -23,8 +23,8 @@ public:
         LayoutStyle layout = {};
         std::function<void(std::string)> on_change = {};
         std::function<std::optional<std::string>(const std::string&)> validator = {};
-        TextFieldVariant variant = TextFieldVariant::Outlined;
-        ButtonSize size = ButtonSize::Medium;
+        InputVariant variant = InputVariant::Outlined;
+        ControlSize size = ControlSize::Medium;
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */

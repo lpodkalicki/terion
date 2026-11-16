@@ -21,7 +21,7 @@ public:
         ButtonVariant variant = ButtonVariant::Text;
         LayoutStyle layout = {};
         std::function<void(std::string)> on_select = {};
-        ButtonSize size = ButtonSize::Medium;
+        ControlSize size = ControlSize::Medium;
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
