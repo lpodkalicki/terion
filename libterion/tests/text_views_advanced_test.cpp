@@ -103,7 +103,10 @@ TEST(DiffViewAdvanced, IntralineEmphasizesOnlyChangedGraphemes)
             EXPECT_TRUE(isValidUtf8(span.text));
             if (span.text == "old" && span.underline) old_changed = true;
             if (span.text == "new" && span.underline) new_changed = true;
-            if (span.text.find("👨‍👩‍👧") != std::string::npos) EXPECT_FALSE(span.underline);
+            if (span.text.find("👨‍👩‍👧") != std::string::npos)
+            {
+                EXPECT_FALSE(span.underline);
+            }
         }
     EXPECT_TRUE(old_changed);
     EXPECT_TRUE(new_changed);

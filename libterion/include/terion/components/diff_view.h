@@ -291,11 +291,20 @@ private:
         StyledText result;
         if (numbers && (row.kind == Kind::Removed || row.kind == Kind::Added || row.kind == Kind::Context))
             result.push_back({.text = numberColumn(row.old_number,row.new_number),.color = ColorVariant::Info});
-        auto content = (row.kind == Kind::Removed || row.kind == Kind::Added) ?
-            changedText(row,counterpart,highlight,true) :
-            StyledText{{.text = row.text,.color = colorFor(row.kind),
-                .bold = row.kind == Kind::Header || row.kind == Kind::Hunk}};
-        result.insert(result.end(),std::make_move_iterator(content.begin()),std::make_move_iterator(content.end()));
+        if (row.kind == Kind::Removed || row.kind == Kind::Added)
+        {
+            auto content = changedText(row,counterpart,highlight,true);
+            result.insert(result.end(),std::make_move_iterator(content.begin()),
+                          std::make_move_iterator(content.end()));
+        }
+        else
+        {
+            StyledSpan span;
+            span.text = row.text;
+            span.color = colorFor(row.kind);
+            span.bold = row.kind == Kind::Header || row.kind == Kind::Hunk;
+            result.push_back(std::move(span));
+        }
         return result;
     }
 
