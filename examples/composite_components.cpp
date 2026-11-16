@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 #include <terion/terion.h>
 
@@ -21,6 +22,17 @@ int main()
         const auto active=step.get();
         const auto open=expanded.get();
         const auto path=location.get();
+        // Build an owned path with a stable lifetime before passing it to Props.
+        // Chained conditionals containing temporary vectors trigger GCC's
+        // -Wdangling-pointer diagnostic with -O3 on some Linux toolchains.
+        std::vector<Breadcrumbs::Item> breadcrumb_items{
+            {"Home", "home"},
+            {"Workspace", "workspace"},
+            {"Project", "project"}
+        };
+        if (path == "home") breadcrumb_items.resize(1);
+        else if (path == "workspace") breadcrumb_items.resize(2);
+
         return Paper({.children={
             Typography({.text="Terion | #134 Composite Components",.variant=TypographyVariant::H2}),
             Typography({.text="STEP 1 | Stepper (select a completed step or use Next)"}),
@@ -46,10 +58,7 @@ int main()
             },.expanded=open,.multiple=true,
                 .on_change=[expanded](std::vector<std::string> next) mutable {expanded.set(std::move(next));}}),
             Typography({.text="STEP 3 | Breadcrumbs (navigate to an ancestor)"}),
-            Breadcrumbs({.items=path=="home" ?
-                std::vector<Breadcrumbs::Item>{{"Home","home"}} : path=="workspace" ?
-                std::vector<Breadcrumbs::Item>{{"Home","home"},{"Workspace","workspace"}} :
-                std::vector<Breadcrumbs::Item>{{"Home","home"},{"Workspace","workspace"},{"Project","project"}},
+            Breadcrumbs({.items=std::move(breadcrumb_items),
                 .on_navigate=[location](std::string value) mutable {location.set(std::move(value));}}),
             Row({.children={
                 Button({.text="Open project",.on_click=[location]() mutable {location.set("project");}}),
