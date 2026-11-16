@@ -49,6 +49,8 @@ public:
         LayoutStyle layout = {};
         bool disabled = false;
         bool show_scrollbar = true;
+        std::function<void(int)> on_selection_change = {}; // Index-based selection.
+        std::function<void(std::string)> on_selection_key_change = {}; // Stable key selection.
     }; /* End of struct Props */
 
     explicit VirtualTable(Props props) : Component(create(std::move(props))) {}
@@ -93,8 +95,10 @@ private:
         const auto row_at = std::move(props.row_at);
         const auto row_key_at = std::move(props.row_key_at);
         const auto format_cell = std::move(props.format_cell);
-        const auto on_select = std::move(props.on_select);
-        const auto on_select_key = std::move(props.on_select_key);
+        const auto on_select = props.on_selection_change ? std::move(props.on_selection_change) :
+            std::move(props.on_select);
+        const auto on_select_key = props.on_selection_key_change ?
+            std::move(props.on_selection_key_change) : std::move(props.on_select_key);
         const auto on_sort = std::move(props.on_sort);
         const auto on_horizontal_scroll = std::move(props.on_horizontal_scroll);
 

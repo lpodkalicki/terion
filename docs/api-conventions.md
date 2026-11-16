@@ -62,20 +62,49 @@ metrics. `Theme::controlMetrics()` accepts either spelling of the size type.
 
 ## Values, selection and callbacks
 
-These are the **current**, not aspirational, rules:
+These are the **current** rules after #139b:
 
-- Input-like widgets (`TextField`, `TextArea`, `Select`, `Tabs`, `Checkbox`,
-  `Switch`, `RadioGroup`, `Slider`) use `value`/`checked` and `on_change` where
-  supported. The precise controlled/uncontrolled behavior varies by widget;
-  #139b will specify and unify it.
-- Button-like actions use `on_click`, dialogs use action-specific callbacks,
-  and virtual lists expose `on_select` (selection) and `on_activate` (activation).
-- Collection widgets are **not yet fully uniform**: `Table` uses `value` and
-  `on_change` for its selected key; `VirtualTable` exposes `selected_index`,
-  `selected_key`, `on_select`, `on_select_key`. Do not assume these names are
-  interchangeable. Their future normalization belongs to #139b.
-- Use `on_event_capture` and `on_event` for low-level event propagation;
-  higher-level callbacks should normally be sufficient for applications.
+- `value` (or `checked`) without `default_value` (or `default_checked`)
+  is **controlled**: a parent rerender supplies the authoritative value.
+- Supplying `default_value` / `default_checked` selects **uncontrolled** state,
+  initialized once per component identity. A retained keyed component keeps its
+  edits and selection when rebuilt; a new `key` resets local state. Explicit
+  defaults win over `value` only for initial seeding.
+- Uncontrolled text fields, checkboxes, switches, select, autocomplete and radio
+  groups accept input even without an `on_change` callback. If a callback is
+  provided, it receives changes; it is never called merely by reconciliation.
+- `Form` is deliberately **controlled by FormState** even if its nested control
+  supplies `default_value`; form submission and reset continue to own the value.
+- Keyed collections (`Table`, `TreeView`, `Tabs`) accept `selected_key` and
+  `on_selection_change` as preferred aliases to `value` and `on_change`.
+  When both are supplied, the new field/callback wins. Only one callback fires.
+- `VirtualList` accepts `on_selection_change(int)` as an alias for `on_select`;
+  `VirtualTable` accepts `on_selection_change(int)` and
+  `on_selection_key_change(std::string)` for index/key selection respectively.
+  Its `selected_key` still takes precedence over `selected_index` when nonempty.
+- `Select` and `RadioGroup` continue to use `value`/`on_change`: they are
+  single-value controls, not generic keyed collections. `on_activate` stays
+  distinct from a selection change for virtualized collections.
+- Button actions use `on_click`, dialogs use action-specific callbacks,
+  and low-level `on_event_capture`/`on_event` remain unchanged.
+
+Examples:
+
+```cpp
+// External state: parent is responsible for propagating the updated value.
+TextField({.value = name, .on_change = setName});
+
+// Local state: seeded once; callback is optional.
+TextField({.default_value = "draft", .key = "editor"});
+
+// Preferred table selection API, without breaking legacy initializers.
+Table({.columns = columns, .rows = rows,
+       .selected_key = selectedKey, .on_selection_change = onSelect});
+```
+
+Changing a control between controlled and uncontrolled modes is supported by
+reconciliation but should be avoided during normal use: changing its `key` is
+preferred when a fresh editor state is intended.
 
 A callback with `on_change` reports the **new value** rather than the old value.
 A callback must not be invoked merely because the component was rendered.

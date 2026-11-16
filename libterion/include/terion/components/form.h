@@ -71,6 +71,9 @@ inline Component bindFormField(Component component,const std::shared_ptr<FormSta
     const auto name = marker.form_field_name;
     auto control = marker.children.front().props();
     const auto current = state->value(name);
+    // FormState owns this value even if the nested input specifies default_value.
+    // Otherwise uncontrolled reconciliation would hide submit/reset changes.
+    control.uncontrolled_value = false;
     if (control.type == Component::Type::Checkbox || control.type == Component::Type::Switch)
     {
         control.checked = std::get<bool>(current);

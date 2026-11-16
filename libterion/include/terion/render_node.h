@@ -28,6 +28,7 @@ public:
     [[nodiscard]] Component::Type type() const noexcept { return type_; }
     [[nodiscard]] const std::string& key() const noexcept { return key_; }
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
+    [[nodiscard]] bool checked() const noexcept { return checked_; }
     [[nodiscard]] const Theme& resolvedTheme(const Theme& fallback) const noexcept
     {
         return theme_override_ ? *theme_override_ : fallback;
@@ -299,6 +300,7 @@ private:
     std::function<void(int)> split_on_change_;
     int hovered_tab_ = -1;
     bool tab_panel_active_ = true;
+    bool uncontrolled_value_ = false;
     bool checked_ = false;
     bool select_open_ = false;
     int select_highlight_ = 0;

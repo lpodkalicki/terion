@@ -29,10 +29,12 @@ public:
 
     explicit Checkbox(Props props) :
         Component({.type = Type::Checkbox,.key = std::move(props.key),.text = std::move(props.label),
-            .layout = props.layout,.color_variant = props.color,.on_toggle = std::move(props.on_change),
+            .layout = props.layout,.color_variant = props.color,.on_toggle = props.on_change ? std::move(props.on_change) :
+                (props.default_checked ? std::function<void(bool)>{[](bool) {}} :
+                 std::function<void(bool)>{}),
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .disabled = props.disabled,.checkbox_variant = props.variant,.checked = props.checked,
-            .form_default_value = props.default_checked.value_or(props.checked)})
+            .disabled = props.disabled,.checkbox_variant = props.variant,.checked = props.default_checked.value_or(props.checked),
+            .form_default_value = props.default_checked.value_or(props.checked),.uncontrolled_value = props.default_checked.has_value()})
     {}
 }; /* End of class Checkbox */
 

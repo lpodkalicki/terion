@@ -31,9 +31,11 @@ public:
 
     explicit TextArea(Props props) :
         Component({.type = Type::TextArea,.key = std::move(props.key),
-            .text = std::move(props.value),.layout = props.layout,
+            .text = props.default_value.value_or(props.value),.layout = props.layout,
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .on_change = std::move(props.on_change),.placeholder = std::move(props.placeholder),
+            .on_change = props.on_change ? std::move(props.on_change) :
+                (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
+                 std::function<void(std::string)>{}),.placeholder = std::move(props.placeholder),
             .disabled = props.disabled,.read_only = props.read_only,
             .text_area_min_rows = props.min_rows,.text_area_soft_wrap = props.soft_wrap,
             .form_default_value = props.default_value.value_or(props.value),
@@ -41,7 +43,7 @@ public:
                 -> std::optional<std::string> {
                 if (validator) return validator(std::get<std::string>(value));
                 return std::nullopt;
-            }})
+            },.uncontrolled_value = props.default_value.has_value()})
     {}
 }; /* End of class TextArea */
 

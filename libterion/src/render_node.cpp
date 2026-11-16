@@ -662,7 +662,12 @@ bool RenderNode::handleChoiceKey(const Event& event)
     if (type_ != Component::Type::RadioGroup)
     {
         if (!activate) return false;
-        if (on_toggle_ && (type_ != Component::Type::Radio || !checked_)) on_toggle_(!checked_);
+        if (on_toggle_ && (type_ != Component::Type::Radio || !checked_))
+        {
+            const bool next = !checked_;
+            if (uncontrolled_value_) checked_ = next;
+            on_toggle_(next);
+        }
         return true;
     }
     if (radio_options_.empty()) return false;
@@ -689,7 +694,11 @@ bool RenderNode::handleChoiceKey(const Event& event)
     }
     else return false;
     if (next >= 0 && !radio_options_[next].disabled && next != selected && on_change_)
-        on_change_(radio_options_[next].value);
+    {
+        const std::string value = radio_options_[next].value;
+        if (uncontrolled_value_) text_ = value;
+        on_change_(value);
+    }
     return true;
 }
 
@@ -702,10 +711,18 @@ bool RenderNode::handleChoiceClick(const Point position)
         if (index < 0 || index >= static_cast<int>(radio_options_.size()) ||
             radio_options_[index].disabled) return true;
         if (radio_options_[index].value != text_ && on_change_)
-            on_change_(radio_options_[index].value);
+        {
+            const std::string value = radio_options_[index].value;
+            if (uncontrolled_value_) text_ = value;
+            on_change_(value);
+        }
     }
     else if (on_toggle_ && (type_ != Component::Type::Radio || !checked_))
-        on_toggle_(!checked_);
+    {
+        const bool next = !checked_;
+        if (uncontrolled_value_) checked_ = next;
+        on_toggle_(next);
+    }
     return true;
 }
 
@@ -1338,7 +1355,11 @@ bool RenderNode::handleSelectKey(const Event& event, const Size screen)
         {
             if (select_options_.empty()) return true;
             if (!select_options_[select_highlight_].disabled && on_change_)
-                on_change_(select_options_[select_highlight_].value);
+            {
+                const std::string value = select_options_[select_highlight_].value;
+                if (uncontrolled_value_) text_ = value;
+                on_change_(value);
+            }
             if (type_ == Component::Type::Autocomplete)
                 autocomplete_query_ = select_options_[select_highlight_].label;
             closeSelect();
@@ -1395,7 +1416,12 @@ bool RenderNode::handleSelectMouse(const MouseEvent& mouse, const Size screen)
             if (index >= 0 && index < static_cast<int>(select_options_.size()) &&
                 !select_options_[index].disabled)
             {
-                if (on_change_) on_change_(select_options_[index].value);
+                if (on_change_)
+                {
+                    const std::string value = select_options_[index].value;
+                    if (uncontrolled_value_) text_ = value;
+                    on_change_(value);
+                }
                 if (type_ == Component::Type::Autocomplete)
                     autocomplete_query_ = select_options_[index].label;
                 closeSelect();

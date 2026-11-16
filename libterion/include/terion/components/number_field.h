@@ -49,8 +49,10 @@ private:
         else if (const auto* integer = std::get_if<std::int64_t>(&selected))
             initial = static_cast<double>(*integer);
         return {.type = Type::NumberField,.key = std::move(props.key),
-            .text = detail::toText(props.value),.layout = props.layout,
-            .on_change = std::move(props.on_change),.placeholder = std::move(props.placeholder),
+            .text = detail::toText(selected),.layout = props.layout,
+            .on_change = props.on_change ? std::move(props.on_change) :
+                (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
+                 std::function<void(std::string)>{}),.placeholder = std::move(props.placeholder),
             .disabled = props.disabled,.read_only = props.read_only,
             .number_min = props.min_value,.number_max = props.max_value,.number_step = props.step,
             .button_size = props.size,.text_field_variant = props.variant,
@@ -66,7 +68,7 @@ private:
                 if (number < min_value || number > max_value) return "Number is out of range";
                 if (validator) return validator(number);
                 return std::nullopt;
-            }};
+            },.uncontrolled_value = props.default_value.has_value()};
     }
 }; /* End of class NumberField */
 

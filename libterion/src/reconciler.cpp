@@ -287,7 +287,11 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     }
     else ++stats_.reused;
 
-    const bool message_changed = node->text_ != props.text;
+    // A default_value seeds a retained RenderNode only once. Reusing the same
+    // key must not replace local edits/selection with the initializer again.
+    const bool keep_local_value = !created && node->uncontrolled_value_ && props.uncontrolled_value;
+    const std::string next_text = keep_local_value ? node->text_ : props.text;
+    const bool message_changed = node->text_ != next_text;
     // Only the simple leaf and container types have a complete sizing dependency list.
     // For interactive widgets, conservatively recompute layout until their properties
     // expose a reliable geometry comparison.
@@ -320,7 +324,8 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         node->redo_stack_.clear();
         node->edit_kind_ = RenderNode::EditKind::None;
     }
-    node->text_ = props.text;
+    node->text_ = next_text;
+    node->uncontrolled_value_ = props.uncontrolled_value;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
     node->color_variant_ = props.color_variant;
@@ -436,7 +441,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     if (props.type == Component::Type::Table)
         node->table_scroll_.configure(counts.at(&component),node->table_scroll_.viewport());
     node->tab_panel_active_ = props.tab_panel_active;
-    node->checked_ = props.checked;
+    if (!keep_local_value) node->checked_ = props.checked;
     node->dialog_open_ = props.dialog_open;
     node->toast_duration_ms_ = std::max(0,props.toast_duration_ms);
     node->toast_severity_ = std::clamp(props.toast_severity,0,3);

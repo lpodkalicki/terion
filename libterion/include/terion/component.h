@@ -270,6 +270,8 @@ public:
         bool form_field_required = false;
         std::function<std::optional<std::string>(const FormValue&,const FormValues&)>
             form_field_validator = {};
+        // Explicit default_value/default_checked requests retained local state.
+        bool uncontrolled_value = false;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}
