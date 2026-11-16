@@ -111,6 +111,7 @@ struct TableCellFormat
     std::optional<Color> foreground = std::nullopt;
     std::optional<Color> background = std::nullopt;
     bool bold = false;
+    std::optional<TextStyleSpec> style_spec = std::nullopt;
 }; /* End of struct TableCellFormat */
 
 struct TreeItem
@@ -272,6 +273,8 @@ public:
             form_field_validator = {};
         // Explicit default_value/default_checked requests retained local state.
         bool uncontrolled_value = false;
+        // Preferred semantic/RGB style for text-bearing components.
+        std::optional<TextStyleSpec> text_style_spec = std::nullopt;
     }; /* End of struct Props */
 
     explicit Component(Props props) : props_(std::move(props)) {}

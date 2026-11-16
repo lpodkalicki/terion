@@ -28,7 +28,10 @@ inline void appendSpan(StyledText& target,StyledSpan span)
         target.back().bold == span.bold && target.back().italic == span.italic &&
         target.back().underline == span.underline &&
         target.back().strikethrough == span.strikethrough &&
-        target.back().dim == span.dim && target.back().background == span.background)
+        target.back().dim == span.dim && target.back().background == span.background &&
+        target.back().foreground == span.foreground &&
+        target.back().background_color == span.background_color &&
+        target.back().style_spec == span.style_spec)
         target.back().text += span.text;
     else target.push_back(std::move(span));
 }

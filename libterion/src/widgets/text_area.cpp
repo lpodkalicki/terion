@@ -112,9 +112,10 @@ void RenderNode::paintTextArea(Painter& painter, std::string_view focused_id, co
     const Palette palette = theme ? theme->palette : Theme::dark().palette;
     const bool focused = focused_id == std::to_string(id_) && !disabled_;
     const Color background = palette.surface;
-    const TextStyle normal {.foreground = disabled_ ? palette.muted : palette.foreground,
+    TextStyle normal {.foreground = disabled_ ? palette.muted : palette.foreground,
         .background = background};
-    painter.fillBackground(bounds_,background);
+    if (!disabled_ && text_style_spec_) normal = text_style_spec_->resolve(palette,normal);
+    painter.fillBackground(bounds_,normal.background);
     TextStyle outline = normal;
     outline.foreground = focused ? palette.primary : palette.muted;
     if (bounds_.width >= 2 && bounds_.height >= 2)

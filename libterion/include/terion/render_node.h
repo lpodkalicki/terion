@@ -192,6 +192,7 @@ private:
     std::string text_;
     LayoutStyle style_;
     TextStyle text_style_;
+    std::optional<TextStyleSpec> text_style_spec_;
     ColorVariant color_variant_ = ColorVariant::Default;
     std::optional<BorderStyle> border_;
     std::optional<Color> background_;

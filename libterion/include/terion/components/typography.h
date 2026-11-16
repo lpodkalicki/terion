@@ -30,6 +30,7 @@ public:
         TextStyle style = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
+        std::optional<TextStyleSpec> style_spec = std::nullopt;
     }; /* End of struct Props */
 
     explicit Typography(Props props) : Component(create(std::move(props))) {}
@@ -40,7 +41,8 @@ private:
         if (props.variant != TypographyVariant::Body) props.style.bold = true;
         return Component({.type = Type::Text,.key = std::move(props.key),
             .text = std::move(props.text),.text_style = props.style,.color_variant = props.color,
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event)});
+            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
+            .text_style_spec = std::move(props.style_spec)});
     }
 }; /* End of class Typography */
 

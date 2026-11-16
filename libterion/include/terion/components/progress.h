@@ -22,12 +22,14 @@ public:
         ColorVariant color = ColorVariant::Primary;
         bool indeterminate = false;
         bool show_percentage = false;
+        std::optional<TextStyleSpec> style_spec = std::nullopt;
     }; /* End of struct Props */
 
     explicit Progress(Props props) : Component({.type = Type::Progress,.key = std::move(props.key),
         .layout = props.layout,.text_style = props.style,.color_variant = props.color,.value = props.value,
         .progress_variant = props.variant,.progress_indeterminate = props.indeterminate,
-        .progress_show_percentage = props.show_percentage})
+        .progress_show_percentage = props.show_percentage,
+        .text_style_spec = std::move(props.style_spec)})
     {}
 }; /* End of class Progress */
 

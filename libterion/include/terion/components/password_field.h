@@ -27,6 +27,7 @@ public:
         ControlSize size = ControlSize::Medium;
         std::function<void(std::string)> on_change = {};
         std::function<std::optional<std::string>(const std::string&)> validator = {};
+        std::optional<TextStyleSpec> style_spec = std::nullopt;
     }; /* End of struct Props */
 
     explicit PasswordField(Props props) :
@@ -42,7 +43,8 @@ public:
                 -> std::optional<std::string> {
                 if (validator) return validator(std::get<std::string>(value));
                 return std::nullopt;
-            },.uncontrolled_value = props.default_value.has_value()})
+            },.uncontrolled_value = props.default_value.has_value(),
+            .text_style_spec = std::move(props.style_spec)})
     {}
 }; /* End of class PasswordField */
 

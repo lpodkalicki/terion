@@ -27,6 +27,7 @@ public:
         std::function<std::optional<std::string>(const std::string&)> validator = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
+        std::optional<TextStyleSpec> style_spec = std::nullopt;
     }; /* End of struct Props */
 
     explicit TextArea(Props props) :
@@ -43,7 +44,8 @@ public:
                 -> std::optional<std::string> {
                 if (validator) return validator(std::get<std::string>(value));
                 return std::nullopt;
-            },.uncontrolled_value = props.default_value.has_value()})
+            },.uncontrolled_value = props.default_value.has_value(),
+            .text_style_spec = std::move(props.style_spec)})
     {}
 }; /* End of class TextArea */
 

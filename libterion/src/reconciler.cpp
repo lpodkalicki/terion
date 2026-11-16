@@ -309,7 +309,8 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     // event handlers do not affect pixels; interactive widgets remain dirty
     // until their visual state has a complete comparison strategy.
     bool paint_dirty = layout_dirty || node->theme_override_ != props.theme_override ||
-        node->text_style_ != props.text_style || node->color_variant_ != props.color_variant ||
+        node->text_style_ != props.text_style || node->text_style_spec_ != props.text_style_spec ||
+        node->color_variant_ != props.color_variant ||
         node->background_ != props.background || node->surface_tone_ != props.surface_tone ||
         node->value_ != props.value || node->disabled_ != props.disabled ||
         node->progress_variant_ != props.progress_variant ||
@@ -328,6 +329,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->uncontrolled_value_ = props.uncontrolled_value;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
+    node->text_style_spec_ = props.text_style_spec;
     node->color_variant_ = props.color_variant;
     node->theme_override_ = props.theme_override;
     node->border_ = props.border;

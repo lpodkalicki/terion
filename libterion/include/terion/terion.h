@@ -67,6 +67,7 @@
 #include <terion/components/markdown_view.h>
 #include <terion/components/diff_view.h>
 #include <terion/styled_text.h>
+#include <terion/text_style_spec.h>
 #include <terion/focus.h>
 #include <terion/geometry.h>
 #include <terion/layout.h>

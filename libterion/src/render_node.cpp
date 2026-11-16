@@ -1911,6 +1911,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
     if (theme && color_variant_ != ColorVariant::Default && text_style_ == TextStyle{})
         style.foreground = theme->palette.resolve(color_variant_);
     if (effective_background) style.background = *effective_background;
+    if (text_style_spec_) style = text_style_spec_->resolve(theme ? theme->palette : Theme::dark().palette,style);
 
     if (effective_background && (background_ || surface_tone_ != SurfaceTone::None))
         painter.fillBackground(bounds_,*effective_background);
@@ -1941,8 +1942,12 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         {
             const bool active = progress_indeterminate_ ? i >= phase && i < phase+segment_width : i < filled;
             TextStyle segment_style = style;
-            if (theme) segment_style.foreground = active ?
-                theme->palette.resolve(color_variant_) : theme->palette.muted;
+            if (theme)
+            {
+                segment_style.foreground = active ? theme->palette.resolve(color_variant_) : theme->palette.muted;
+                if (active && text_style_spec_ && text_style_spec_->foreground)
+                    segment_style.foreground = text_style_spec_->foreground->resolveForeground(theme->palette);
+            }
             painter.put(bounds_.x+i,bounds_.y,active ? on : off,segment_style);
         }
         if (suffix_width > 0)
@@ -2066,7 +2071,10 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                         span_style.background = palette.resolve(*span.background);
                     if (!disabled_ && span.background_color)
                         span_style.background = *span.background_color;
-                    if ((!disabled_ && span.background_color) || (span.background && !selected && !disabled_))
+                    if (!disabled_ && span.style_spec)
+                        span_style = span.style_spec->resolve(palette,span_style);
+                    if ((!disabled_ && span.style_spec && span.style_spec->background) ||
+                        (!disabled_ && span.background_color) || (span.background && !selected && !disabled_))
                         painter.fillBackground({.x = x,.y = y,.width = textWidth(clipped),.height = 1},
                             span_style.background);
                     painter.text(x,y,clipped,span_style);
@@ -2137,10 +2145,12 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
                     if (formatted.foreground) cell_style.foreground = *formatted.foreground;
                     if (formatted.background) cell_style.background = *formatted.background;
                     cell_style.bold = cell_style.bold || formatted.bold;
+                    if (formatted.style_spec) cell_style = formatted.style_spec->resolve(palette,cell_style);
                 }
-                if (formatted.background && !row.disabled)
+                if (!row.disabled && (formatted.background ||
+                    (formatted.style_spec && formatted.style_spec->background)))
                     painter.fillBackground({.x = column_x,.y = y,.width = widths[i],.height = 1},
-                        *formatted.background);
+                        cell_style.background);
                 const std::string cell_text = clipText(formatted.text,std::max(0,widths[i]-1));
                 painter.text(aligned_x(column_x,widths[i]-1,textWidth(cell_text),
                     table_columns_[i].alignment),y,cell_text,cell_style);
@@ -2221,9 +2231,10 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             background_color = effective_background.value_or(palette.background);
 
         if (text_style_ != TextStyle{}) foreground_color = text_style_.foreground;
-        const TextStyle button_style {.foreground = foreground_color,.background = background_color,
+        TextStyle button_style {.foreground = foreground_color,.background = background_color,
             .bold = focused || text_style_.bold,.underline = text_style_.underline};
-        painter.fillBackground(bounds_,background_color);
+        if (!disabled_ && text_style_spec_) button_style = text_style_spec_->resolve(palette,button_style);
+        painter.fillBackground(bounds_,button_style.background);
         if (outlined)
         {
             TextStyle border_style = button_style;
@@ -2388,8 +2399,9 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             outlined ? effective_background.value_or(palette.background) : palette.surface;
         if (hovered && !focused) background_color = blendColor(background_color,palette.primary,10);
         const Color foreground_color = disabled_ ? palette.muted : palette.foreground;
-        const TextStyle field_style {.foreground = foreground_color,.background = background_color};
-        painter.fillBackground(bounds_,background_color);
+        TextStyle field_style {.foreground = foreground_color,.background = background_color};
+        if (!disabled_ && text_style_spec_) field_style = text_style_spec_->resolve(palette,field_style);
+        painter.fillBackground(bounds_,field_style.background);
         if (outlined)
         {
             TextStyle outline = field_style;

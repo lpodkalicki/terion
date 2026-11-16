@@ -29,6 +29,7 @@ public:
         ControlSize size = ControlSize::Medium;
         std::function<void(std::string)> on_change = {};
         std::function<std::optional<std::string>(double)> validator = {};
+        std::optional<TextStyleSpec> style_spec = std::nullopt;
     }; /* End of struct Props */
 
     explicit NumberField(Props props) :
@@ -68,7 +69,8 @@ private:
                 if (number < min_value || number > max_value) return "Number is out of range";
                 if (validator) return validator(number);
                 return std::nullopt;
-            },.uncontrolled_value = props.default_value.has_value()};
+            },.uncontrolled_value = props.default_value.has_value(),
+            .text_style_spec = std::move(props.style_spec)};
     }
 }; /* End of class NumberField */
 

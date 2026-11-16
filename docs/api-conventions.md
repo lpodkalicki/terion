@@ -162,3 +162,11 @@ by replacing an enum definition with a new one.
 - Do direct-header includes and `<terion/terion.h>` both compile as C++20?
 - Are old and preferred API spellings covered by CI with `-Werror`?
 - Are known limitations documented rather than silently changing behavior?
+
+## Declarative text styling (#139c)
+
+Prefer `TextStyleSpec` for optional semantic/RGB styling in text-bearing
+components (`.style_spec`). Keep `TextStyle` for fully resolved renderer RGB
+styles. `ColorSpec` accepts `ColorVariant` or `Color`. Existing public `.style`
+and individual color fields remain supported. See [styling-api.md](styling-api.md)
+for precedence rules, examples, and compatibility details.

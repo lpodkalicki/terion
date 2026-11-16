@@ -178,7 +178,7 @@ private:
                     .text = col < row.cells.size() ? row.cells[col] : std::string{}};
                 full.push_back({.text = alignCell(format.text,widths[col]-1,columns[col].alignment)+" ",
                     .bold = format.bold,.foreground = format.foreground,
-                    .background_color = format.background});
+                    .background_color = format.background,.style_spec = format.style_spec});
             }
             return detail::sliceStyledColumns(full,offset,plot_width);
         };
