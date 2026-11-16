@@ -228,9 +228,9 @@ int main()
                         }
                         return cell;
                     },
-                    .value = selected_row.get(),.key = "files-table",
+                    .selected_key = selected_row.get(),.key = "files-table",
                     .layout = {.height = std::max(3,std::min(12,body_height - 10))},
-                    .on_change = [&](std::string value) { selected_row.set(std::move(value)); }}),
+                    .on_selection_change = [&](std::string value) { selected_row.set(std::move(value)); }}),
                     .options = {{"Open details","open"},{"Rename","rename"},
                         {"Delete...","delete"}},.key = "file-context-menu",
                     .on_select = [&](std::string action) {
@@ -274,9 +274,9 @@ int main()
 
         const auto make_folder_tree = [&]() -> Component { return Paper({.children = {
             Typography({.text = "COLLECTIONS",.variant = TypographyVariant::Subtitle}),
-            TreeView({.items = navigation,.expanded = expanded.get(),.value = node.get(),
+            TreeView({.items = navigation,.expanded = expanded.get(),.selected_key = node.get(),
                 .key = "navigation-tree",.layout = {.height = std::max(3,body_height - 5)},
-                .on_change = [&](std::string value) {
+                .on_selection_change = [&](std::string value) {
                     node.set(std::move(value));
                     page.set("files");
                     content_scroll.set(0);
@@ -297,8 +297,8 @@ int main()
         // The narrow layout keeps the folder tree as a page, preserving keyboard access.
         Component content = Column({.children = {
             Tabs({.options = page_tabs,
-                .value = active,.key = "demo-tabs",
-                .on_change = [&](std::string value) {
+                .selected_key = active,.key = "demo-tabs",
+                .on_selection_change = [&](std::string value) {
                     page.set(std::move(value));
                     content_scroll.set(0);
                 }}),
@@ -362,7 +362,7 @@ int main()
                         .variant = ButtonVariant::Text,.on_click = [&] {
                             light_theme.set(!light_theme.get());
                             app.setTheme(light_theme.get() ? Theme::light() : Theme::dark());
-                        },.size = ButtonSize::Compact})
+                        },.size = ControlSize::Compact})
                 },.layout = {.width = screen.width,.justify_content = JustifyContent::SpaceBetween}})},
                     .layout = {.width = screen.width,.padding = 0}}),
                 Dialog({.open = dialog_open.get(),.title = "Delete file?",

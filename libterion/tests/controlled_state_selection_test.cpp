@@ -119,19 +119,18 @@ TEST(ControlledState, FormRemainsAuthoritativeOverNestedDefaultValues)
     EXPECT_EQ(tree.root()->children()[0]->children()[0]->text(),"Alice");
 }
 
-TEST(SelectionApi, TableNewPropertiesOverrideLegacyAndOnlyOneCallbackFires)
+TEST(SelectionApi, TableUsesCanonicalKeyAndCallback)
 {
     Reconciler tree;
-    int old_calls = 0;
-    std::string new_value;
+    std::string selected;
     tree.update(Table({.columns = {{"Name",12}},.rows = {
         {"a",{"Alpha"}},{"b",{"Beta"}}},
-        .value = "a",.on_change = [&](std::string) { ++old_calls; },
-        .selected_key = "a",.on_selection_change = [&](std::string key) { new_value = std::move(key); }}));
+        .selected_key = "a",.on_selection_change = [&](std::string key) {
+            selected = std::move(key);
+        }}));
     tree.root()->layout({.maximum = {.width = 20,.height = 5}});
     ASSERT_TRUE(tree.root()->handleTableKey({.key = Key::Down}));
-    EXPECT_EQ(new_value,"b");
-    EXPECT_EQ(old_calls,0);
+    EXPECT_EQ(selected,"b");
 }
 
 TEST(SelectionApi, TreeAndTabsAcceptSelectedKey)
@@ -142,18 +141,17 @@ TEST(SelectionApi, TreeAndTabsAcceptSelectedKey)
     EXPECT_EQ(tabs.props().text,"general");
 }
 
-TEST(SelectionApi, VirtualListPreferredCallbackOverridesLegacy)
+TEST(SelectionApi, VirtualListUsesSingleSelectionCallback)
 {
-    int old_calls = 0;
+    int calls = 0;
     int selected = -1;
     Reconciler tree;
     tree.update(VirtualList({.item_count = 5,.selected_index = 0,
-        .on_select = [&](int) { ++old_calls; },
-        .on_selection_change = [&](int index) { selected = index; }}));
+        .on_selection_change = [&](int index) { selected = index; ++calls; }}));
     tree.root()->layout({.maximum = {.width = 12,.height = 4}});
     ASSERT_TRUE(tree.root()->handleVirtualListKey({.key = Key::Down}));
     EXPECT_EQ(selected,1);
-    EXPECT_EQ(old_calls,0);
+    EXPECT_EQ(calls,1);
 }
 
 TEST(SelectionApi, VirtualTablePreferredKeyCallbackAndLazyRecords)
@@ -168,8 +166,8 @@ TEST(SelectionApi, VirtualTablePreferredKeyCallbackAndLazyRecords)
         },
         .row_key_at = [](int index) { return "id-"+std::to_string(index); },
         .selected_index = -1,.selected_key = "id-1",
-        .layout = {.width = 12,.height = 5},
-        .on_selection_key_change = [&](std::string key) { selected_key = std::move(key); }}));
+        .on_selection_key_change = [&](std::string key) { selected_key = std::move(key); },
+        .layout = {.width = 12,.height = 5}}));
     EXPECT_EQ(loaded,0);
     auto* list = tree.root()->children()[1].get();
     list->layout({.maximum = {.width = 12,.height = 4}});

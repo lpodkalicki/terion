@@ -88,7 +88,7 @@ private:
                     .variant=ButtonVariant::Text,.disabled=item.disabled,
                     .on_click=[callback=props.on_navigate,value=item.value] {
                         if (callback) callback(value);
-                    },.size=ButtonSize::Compact}));
+                    },.size=ControlSize::Compact}));
         };
         if (!collapsed)
         {
@@ -107,7 +107,7 @@ private:
             }
             entries.emplace_back(DropdownMenu({.label="…",.options=std::move(hidden),
                 .key="overflow",.variant=ButtonVariant::Text,.on_select=props.on_navigate,
-                .size=ButtonSize::Compact}));
+                .size=ControlSize::Compact}));
             for (std::size_t i=hidden_end; i<count; ++i) add_item(i);
         }
         return Row({.children=std::move(entries),.key=std::move(props.key),.layout=props.layout});

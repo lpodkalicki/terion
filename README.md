@@ -16,9 +16,8 @@ Press Escape to exit the demo. Linux/macOS with a terminal supporting ANSI true 
 ## Public API conventions
 
 See [docs/api-conventions.md](docs/api-conventions.md) for naming, component `Props`,
-callback conventions and compatibility guarantees. #139a introduces preferred
-`ControlSize` and `InputVariant` aliases while keeping `ButtonSize` and
-`TextFieldVariant` source-compatible.
+callback conventions and the canonical, pre-release API. #139d removes legacy
+aliases and duplicate selection props; see [migration instructions](docs/migration-139d.md) before updating.
 
 ## Design
 
@@ -338,7 +337,7 @@ DiffView({
 });
 ```
 
-`DiffView::render()` remains backward-compatible; `renderEnhanced()` exposes
+`DiffView::render()` exposes
 the new static rendering options. Intra-line changes are underlined and bold;
 this is a visual comparison, not a semantic word-level diff algorithm.
 

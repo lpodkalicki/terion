@@ -27,7 +27,7 @@ public:
         std::function<bool(int)> item_is_selected = {};
         int row_height = 1;
         bool follow_tail = false;
-        std::function<void(int)> on_select = {};
+        std::function<void(int)> on_selection_change = {};
         std::function<void(int)> on_activate = {};
         std::function<void(int,int)> on_click_position = {};
         std::string key = {};
@@ -36,7 +36,6 @@ public:
         bool show_scrollbar = true;
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
-        std::function<void(int)> on_selection_change = {}; // Preferred synonym for on_select.
     }; /* End of struct Props */
 
     explicit VirtualList(Props props) :
@@ -52,8 +51,7 @@ public:
             .virtual_item_is_selected = std::move(props.item_is_selected),
             .virtual_row_height = std::max(1,props.row_height),
             .virtual_follow_tail = props.follow_tail,
-            .virtual_on_select = props.on_selection_change ? std::move(props.on_selection_change) :
-                std::move(props.on_select),
+            .virtual_on_select = std::move(props.on_selection_change),
             .virtual_on_activate = std::move(props.on_activate),
             .virtual_on_click_position = std::move(props.on_click_position)})
     {}

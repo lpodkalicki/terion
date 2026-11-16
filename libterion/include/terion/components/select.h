@@ -34,7 +34,7 @@ public:
                 (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
                  std::function<void(std::string)>{}),
             .placeholder = std::move(props.placeholder),.disabled = props.disabled,
-            .button_size = props.size,.select_options = std::move(props.options),.form_default_value = props.default_value.value_or(props.value),.uncontrolled_value = props.default_value.has_value()})
+            .control_size = props.size,.select_options = std::move(props.options),.form_default_value = props.default_value.value_or(props.value),.uncontrolled_value = props.default_value.has_value()})
     {}
 }; /* End of class Select */
 

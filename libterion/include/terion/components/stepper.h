@@ -55,7 +55,7 @@ public:
         std::string key = {};
         LayoutStyle layout = {.gap = 1};
         std::function<void(std::size_t)> on_change = {};
-        // New options follow the original fields to retain aggregate initialization compatibility.
+        // Advanced step options.
         bool completed = false;
         StepperOrientation orientation = StepperOrientation::Horizontal;
         // Return false to reject a user-initiated transition (e.g. invalid form data).
@@ -124,7 +124,7 @@ private:
                 .on_click=[callback=props.on_change,before=props.on_before_change,current,i] {
                     if ((!before || before(current,i)) && callback) callback(i);
                 },
-                .size=ButtonSize::Compact}));
+                .size=ControlSize::Compact}));
             if (i+1 < props.steps.size())
                 entries.emplace_back(Typography({.text=props.orientation == StepperOrientation::Vertical ? "│" : "›",
                     .key="separator-"+std::to_string(i)}));

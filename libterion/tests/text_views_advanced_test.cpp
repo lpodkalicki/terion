@@ -91,7 +91,7 @@ TEST(DiffViewAdvanced, HunkIndexAndCopyText)
 
 TEST(DiffViewAdvanced, IntralineEmphasizesOnlyChangedGraphemes)
 {
-    const auto rendered = DiffView::renderEnhanced(
+    const auto rendered = DiffView::render(
         "@@ -1 +1 @@\n-ab👨‍👩‍👧old\n+ab👨‍👩‍👧new",
         DiffViewMode::Unified,false,0,true);
     ASSERT_EQ(rendered.size(),3u);
@@ -114,7 +114,7 @@ TEST(DiffViewAdvanced, IntralineEmphasizesOnlyChangedGraphemes)
 
 TEST(DiffViewAdvanced, SideBySidePairsUnequalChangeBlocksAndPreservesColumns)
 {
-    const auto rendered = DiffView::renderEnhanced(
+    const auto rendered = DiffView::render(
         "@@ -1,3 +1,2 @@\n-a\n-b\n+z\n context",
         DiffViewMode::SideBySide,true,52,true);
     ASSERT_EQ(rendered.size(),4u);
@@ -131,7 +131,7 @@ TEST(DiffViewAdvanced, SideBySidePairsUnequalChangeBlocksAndPreservesColumns)
 
 TEST(DiffViewAdvanced, ModeFallsBackToUnifiedWhenTooNarrow)
 {
-    const auto rendered = DiffView::renderEnhanced("@@ -1 +1 @@\n-a\n+b",
+    const auto rendered = DiffView::render("@@ -1 +1 @@\n-a\n+b",
         DiffViewMode::SideBySide,false,12,true);
     ASSERT_EQ(rendered.size(),3u);
     EXPECT_NE(joined(rendered[1]).find("-a"),std::string::npos);
@@ -179,7 +179,7 @@ TEST(DiffViewAdvanced, SideBySideReflowsOnResize)
 
 TEST(DiffViewAdvanced, UnicodeSideBySideSeparatorRemainsAtFixedColumn)
 {
-    const auto rendered = DiffView::renderEnhanced(
+    const auto rendered = DiffView::render(
         "@@ -20,3 +20,3 @@\n"
         " void onChange() {\n"
         "-    setText(\"Polska 🇵🇱\");\n"

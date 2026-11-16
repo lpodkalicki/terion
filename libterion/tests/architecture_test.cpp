@@ -114,9 +114,9 @@ TEST(Dialog, ComposesInteractiveChildrenWithinModalFocusScope)
                 .children = {
                     TextField({.value = name.get(),.key = "name",.on_change = [&](std::string next) {
                         name.set(std::move(next));
-                    },.size = ButtonSize::Compact}),
+                    },.size = ControlSize::Compact}),
                     Button({.text = "Save",.key = "save",.on_click = [&] { ++inside_clicks; },
-                        .size = ButtonSize::Compact})
+                        .size = ControlSize::Compact})
                 }})
         }});
     });

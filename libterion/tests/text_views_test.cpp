@@ -35,7 +35,7 @@ TEST(MarkdownView, HandlesBlankLinesAndWindowsNewlines)
 
 TEST(DiffView, ColorsChangesAndCountsHunkLines)
 {
-    const auto lines = DiffView::render("@@ -10,2 +20,3 @@\n old\n-removed\n+new\n+another\n");
+    const auto lines = DiffView::render("@@ -10,2 +20,3 @@\n old\n-removed\n+new\n+another\n",DiffViewMode::Unified);
     ASSERT_EQ(lines.size(),5u);
     EXPECT_EQ(lines[0][0].color,ColorVariant::Info);
     EXPECT_EQ(lines[1][0].text,"   10    20 │ ");
@@ -48,7 +48,7 @@ TEST(DiffView, ColorsChangesAndCountsHunkLines)
 
 TEST(DiffView, RecognizesHeadersWithoutConfusingWithChanges)
 {
-    const auto lines = DiffView::render("--- a/old\n+++ b/new\n@@ -1 +1 @@\n-old\n+new");
+    const auto lines = DiffView::render("--- a/old\n+++ b/new\n@@ -1 +1 @@\n-old\n+new",DiffViewMode::Unified);
     ASSERT_EQ(lines.size(),5u);
     EXPECT_EQ(lines[0][0].color,ColorVariant::Primary);
     EXPECT_EQ(lines[1][0].color,ColorVariant::Primary);
@@ -131,7 +131,7 @@ TEST(MarkdownView, SupportsInlineEmphasisAndCleanCode)
 
 TEST(DiffView, OptionalWrappingPreservesChangeColors)
 {
-    const auto lines = DiffView::render("@@ -1 +1 @@\n+an exceptionally long addition",false,12);
+    const auto lines = DiffView::render("@@ -1 +1 @@\n+an exceptionally long addition",DiffViewMode::Unified,false,12,false);
     ASSERT_GE(lines.size(),3u);
     for (std::size_t i = 1; i < lines.size(); ++i)
         for (const auto& span : lines[i])

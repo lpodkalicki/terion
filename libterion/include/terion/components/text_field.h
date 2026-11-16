@@ -37,7 +37,7 @@ public:
             .on_change = props.on_change ? std::move(props.on_change) :
                 (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
                  std::function<void(std::string)>{}),.placeholder = std::move(props.placeholder),
-            .disabled = props.disabled,.read_only = props.read_only,.button_size = props.size,.text_field_variant = props.variant,.form_default_value = props.default_value.value_or(props.value),
+            .disabled = props.disabled,.read_only = props.read_only,.control_size = props.size,.input_variant = props.variant,.form_default_value = props.default_value.value_or(props.value),
             .form_validator = [validator = std::move(props.validator)](const FormValue& value)
                 -> std::optional<std::string> {
                 if (validator) return validator(std::get<std::string>(value));

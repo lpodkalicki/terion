@@ -22,7 +22,7 @@ int main()
             VirtualList({.item_count = item_count,
                 .item_text = [](int index) { return "Record "+std::to_string(index+1); },
                 .selected_index = selected.get(),
-                .on_select = [&](int index) { selected.set(index); },
+                .on_selection_change = [&](int index) { selected.set(index); },
                 .key = "virtual-list",.layout = {.width = 50,.height = 14}}),
             Typography({.text = "Selected record: "+std::to_string(selected.get()+1)})
         },.layout = {.padding = 1,.gap = 1}});

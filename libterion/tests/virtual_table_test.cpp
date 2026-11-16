@@ -45,7 +45,7 @@ TEST(VirtualTable, HeaderSortAndRowSelection)
         .columns = {{.title = "ID",.width = 8}},
         .row_count = 50,
         .row_at = [](int index) { return TableRow{.key = "",.cells = {std::to_string(index)}}; },
-        .on_select = [&](int index) { selected = index; },
+        .on_selection_change = [&](int index) { selected = index; },
         .on_sort = [&](int col,bool ascending) { sort_col = col; sort_asc = ascending; },
         .layout = {.width = 10,.height = 4}
     }));

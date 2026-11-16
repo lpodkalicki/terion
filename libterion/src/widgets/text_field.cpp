@@ -307,7 +307,7 @@ void RenderNode::setCursorFromX(const int x)
 {
     if (type_ != Component::Type::TextField && type_ != Component::Type::PasswordField &&
         type_ != Component::Type::NumberField) return;
-    const int inset = text_field_variant_ == TextFieldVariant::Outlined ? 2 : 1;
+    const int inset = input_variant_ == InputVariant::Outlined ? 2 : 1;
     const int desired = std::max(0,x - bounds_.x - inset + scroll_columns_);
     const bool masked = type_ == Component::Type::PasswordField && !password_reveal_;
     int columns = 0;

@@ -112,19 +112,19 @@ int main()
             return Row({.children = {
                 Button({.text = "Editor",.key = "focus-editor",
                     .on_click = [&] { focus_to("editor","Markdown editor"); },
-                    .size = ButtonSize::Compact}),
+                    .size = ControlSize::Compact}),
                 Button({.text = "Search",.key = "focus-search",
                     .on_click = [&] { focus_to("search","Search field"); },
-                    .size = ButtonSize::Compact}),
+                    .size = ControlSize::Compact}),
                 Button({.text = "Action",.key = "focus-action",
                     .on_click = [&] { focus_to("action","Action button"); },
-                    .size = ButtonSize::Compact})
+                    .size = ControlSize::Compact})
             },.layout = {.gap = 1}});
         };
         const auto action_button = [&] {
             return Button({.text = "Run action [F4]",.key = "action",
                 .on_click = [&] { status.set("Action button activated"); },
-                .size = ButtonSize::Compact});
+                .size = ControlSize::Compact});
         };
         const auto editor_field = [&] {
             return TextArea({.value = editor.get(),.key = "editor",.soft_wrap = true,
@@ -135,7 +135,7 @@ int main()
             return TextField({.value = search.get(),.key = "search",
                 .layout = {.width = sidebar_width},
                 .on_change = [&](std::string text) { search.set(std::move(text)); },
-                .size = ButtonSize::Compact});
+                .size = ControlSize::Compact});
         };
 
         const auto make_body = [&]() -> Component {

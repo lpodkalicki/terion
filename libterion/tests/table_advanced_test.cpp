@@ -48,7 +48,7 @@ TEST(TableAdvanced, VirtualTableSelectionUsesStableKeysAndOnlyVisibleRows)
                 return "id-"+std::to_string(reverse ? 99999-index : index);
             },
             .selected_key = "id-99998",
-            .on_select_key = [&](std::string key) { selected = std::move(key); },
+            .on_selection_key_change = [&](std::string key) { selected = std::move(key); },
             .layout = {.width = 16,.height = 4}});
     };
     Reconciler tree;
@@ -126,7 +126,7 @@ TEST(TableAdvanced, VirtualTableDisabledRowsDoNotSelectByKey)
         .row_count = 2,
         .row_at = [](int index) { return TableRow{.key = "key-"+std::to_string(index),
             .cells = {"Text"},.disabled = index == 1}; },
-        .on_select_key = [&](std::string key) { selected = std::move(key); },
+        .on_selection_key_change = [&](std::string key) { selected = std::move(key); },
         .layout = {.width = 12,.height = 3}}));
     tree.root()->layout({.maximum = {.width = 12,.height = 3}});
     EXPECT_TRUE(tree.root()->children()[1]->handleVirtualListClick({.x = 0,.y = 1}));
@@ -145,7 +145,7 @@ TEST(TableAdvanced, VirtualTableKeyboardNavigationStartsFromVisibleSelectedKey)
                 .cells = {std::to_string(index)}}; },
             .row_key_at = [](int index) { return "key-"+std::to_string(index); },
             .selected_key = selected,
-            .on_select_key = [&](std::string key) { selected = std::move(key); },
+            .on_selection_key_change = [&](std::string key) { selected = std::move(key); },
             .layout = {.width = 14,.height = 5}});
     };
     Reconciler tree;

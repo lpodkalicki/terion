@@ -36,8 +36,7 @@ int main()
                 .rows = {{"node-a",{"Node A","Online"}},
                     {"node-b",{"Node B","Idle"}},
                     {"node-c",{"Node C","Offline"}}},
-                .key = "nodes",.layout = {.height = 6},
-                .selected_key = selected_key,
+                .selected_key = selected_key,.key = "nodes",.layout = {.height = 6},
                 .on_selection_change = [selected](std::string value) mutable {
                     selected.set(std::move(value));
                 }}),

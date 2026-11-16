@@ -40,13 +40,13 @@ int main()
                             .children = {
                                 Typography({.text = "Overview"}),
                                 Divider({}),
-                                Button({.text = "Dashboard",.variant = ButtonVariant::Contained,.size = ButtonSize::Compact}),
-                                Button({.text = "Settings",.size = ButtonSize::Compact}),
-                                Button({.text = "Reports",.disabled = true,.size = ButtonSize::Compact}),
+                                Button({.text = "Dashboard",.variant = ButtonVariant::Contained,.size = ControlSize::Compact}),
+                                Button({.text = "Settings",.size = ControlSize::Compact}),
+                                Button({.text = "Reports",.disabled = true,.size = ControlSize::Compact}),
                                 Typography({.text = "Search",.variant = TypographyVariant::Subtitle}),
                                 TextField({.value = query.get(),.placeholder = "Type to search...",
                                     .key = "search",.on_change = [&](std::string text) { query.set(std::move(text)); },
-                                    .size = ButtonSize::Compact}),
+                                    .size = ControlSize::Compact}),
                                 Typography({.text = "Input: " + query.get()})
                             },
                             .layout = {.width = sidebar_width,.padding = 1,.gap = 1}
@@ -101,7 +101,7 @@ int main()
                                 .variant = ButtonVariant::Text,.on_click = [&] {
                                     light.set(!light.get());
                                     app.setTheme(light.get() ? Theme::light() : Theme::dark());
-                                },.size = ButtonSize::Compact})
+                                },.size = ControlSize::Compact})
                         },.layout = {.width = screen.width,.justify_content = JustifyContent::SpaceBetween}
                     })},
                     .layout = {.width = screen.width,.padding = 0}

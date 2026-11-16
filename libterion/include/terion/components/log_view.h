@@ -291,7 +291,7 @@ private:
             },
             .selected_index = selected,
             .follow_tail = props.follow_tail,
-            .on_select = [buffer,indices,on_select,on_select_sequence](int index) {
+            .on_selection_change = [buffer,indices,on_select,on_select_sequence](int index) {
                 if (on_select) on_select(index);
                 if (on_select_sequence && buffer && index >= 0 &&
                     static_cast<std::size_t>(index) < indices->size())

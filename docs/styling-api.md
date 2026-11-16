@@ -2,8 +2,7 @@
 
 Terion separates **declarative styles** (semantic colors resolved for the active theme)
 from **raster styles** (fully resolved RGB colors used by `Painter` and `ScreenBuffer`).
-This avoids changing existing low-level `TextStyle` and preserves C++20 aggregate
-initializers in public `Props`.
+This avoids changing existing low-level `TextStyle` and supports C++20 aggregate initializers in public `Props`.
 
 ## Types
 
@@ -54,10 +53,10 @@ as well as `TextField`, `TextArea`, `NumberField` and `PasswordField`.
 `VirtualList`, `LogView`, `MarkdownView`, and `DiffView` carry `StyledSpan` styles
 without requiring an additional component API.
 
-## Compatibility and precedence
+## Style resolution and precedence
 
 1. Components first compute their normal text style from their state,
-   inherited background, active theme, legacy `style` / `color` / RGB fields.
+   inherited background, active theme, base `style` / `color` / RGB fields.
 2. `style_spec` overrides **only the explicitly set** fields. For example,
    `.italic = true` does not reset a cell's bold selection style.
 3. A disabled table row or virtual list ignores the custom style to preserve
@@ -65,10 +64,9 @@ without requiring an additional component API.
 4. Colors are resolved using the palette active during paint, so changing
    `ThemeProvider` updates semantic colors even with retained components.
 
-Legacy `StyledSpan.color`, `.background`, `.foreground`, `.background_color`,
-`TableCellFormat.foreground`, `.background` and `.bold` remain supported. New
-fields are appended **after existing fields** to preserve declaration order
-for C++20 designated initializers. No removal or rename is required.
+Base `StyledSpan.color`, `.background`, `.foreground`, `.background_color`,
+`TableCellFormat.foreground`, `.background` and `.bold` remain valid as concise style fields. For complete declarations, prefer
+`style_spec`.
 
 For rendering APIs that need exact RGB values, use the existing `TextStyle`.
 Do not resolve semantic colors in component constructors: the theme may change.

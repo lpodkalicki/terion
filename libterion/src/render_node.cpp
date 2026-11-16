@@ -221,7 +221,7 @@ Size RenderNode::measure(const Constraints& constraints) const
     }
     else if (type_ == Component::Type::Button)
     {
-        const auto metrics = layout_theme_.controlMetrics(button_size_);
+        const auto metrics = layout_theme_.controlMetrics(control_size_);
         content = {.width = addBounded(textWidth(text_),metrics.horizontal_padding * 2 +
             (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
             .height = metrics.height};
@@ -233,7 +233,7 @@ Size RenderNode::measure(const Constraints& constraints) const
     }
     else if (type_ == Component::Type::DropdownMenu)
     {
-        const auto metrics = layout_theme_.controlMetrics(button_size_);
+        const auto metrics = layout_theme_.controlMetrics(control_size_);
         content = {.width = addBounded(textWidth(text_),metrics.horizontal_padding*2+2+
             (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
             .height = metrics.height};
@@ -278,12 +278,12 @@ Size RenderNode::measure(const Constraints& constraints) const
         type_ == Component::Type::PasswordField || type_ == Component::Type::Select ||
         type_ == Component::Type::Autocomplete)
     {
-        const auto metrics = layout_theme_.controlMetrics(button_size_);
+        const auto metrics = layout_theme_.controlMetrics(control_size_);
         int content_width = std::max(textWidth(text_),textWidth(placeholder_));
         if (type_ == Component::Type::Select || type_ == Component::Type::Autocomplete)
             for (const auto& option : select_options_) content_width = std::max(content_width,textWidth(option.label));
         content = {.width = addBounded(content_width,metrics.horizontal_padding * 2 +
-            ((type_ == Component::Type::Select || type_ == Component::Type::Autocomplete) ? 3 : text_field_variant_ == TextFieldVariant::Outlined ? 2 : 0)),
+            ((type_ == Component::Type::Select || type_ == Component::Type::Autocomplete) ? 3 : input_variant_ == InputVariant::Outlined ? 2 : 0)),
             .height = metrics.height};
     }
     else if (type_ == Component::Type::Text)
@@ -2393,7 +2393,7 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         const Palette palette = theme ? theme->palette : Theme::dark().palette;
         const bool focused = focused_id == std::to_string(id_) && !disabled_;
         const bool hovered = hovered_id == std::to_string(id_) && !disabled_;
-        const bool outlined = text_field_variant_ == TextFieldVariant::Outlined;
+        const bool outlined = input_variant_ == InputVariant::Outlined;
         const bool compact = bounds_.height < 3;
         Color background_color = disabled_ ? palette.surface :
             outlined ? effective_background.value_or(palette.background) : palette.surface;

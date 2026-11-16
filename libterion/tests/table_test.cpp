@@ -13,7 +13,7 @@ TEST(Table, KeyboardSelectionSkipsDisabledRows)
     Reconciler tree;
     tree.update(Table({.columns = {{"Name"}},.rows = {
         {"one",{"One"}},{"two",{"Two"},true},{"three",{"Three"}}},
-        .value = "one",.on_change = [&](std::string value) { selected = std::move(value); }}));
+        .selected_key = "one",.on_selection_change = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 40,.height = 10}});
     EXPECT_TRUE(tree.root()->handleTableKey({.key = Key::Down}));
     EXPECT_EQ(selected,"three");
@@ -26,8 +26,8 @@ TEST(Table, MouseSelectionRespectsHeaderAndRowPosition)
     std::string selected;
     Reconciler tree;
     tree.update(Table({.columns = {{"Name"}},.rows = {
-        {"one",{"One"}},{"two",{"Two"}}},.value = "one",
-        .on_change = [&](std::string value) { selected = std::move(value); }}));
+        {"one",{"One"}},{"two",{"Two"}}},.selected_key = "one",
+        .on_selection_change = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 40,.height = 10}});
     // Clicking the header is handled by sorting (introduced with sortable tables).
     EXPECT_TRUE(tree.root()->handleTableClick({.x = 1,.y = 0}));
@@ -41,7 +41,7 @@ TEST(Table, PaintsHeaderAndClipsRowsToViewport)
     Reconciler tree;
     tree.update(Table({.columns = {{"Name",10}},.rows = {
         {"one",{"Alpha"}},{"two",{"Beta"}},{"three",{"Gamma"}}},
-        .value = "one",.layout = {.height = 3}}));
+        .selected_key = "one",.layout = {.height = 3}}));
     tree.root()->layout({.maximum = {.width = 20,.height = 6}});
     ScreenBuffer screen({.width = 20,.height = 6});
     Painter painter(screen);
@@ -57,7 +57,7 @@ TEST(Table, HeaderClickSortsRowsAndTogglesDirection)
     Reconciler tree;
     tree.update(Table({.columns = {{"Name",12}},.rows = {
         {"b",{"Bravo"}},{"a",{"Alpha"}},{"c",{"Charlie"}}},
-        .value = "b",.on_change = [&](std::string key) { selected = std::move(key); }}));
+        .selected_key = "b",.on_selection_change = [&](std::string key) { selected = std::move(key); }}));
     tree.root()->layout({.maximum = {.width = 25,.height = 8}});
     EXPECT_TRUE(tree.root()->handleTableClick({.x = 2,.y = 0}));
     EXPECT_EQ(tree.root()->table_sort_column(),0);
@@ -102,8 +102,8 @@ TEST(Table, FilterAffectsSortingSelectionAndScrollbar)
         {"a",{"Alpha"}},{"b",{"Bravo"}},{"c",{"Charlie"}},
         {"d",{"Delta"}},{"e",{"Echo"}}},
         .filter = [](const TableRow& row) { return row.key == "b" || row.key == "d"; },
-        .value = "b",.layout = {.height = 5},
-        .on_change = [&](std::string value) { selected = std::move(value); }}));
+        .selected_key = "b",.layout = {.height = 5},
+        .on_selection_change = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 20,.height = 5}});
     const auto order = tree.root()->table_order();
     ASSERT_EQ(order.size(),2U);
@@ -116,8 +116,8 @@ TEST(Table, FilterAffectsSortingSelectionAndScrollbar)
         {"a",{"Alpha"}},{"b",{"Bravo"}},{"c",{"Charlie"}},
         {"d",{"Delta"}},{"e",{"Echo"}}},
         .filter = [](const TableRow& row) { return row.key == "b" || row.key == "d"; },
-        .value = selected,.layout = {.height = 5},
-        .on_change = [&](std::string value) { selected = std::move(value); }}));
+        .selected_key = selected,.layout = {.height = 5},
+        .on_selection_change = [&](std::string value) { selected = std::move(value); }}));
     tree.root()->layout({.maximum = {.width = 20,.height = 5}});
     EXPECT_TRUE(tree.root()->handleTableClick({.x = 2,.y = 2}));
     EXPECT_EQ(selected,"b");

@@ -56,7 +56,7 @@ private:
                  std::function<void(std::string)>{}),.placeholder = std::move(props.placeholder),
             .disabled = props.disabled,.read_only = props.read_only,
             .number_min = props.min_value,.number_max = props.max_value,.number_step = props.step,
-            .button_size = props.size,.text_field_variant = props.variant,
+            .control_size = props.size,.input_variant = props.variant,
             .form_default_value = initial,
             .form_validator = [validator = std::move(props.validator),min_value = props.min_value,
                 max_value = props.max_value](const FormValue& value) -> std::optional<std::string> {

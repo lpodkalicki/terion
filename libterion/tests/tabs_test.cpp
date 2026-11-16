@@ -13,7 +13,7 @@ TEST(Tabs, ArrowKeysSkipDisabledTabsAndWrap)
     Reconciler tree;
     const auto build = [&](std::string value) {
         tree.update(Tabs({.options = {{"One","one"},{"Disabled","disabled",true},{"Three","three"}},
-            .value = std::move(value),.on_change = [&](std::string next) { selected = std::move(next); }}));
+            .selected_key = std::move(value),.on_selection_change = [&](std::string next) { selected = std::move(next); }}));
     };
     build("one");
     EXPECT_TRUE(tree.root()->handleTabsKey({.key = Key::Right}));
@@ -31,7 +31,7 @@ TEST(Tabs, MouseClickChangesSelectedTab)
     std::string selected;
     Reconciler tree;
     tree.update(Tabs({.options = {{"One","one"},{"Two","two"},{"Three","three"}},
-        .value = "one",.on_change = [&](std::string next) { selected = std::move(next); }}));
+        .selected_key = "one",.on_selection_change = [&](std::string next) { selected = std::move(next); }}));
     tree.root()->layout({.maximum = {.width = 50,.height = 5}});
     EXPECT_TRUE(tree.root()->handleTabsClick({.x = 8,.y = 1}));
     EXPECT_EQ(selected,"two");
@@ -42,7 +42,7 @@ TEST(Tabs, MouseHoverHighlightsOnlyTheTabUnderPointer)
 {
     Reconciler tree;
     tree.update(Tabs({.options = {{"One","one"},{"Two","two"},{"Three","three"}},
-        .value = "three"}));
+        .selected_key = "three"}));
     auto* tabs = tree.root();
     tabs->layout({.maximum = {.width = 50,.height = 5}});
     const Theme theme = Theme::dark();
@@ -83,8 +83,8 @@ TEST(TabPanel, SwitchingPanelsUpdatesFocusTargets)
     app.render([&] {
         const auto page = active.get();
         return Column({.children = {
-            Tabs({.options = {{"One","one"},{"Two","two"}},.value = page,.key = "tabs",
-                .on_change = [&](std::string value) { active.set(std::move(value)); }}),
+            Tabs({.options = {{"One","one"},{"Two","two"}},.selected_key = page,.key = "tabs",
+                .on_selection_change = [&](std::string value) { active.set(std::move(value)); }}),
             TabPanel({.children = {Button({.text = "First",.key = "first",
                 .on_click = [] {}})},.key = "panel-one",.active = page == "one"}),
             TabPanel({.children = {Button({.text = "Second",.key = "second",

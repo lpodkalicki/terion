@@ -10,17 +10,17 @@ using namespace terion;
 TEST(LayoutConsistency, DensityMetricsPreserveLegacyDefaults)
 {
     const Theme theme = Theme::dark();
-    EXPECT_EQ(theme.controlMetrics(ButtonSize::Compact),(ControlMetrics{1,1}));
-    EXPECT_EQ(theme.controlMetrics(ButtonSize::Medium),(ControlMetrics{3,2}));
-    EXPECT_EQ(theme.controlMetrics(ButtonSize::Large),(ControlMetrics{5,3}));
+    EXPECT_EQ(theme.controlMetrics(ControlSize::Compact),(ControlMetrics{1,1}));
+    EXPECT_EQ(theme.controlMetrics(ControlSize::Medium),(ControlMetrics{3,2}));
+    EXPECT_EQ(theme.controlMetrics(ControlSize::Large),(ControlMetrics{5,3}));
     Theme compact = theme;
     compact.density = ComponentDensity::Compact;
-    EXPECT_EQ(compact.controlMetrics(ButtonSize::Medium).height,1);
-    EXPECT_EQ(compact.controlMetrics(ButtonSize::Large).height,3);
+    EXPECT_EQ(compact.controlMetrics(ControlSize::Medium).height,1);
+    EXPECT_EQ(compact.controlMetrics(ControlSize::Large).height,3);
     Theme spacious = theme;
     spacious.density = ComponentDensity::Spacious;
-    EXPECT_EQ(spacious.controlMetrics(ButtonSize::Medium).height,5);
-    EXPECT_EQ(spacious.controlMetrics(ButtonSize::Large).height,7);
+    EXPECT_EQ(spacious.controlMetrics(ControlSize::Medium).height,5);
+    EXPECT_EQ(spacious.controlMetrics(ControlSize::Large).height,7);
     spacious.focus_color = Color::rgb(255,110,0);
     EXPECT_EQ(spacious.focusColor(),Color::rgb(255,110,0));
     EXPECT_EQ(theme.focusColor(),theme.palette.primary);

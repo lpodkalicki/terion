@@ -335,9 +335,9 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     node->border_ = props.border;
     node->background_ = props.background;
     node->button_variant_ = props.button_variant;
-    node->button_size_ = props.button_size;
+    node->control_size_ = props.control_size;
     node->checkbox_variant_ = props.checkbox_variant;
-    node->text_field_variant_ = props.text_field_variant;
+    node->input_variant_ = props.input_variant;
     node->password_reveal_ = props.password_reveal;
     node->password_mask_ = props.password_mask;
     node->number_min_ = props.number_min;

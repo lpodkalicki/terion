@@ -17,12 +17,8 @@ enum class ColorVariant { Default, Primary, Success, Warning, Error, Info };
 // Component density is independent of terminal font size. Comfortable retains
 // the original measurements of all existing components.
 enum class ComponentDensity { Compact, Comfortable, Spacious };
-// The canonical name for the size of interactive controls. Keep ButtonSize as
-// the underlying enum in this release to preserve source and binary compatibility.
-// Future components should use ControlSize; the existing enumerators remain
-// Compact, Medium and Large (Compact is intentionally not renamed to Small).
-enum class ButtonSize { Compact, Medium, Large };
-using ControlSize = ButtonSize;
+// Shared sizing for all interactive controls.
+enum class ControlSize { Compact, Medium, Large };
 
 struct ControlMetrics
 {

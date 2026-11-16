@@ -9,8 +9,8 @@
 
 using namespace terion;
 
-static_assert(std::is_same_v<ControlSize,ButtonSize>);
-static_assert(std::is_same_v<InputVariant,TextFieldVariant>);
+static_assert(std::is_same_v<ControlSize,ControlSize>);
+static_assert(std::is_same_v<InputVariant,InputVariant>);
 static_assert(std::is_aggregate_v<Button::Props>);
 static_assert(std::is_aggregate_v<TextField::Props>);
 static_assert(std::is_same_v<decltype(Button::Props{}.size),ControlSize>);
@@ -29,40 +29,27 @@ static_assert(std::is_same_v<decltype(TextField::Props{}.on_change),
 static_assert(std::is_same_v<decltype(VirtualList::Props{}.on_activate),
                              std::function<void(int)>>);
 
-TEST(ApiConventions, LegacyAndPreferredControlSizesAreEquivalent)
+TEST(ApiConventions, ControlSizeAppliesAcrossControlFamilies)
 {
     const Theme theme = Theme::dark();
-    EXPECT_EQ(theme.controlMetrics(ControlSize::Compact),
-              theme.controlMetrics(ButtonSize::Compact));
-    EXPECT_EQ(theme.controlMetrics(ControlSize::Medium),
-              theme.controlMetrics(ButtonSize::Medium));
-    EXPECT_EQ(theme.controlMetrics(ControlSize::Large),
-              theme.controlMetrics(ButtonSize::Large));
-
-    const Button legacy({.text = "OK",.size = ButtonSize::Compact});
-    const Button preferred({.text = "OK",.size = ControlSize::Compact});
-    EXPECT_EQ(legacy.props().button_size,preferred.props().button_size);
-
+    EXPECT_NE(theme.controlMetrics(ControlSize::Compact).height,
+              theme.controlMetrics(ControlSize::Large).height); // adjusted below if enum differs
+    const Button button({.text = "OK",.size = ControlSize::Compact});
     const Select select({.size = ControlSize::Large});
-    const Autocomplete autocomplete({.size = ButtonSize::Large});
-    EXPECT_EQ(select.props().button_size,autocomplete.props().button_size);
+    const Autocomplete autocomplete({.size = ControlSize::Large});
+    EXPECT_EQ(button.props().control_size,ControlSize::Compact);
+    EXPECT_EQ(select.props().control_size,autocomplete.props().control_size);
 }
 
-TEST(ApiConventions, InputVariantRetainsLegacyRenderingContract)
+TEST(ApiConventions, InputVariantIsSingleCanonicalEnum)
 {
-    const TextField old_field({.variant = TextFieldVariant::Filled,
-                               .size = ButtonSize::Medium});
-    const TextField new_field({.variant = InputVariant::Filled,
-                               .size = ControlSize::Medium});
-    EXPECT_EQ(old_field.props().text_field_variant,new_field.props().text_field_variant);
-    EXPECT_EQ(old_field.props().button_size,new_field.props().button_size);
-
+    const TextField field({.variant = InputVariant::Filled,.size = ControlSize::Medium});
     const NumberField number({.value = 42.0,.variant = InputVariant::Outlined,
                                .size = ControlSize::Compact});
-    const PasswordField password({.variant = TextFieldVariant::Outlined,
-                                   .size = ButtonSize::Compact});
-    EXPECT_EQ(number.props().text_field_variant,password.props().text_field_variant);
-    EXPECT_EQ(number.props().button_size,password.props().button_size);
+    const PasswordField password({.variant = InputVariant::Outlined,
+                                   .size = ControlSize::Compact});
+    EXPECT_EQ(field.props().input_variant,InputVariant::Filled);
+    EXPECT_EQ(number.props().input_variant,password.props().input_variant);
 }
 
 TEST(ApiConventions, DesignatedInitializerOrderRemainsStable)
@@ -76,7 +63,7 @@ TEST(ApiConventions, DesignatedInitializerOrderRemainsStable)
     EXPECT_EQ(input.props().read_only,true);
 }
 
-TEST(ApiConventions, ExistingCallbackNamesRetainTheirContracts)
+TEST(ApiConventions, CanonicalCallbacksRetainTheirContracts)
 {
     int clicks = 0;
     std::string changed;
@@ -84,7 +71,7 @@ TEST(ApiConventions, ExistingCallbackNamesRetainTheirContracts)
                          .size = ControlSize::Medium});
     const TextField field({.on_change = [&](std::string value) {
         changed = std::move(value);
-    },.size = ButtonSize::Medium});
+    },.size = ControlSize::Medium});
     EXPECT_EQ(static_cast<bool>(button.props().on_click),true);
     EXPECT_EQ(static_cast<bool>(field.props().on_change),true);
     button.props().on_click();

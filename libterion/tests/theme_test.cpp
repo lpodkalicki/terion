@@ -14,7 +14,7 @@ TEST(Theme, AppliesPaletteAndSpacingToComponents)
     EXPECT_EQ(light.palette.background,Color::rgb(248,249,251));
     Reconciler themed;
     themed.update(Component::column({
-        Button({.text = "OK",.variant = ButtonVariant::Contained,.size = ButtonSize::Compact}),
+        Button({.text = "OK",.variant = ButtonVariant::Contained,.size = ControlSize::Compact}),
         Progress({.value = 0.5,.layout = {.width = 4}})
     }));
     themed.root()->layout(Constraints{.maximum = {.width = 15,.height = 4}});

@@ -45,7 +45,7 @@ int main()
                 }),
                 Row({.children = {
                     Button({.text = "Top",.key = "top",.variant = ButtonVariant::Contained,
-                        .on_click = [&] { offset.set(0); },.size = ButtonSize::Compact}),
+                        .on_click = [&] { offset.set(0); },.size = ControlSize::Compact}),
                     Typography({.text = "60 items | ScrollView clips content to its viewport"})
                 },.layout = {.gap = 2}})
             },

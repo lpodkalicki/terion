@@ -197,9 +197,9 @@ private:
     std::optional<BorderStyle> border_;
     std::optional<Color> background_;
     ButtonVariant button_variant_ = ButtonVariant::Outlined;
-    ButtonSize button_size_ = ButtonSize::Medium;
+    ControlSize control_size_ = ControlSize::Medium;
     CheckboxVariant checkbox_variant_ = CheckboxVariant::Default;
-    TextFieldVariant text_field_variant_ = TextFieldVariant::Outlined;
+    InputVariant input_variant_ = InputVariant::Outlined;
     bool password_reveal_ = false;
     char32_t password_mask_ = U'•';
     double number_min_ = -1.0e100;

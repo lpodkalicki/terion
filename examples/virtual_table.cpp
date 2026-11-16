@@ -32,7 +32,7 @@ int main()
                 .selected_index = selected.get(),
                 .sort_column = sort_column.get(),
                 .sort_ascending = sort_ascending.get(),
-                .on_select = [&](int index) { selected.set(index); },
+                .on_selection_change = [&](int index) { selected.set(index); },
                 .on_sort = [&](int column, bool ascending) {
                     sort_column.set(column);
                     sort_ascending.set(ascending);

@@ -13,7 +13,7 @@ TEST(TextField, RendersCursorAndEditsUtf8Text)
     fields.update(Column({.children = {
         TextField({.value = "Łódź",.key = "outlined",.layout = {.width = 16}}),
         TextField({.placeholder = "Search",.key = "filled",.layout = {.width = 16},
-            .variant = TextFieldVariant::Filled}),
+            .variant = InputVariant::Filled}),
         TextField({.value = "Disabled",.key = "disabled",.disabled = true,
             .layout = {.width = 16}})
     }}));

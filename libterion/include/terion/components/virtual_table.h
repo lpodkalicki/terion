@@ -40,8 +40,8 @@ public:
         std::string selected_key = {}; // Takes precedence over selected_index when nonempty.
         int sort_column = -1;
         bool sort_ascending = true;
-        std::function<void(int)> on_select = {};
-        std::function<void(std::string)> on_select_key = {};
+        std::function<void(int)> on_selection_change = {}; // Index-based selection.
+        std::function<void(std::string)> on_selection_key_change = {}; // Stable key selection.
         std::function<void(int,bool)> on_sort = {};
         int horizontal_offset = 0;
         std::function<void(int)> on_horizontal_scroll = {};
@@ -49,8 +49,6 @@ public:
         LayoutStyle layout = {};
         bool disabled = false;
         bool show_scrollbar = true;
-        std::function<void(int)> on_selection_change = {}; // Index-based selection.
-        std::function<void(std::string)> on_selection_key_change = {}; // Stable key selection.
     }; /* End of struct Props */
 
     explicit VirtualTable(Props props) : Component(create(std::move(props))) {}
@@ -95,10 +93,8 @@ private:
         const auto row_at = std::move(props.row_at);
         const auto row_key_at = std::move(props.row_key_at);
         const auto format_cell = std::move(props.format_cell);
-        const auto on_select = props.on_selection_change ? std::move(props.on_selection_change) :
-            std::move(props.on_select);
-        const auto on_select_key = props.on_selection_key_change ?
-            std::move(props.on_selection_key_change) : std::move(props.on_select_key);
+        const auto on_select = std::move(props.on_selection_change);
+        const auto on_select_key = std::move(props.on_selection_key_change);
         const auto on_sort = std::move(props.on_sort);
         const auto on_horizontal_scroll = std::move(props.on_horizontal_scroll);
 
@@ -146,7 +142,7 @@ private:
                         if (on_sort) on_sort(column_index,column_index == sort_column ? !sort_ascending : true);
                     },
                     .layout = {.width = right-left,.height = 1},
-                    .size = ButtonSize::Compact
+                    .size = ControlSize::Compact
                 }));
             }
             column_start += width;
@@ -159,12 +155,12 @@ private:
                 .variant = ButtonVariant::Text,.disabled = disabled || offset == 0,
                 .on_click = [on_horizontal_scroll,offset,step] {
                     on_horizontal_scroll(std::max(0,offset-step));
-                },.layout = {.width = 2,.height = 1},.size = ButtonSize::Compact}));
+                },.layout = {.width = 2,.height = 1},.size = ControlSize::Compact}));
             headings.emplace_back(Button({.text = ">",.key = "horizontal_next",
                 .variant = ButtonVariant::Text,.disabled = disabled || offset >= max_offset,
                 .on_click = [on_horizontal_scroll,offset,step,max_offset] {
                     on_horizontal_scroll(std::min(max_offset,offset+step));
-                },.layout = {.width = 2,.height = 1},.size = ButtonSize::Compact}));
+                },.layout = {.width = 2,.height = 1},.size = ControlSize::Compact}));
         }
 
         const auto styled_row = [row_at,format_cell,columns = std::move(props.columns),widths,
@@ -206,7 +202,7 @@ private:
             .item_styled = styled_row,
             .selected_index = selected_index,
             .item_is_selected = selected_key.empty() ? std::function<bool(int)>{} : selected_by_key,
-            .on_select = select_row,
+            .on_selection_change = select_row,
             .key = "rows",
             .layout = {.width = table_width,.height = std::max(0,requested_height-1)},
             .disabled = disabled,

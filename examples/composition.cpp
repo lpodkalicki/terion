@@ -26,7 +26,7 @@ const auto FileRow = component([](const FileRowProps& props) {
         Typography({.text = props.kind,.key = "kind"}),
         Typography({.text = props.name,.key = "filename"}),
         Button({.text = "Open",.key = "open",.on_click = props.on_open,
-            .size = ButtonSize::Compact})
+            .size = ControlSize::Compact})
     },.key = props.key,.layout = {.gap = 2}});
 });
 

@@ -34,7 +34,7 @@ public:
             .on_click = std::move(props.on_click),
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .disabled = props.disabled,
-            .button_variant = props.variant,.button_size = props.size,
+            .button_variant = props.variant,.control_size = props.size,
             .text_style_spec = std::move(props.style_spec)})
     {}
 }; /* End of class Button */

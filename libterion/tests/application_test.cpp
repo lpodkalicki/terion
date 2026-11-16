@@ -83,10 +83,10 @@ TEST(Application, DispatchesFocusAndMouseActionsToButtons)
     app.render([&] {
         return Column({.children = {
             Typography({.text = "Actions",.variant = TypographyVariant::H2}),
-            Button({.text = "First",.key = "first",.on_click = [&] { ++clicks; },.size = ButtonSize::Compact}),
+            Button({.text = "First",.key = "first",.on_click = [&] { ++clicks; },.size = ControlSize::Compact}),
             Button({.text = "Disabled",.key = "disabled",.disabled = true,.on_click = [&] { clicks += 100; },
-                .size = ButtonSize::Compact}),
-            Button({.text = "Second",.key = "second",.on_click = [&] { clicks += 10; },.size = ButtonSize::Compact})
+                .size = ControlSize::Compact}),
+            Button({.text = "Second",.key = "second",.on_click = [&] { clicks += 10; },.size = ControlSize::Compact})
         }});
     });
     app.renderOnce();
@@ -132,8 +132,8 @@ TEST(Application, EditsUtf8TextAndMovesFocus)
     app.render([&] {
         return Column({.children = {
             TextField({.value = input.get(),.placeholder = "Name",.key = "name",
-                .on_change = [&](std::string value) { input.set(std::move(value)); },.size = ButtonSize::Compact}),
-            Button({.text = "OK",.key = "ok",.on_click = [&] { ++clicks; },.size = ButtonSize::Compact})
+                .on_change = [&](std::string value) { input.set(std::move(value)); },.size = ControlSize::Compact}),
+            Button({.text = "OK",.key = "ok",.on_click = [&] { ++clicks; },.size = ControlSize::Compact})
         }});
     });
     app.renderOnce();
@@ -175,7 +175,7 @@ TEST(Application, ClickingOutsideTextFieldRemovesFocusAndKeepsItRemovedAfterRend
     app.render([&] {
         return Column({.children = {
             TextField({.value = input.get(),.on_change = [&](std::string value) {
-                input.set(std::move(value)); },.size = ButtonSize::Compact}),
+                input.set(std::move(value)); },.size = ControlSize::Compact}),
             Typography({.text = "Static label"})
         }});
     });

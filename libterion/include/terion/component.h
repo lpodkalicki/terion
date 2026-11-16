@@ -33,15 +33,12 @@ enum class CheckboxVariant
     Emoji
 }; /* End of enum CheckboxVariant */
 
-enum class TextFieldVariant
+enum class InputVariant
 {
     Outlined,
     Filled
-}; /* End of enum TextFieldVariant */
+}; /* End of enum InputVariant */
 
-// InputVariant is the preferred public name for fields that share the same
-// outlined/filled appearance. TextFieldVariant remains for compatibility.
-using InputVariant = TextFieldVariant;
 
 enum class SurfaceTone
 {
@@ -205,9 +202,9 @@ public:
         double value = 0.0;
         int columns = 1;
         SurfaceTone surface_tone = SurfaceTone::None;
-        ButtonSize button_size = ButtonSize::Medium;
+        ControlSize control_size = ControlSize::Medium;
         CheckboxVariant checkbox_variant = CheckboxVariant::Default;
-        TextFieldVariant text_field_variant = TextFieldVariant::Outlined;
+        InputVariant input_variant = InputVariant::Outlined;
         int scroll_offset = 0;
         std::function<void(int)> on_scroll = {};
         bool scrollbar_visible = true;

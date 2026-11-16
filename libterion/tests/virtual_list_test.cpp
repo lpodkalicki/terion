@@ -35,7 +35,7 @@ TEST(VirtualList, KeyboardRevealsSelectionAndMouseSelectsVisibleRow)
     Reconciler tree;
     const auto component = [&] {
         return VirtualList({.item_count = 100,.selected_index = selected,
-            .on_select = [&](int index) { selected = index; },
+            .on_selection_change = [&](int index) { selected = index; },
             .layout = {.width = 20,.height = 4}});
     };
     tree.update(component());
@@ -76,13 +76,13 @@ TEST(VirtualList, EmptyAndDisabledListsDoNotSelect)
     int selected = -1;
     Reconciler tree;
     tree.update(VirtualList({.item_count = 0,
-        .on_select = [&](int index) { selected = index; },
+        .on_selection_change = [&](int index) { selected = index; },
         .layout = {.width = 14,.height = 4}}));
     tree.root()->layout({.maximum = {.width = 14,.height = 4}});
     EXPECT_FALSE(tree.root()->handleVirtualListKey({.key = Key::Down}));
     EXPECT_FALSE(tree.root()->handleVirtualListClick({.x = 1,.y = 0}));
     tree.update(VirtualList({.item_count = 20,
-        .on_select = [&](int index) { selected = index; },
+        .on_selection_change = [&](int index) { selected = index; },
         .layout = {.width = 14,.height = 4},
         .disabled = true}));
     tree.root()->layout({.maximum = {.width = 14,.height = 4}});
@@ -97,7 +97,7 @@ TEST(VirtualList, EnterActivatesSelectedRow)
     int activated = -1;
     Reconciler tree;
     tree.update(VirtualList({.item_count = 5,.selected_index = selected,
-        .on_select = [&](int index) { selected = index; },
+        .on_selection_change = [&](int index) { selected = index; },
         .on_activate = [&](int index) { activated = index; },
         .layout = {.width = 20,.height = 4}}));
     tree.root()->layout({.maximum = {.width = 25,.height = 10}});
@@ -111,7 +111,7 @@ TEST(VirtualList, DoubleClickActivatesSameRow)
     int activated = -1;
     Reconciler tree;
     tree.update(VirtualList({.item_count = 5,
-        .on_select = [&](int index) { selected = index; },
+        .on_selection_change = [&](int index) { selected = index; },
         .on_activate = [&](int index) { activated = index; },
         .layout = {.width = 20,.height = 4}}));
     tree.root()->layout({.maximum = {.width = 25,.height = 10}});
@@ -130,7 +130,7 @@ TEST(VirtualList, SpacedRowsKeepScrollAndMouseSelectionInItemCoordinates)
     tree.update(VirtualList({.item_count = 100,
         .item_text = [&](int index) { painted.push_back(index); return std::to_string(index); },
         .row_height = 2,
-        .on_select = [&](int index) { selected = index; },
+        .on_selection_change = [&](int index) { selected = index; },
         .layout = {.width = 16,.height = 6}}));
     ASSERT_NE(tree.root(),nullptr);
     tree.root()->layout({.maximum = {.width = 16,.height = 6}});

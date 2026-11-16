@@ -65,7 +65,7 @@ int main()
                 },
                 .selected_key = chosen,
                 .sort_column = sorted,.sort_ascending = !reverse,
-                .on_select_key = [selected](std::string key) mutable { selected.set(std::move(key)); },
+                .on_selection_key_change = [selected](std::string key) mutable { selected.set(std::move(key)); },
                 .on_sort = [descending,sort_column,reverse](int column,bool) mutable {
                     sort_column.set(column);
                     descending.set(!reverse);
@@ -84,7 +84,7 @@ int main()
                     if (index == 1) format.foreground = Color::rgb(220,176,80);
                     return format;
                 },
-                .value = "one",.key = "standard-table",.layout = {.width = 72,.height = 6}}),
+                .selected_key = "one",.key = "standard-table",.layout = {.width = 72,.height = 6}}),
             Typography({.text = "Tab: focus | Mouse wheel: vertical | Shift+wheel: horizontal | Esc: quit"})
         },.layout = {.padding = 1,.gap = 1}});
     });

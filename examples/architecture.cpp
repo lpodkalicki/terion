@@ -33,10 +33,10 @@ int main()
                 .children = {
                     TextField({.value = name.get(),.placeholder = "Name",.key = "name",
                         .on_change = [&](std::string value) { name.set(std::move(value)); },
-                        .size = ButtonSize::Compact}),
+                        .size = ControlSize::Compact}),
                     Button({.text = "Save",.key = "save",.variant = ButtonVariant::Contained,
                         .on_click = [&] { saves.set(saves.get()+1); dialog_open.set(false); },
-                        .size = ButtonSize::Compact})
+                        .size = ControlSize::Compact})
                 }})
         },.layout = {.padding = 2,.gap = 1}});
     });

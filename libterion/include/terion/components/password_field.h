@@ -38,7 +38,7 @@ public:
                  std::function<void(std::string)>{}),.placeholder = std::move(props.placeholder),
             .disabled = props.disabled,.read_only = props.read_only,
             .password_reveal = props.reveal,.password_mask = props.mask,
-            .button_size = props.size,.text_field_variant = props.variant,.form_default_value = props.default_value.value_or(props.value),
+            .control_size = props.size,.input_variant = props.variant,.form_default_value = props.default_value.value_or(props.value),
             .form_validator = [validator = std::move(props.validator)](const FormValue& value)
                 -> std::optional<std::string> {
                 if (validator) return validator(std::get<std::string>(value));

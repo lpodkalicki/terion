@@ -26,7 +26,7 @@ struct StyledSpan
     // Explicit RGB overrides for table cells and other custom styled content.
     std::optional<Color> foreground = std::nullopt;
     std::optional<Color> background_color = std::nullopt;
-    // Preferred declarative style; explicitly supplied fields override legacy fields.
+    // Rich declarative style; explicitly supplied fields override simple span defaults.
     std::optional<TextStyleSpec> style_spec = std::nullopt;
 }; /* End of struct StyledSpan */
 

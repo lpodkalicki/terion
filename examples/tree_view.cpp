@@ -34,9 +34,9 @@ int main()
         return Paper({.children = {
             Typography({.text = "TreeView — arrows, Enter/Space, mouse, wheel",
                 .variant = TypographyVariant::H2}),
-            TreeView({.items = items,.expanded = expanded.get(),.value = selected.get(),
+            TreeView({.items = items,.expanded = expanded.get(),.selected_key = selected.get(),
                 .key = "tree",.layout = {.width = 38,.height = 14},
-                .on_change = [&](std::string value) { selected.set(std::move(value)); },
+                .on_selection_change = [&](std::string value) { selected.set(std::move(value)); },
                 .on_toggle = [&](std::string key, bool open) {
                     auto values = expanded.get();
                     values.erase(std::remove(values.begin(),values.end(),key),values.end());

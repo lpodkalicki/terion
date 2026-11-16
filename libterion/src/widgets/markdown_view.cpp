@@ -1,0 +1,601 @@
+/*
+ * Copyright (c) 2026 by Łukasz Marcin Podkalicki <lpodkalicki@gmail.com>
+ */
+
+#include <terion/components/markdown_view.h>
+#include <algorithm>
+#include <limits>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+#include <terion/components/virtual_list.h>
+#include <terion/components/text_view_detail.h>
+#include <cctype>
+#include <functional>
+
+namespace terion {
+
+std::vector<MarkdownView::Heading> MarkdownView::outline(std::string_view markdown)
+{
+        const auto source = sourceLines(markdown);
+        std::vector<Heading> result;
+        bool in_code = false;
+        char fence_char = 0;
+        std::size_t fence_size = 0;
+        for (std::size_t i = 0; i < source.size(); ++i)
+        {
+            const auto value = trimLeft(source[i]);
+            const auto marker = fenceMarker(value);
+            if (marker.second >= 3)
+            {
+                if (!in_code)
+                {
+                    in_code = true; fence_char = marker.first; fence_size = marker.second;
+                    continue;
+                }
+                if (marker.first == fence_char && marker.second >= fence_size &&
+                    trim(value.substr(marker.second)).empty()) { in_code = false; continue; }
+            }
+            if (in_code) continue;
+            std::size_t depth = 0;
+            while (depth < value.size() && depth < 6 && value[depth] == '#') ++depth;
+            if (depth && depth < value.size() && value[depth] == ' ')
+            {
+                result.push_back({i,static_cast<int>(depth),std::string(trim(value.substr(depth+1)))});
+                continue;
+            }
+            if (i+1 < source.size() && !trim(value).empty())
+            {
+                const int level = setextLevel(source[i+1]);
+                if (level != 0)
+                {
+                    result.push_back({i,level,std::string(trim(value))});
+                    ++i;
+                }
+            }
+        }
+        return result;
+    }
+
+std::vector<StyledText> MarkdownView::render(std::string_view markdown,
+                                                         int wrap_width)
+{
+        return renderDocument(markdown,wrap_width).lines;
+    }
+
+std::vector<std::string_view> MarkdownView::sourceLines(std::string_view text)
+{
+        std::vector<std::string_view> result;
+        std::size_t begin = 0;
+        while (begin < text.size())
+        {
+            const auto end = text.find('\n',begin);
+            auto line = text.substr(begin,end == std::string_view::npos ? text.size()-begin : end-begin);
+            if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
+            result.push_back(line);
+            if (end == std::string_view::npos) break;
+            begin = end+1;
+        }
+        return result;
+    }
+
+std::string_view MarkdownView::trim(std::string_view value)
+{
+        const auto first = value.find_first_not_of(" \t");
+        if (first == std::string_view::npos) return {};
+        value.remove_prefix(first);
+        const auto last = value.find_last_not_of(" \t");
+        return value.substr(0,last+1);
+    }
+
+std::pair<char,std::size_t> MarkdownView::fenceMarker(std::string_view line)
+{
+        if (line.empty() || (line.front() != '`' && line.front() != '~')) return {' ',0};
+        const char marker = line.front();
+        std::size_t size = 0;
+        while (size < line.size() && line[size] == marker) ++size;
+        return {marker,size};
+    }
+
+int MarkdownView::setextLevel(std::string_view line)
+{
+        line = trim(line);
+        if (line.size() < 3) return 0;
+        const char marker = line.front();
+        if (marker != '=' && marker != '-') return 0;
+        return line.find_first_not_of(marker) == std::string_view::npos ? (marker == '=' ? 1 : 2) : 0;
+    }
+
+std::vector<std::string_view> MarkdownView::tableCells(std::string_view line)
+{
+        std::vector<std::string_view> result;
+        line = trim(line);
+        if (!line.empty() && line.front() == '|') line.remove_prefix(1);
+        if (!line.empty() && line.back() == '|') line.remove_suffix(1);
+        std::size_t begin = 0;
+        for (std::size_t i = 0; i <= line.size(); ++i)
+            if (i == line.size() || (line[i] == '|' && (i == 0 || line[i-1] != '\\')))
+            {
+                result.push_back(trim(line.substr(begin,i-begin)));
+                begin = i+1;
+            }
+        return result;
+    }
+
+bool MarkdownView::tableSeparator(std::string_view line,std::size_t columns)
+{
+        const auto cells = tableCells(line);
+        if (cells.size() != columns || columns == 0) return false;
+        for (auto cell : cells)
+        {
+            if (!cell.empty() && cell.front() == ':') cell.remove_prefix(1);
+            if (!cell.empty() && cell.back() == ':') cell.remove_suffix(1);
+            if (cell.size() < 3 || cell.find_first_not_of('-') != std::string_view::npos) return false;
+        }
+        return true;
+    }
+
+std::vector<TableAlignment> MarkdownView::tableAlignments(std::string_view separator)
+{
+        std::vector<TableAlignment> result;
+        for (auto cell : tableCells(separator))
+        {
+            const bool left = !cell.empty() && cell.front() == ':';
+            const bool right = !cell.empty() && cell.back() == ':';
+            result.push_back(left && right ? TableAlignment::Center :
+                right ? TableAlignment::Right : TableAlignment::Left);
+        }
+        return result;
+    }
+
+std::string MarkdownView::plainText(const StyledText& spans)
+{
+        std::string value;
+        for (const auto& span : spans) value += span.text;
+        return value;
+    }
+
+StyledText MarkdownView::clipCell(const StyledText& text,int width)
+{
+        StyledText result;
+        int used = 0;
+        bool full = false;
+        for (const auto& span : text)
+        {
+            if (full) break;
+            std::string bytes;
+            for (std::size_t i = 0; i < span.text.size();)
+            {
+                const auto glyph = nextGrapheme(span.text,i);
+                if (!glyph.bytes) break;
+                const int cells = glyph.columns;
+                if (used+cells > width) { full = true; break; }
+                bytes += span.text.substr(i,glyph.bytes);
+                used += cells;
+                i += glyph.bytes;
+            }
+            if (!bytes.empty())
+            {
+                auto clipped = span;
+                clipped.text = std::move(bytes);
+                result.push_back(std::move(clipped));
+            }
+            if (used >= width) break;
+        }
+        return result;
+    }
+
+void MarkdownView::appendTableRow(StyledText& output,const std::vector<std::string_view>& cells,
+                               const std::vector<int>& widths,const std::vector<TableAlignment>& alignments,
+                               bool header)
+{
+        output.push_back({.text = "│ ",.color = ColorVariant::Info});
+        for (std::size_t i = 0; i < widths.size(); ++i)
+        {
+            const auto cell = i < cells.size() ? cells[i] : std::string_view{};
+            auto styled = clipCell(inlineText(cell,header ? ColorVariant::Primary : ColorVariant::Default,header),widths[i]);
+            const int visible = detail::textCells(plainText(styled));
+            const int padding = std::max(0,widths[i]-visible);
+            const TableAlignment alignment = i < alignments.size() ? alignments[i] : TableAlignment::Left;
+            const int before = alignment == TableAlignment::Right ? padding :
+                alignment == TableAlignment::Center ? padding/2 : 0;
+            if (before > 0) output.push_back({.text = std::string(static_cast<std::size_t>(before),' ')});
+            for (auto& span : styled) output.push_back(std::move(span));
+            const int after = padding-before;
+            if (after > 0) output.push_back({.text = std::string(static_cast<std::size_t>(after),' ')});
+            output.push_back({.text = " │",.color = ColorVariant::Info});
+            if (i+1 < widths.size()) output.push_back({.text = " "});
+        }
+    }
+
+StyledText MarkdownView::renderNestedLine(std::string_view line)
+{
+        std::size_t spaces = 0;
+        while (spaces < line.size() && (line[spaces] == ' ' || line[spaces] == '\t'))
+            spaces += 1;
+        const auto value = line.substr(spaces);
+        // Only list items have a meaningful hierarchy. Do not indent ordinary paragraphs.
+        const bool bullet = startsWith(value,"- ") || startsWith(value,"* ") ||
+            startsWith(value,"+ ");
+        std::size_t digits = 0;
+        while (digits < value.size() && value[digits] >= '0' && value[digits] <= '9') ++digits;
+        const bool numbered = digits && digits+1 < value.size() && value[digits] == '.' && value[digits+1] == ' ';
+        if (spaces == 0 || (!bullet && !numbered)) return renderLine(line);
+        const auto depth = std::min<std::size_t>(spaces/2,8);
+        auto result = renderLine(value);
+        if (!result.empty()) result.front().text.insert(0,depth*2,' ');
+        return result;
+    }
+
+MarkdownView::Document MarkdownView::renderDocument(std::string_view markdown,int wrap_width)
+{
+        Document document;
+        const auto source = sourceLines(markdown);
+        const auto emit = [&](const StyledText& line,std::size_t origin,int hanging = -1) {
+            const auto wrapped = wrap_width > 0 ?
+                (hanging >= 0 ? detail::wrapStyled(line,wrap_width,hanging) :
+                    detail::wrapLines({line},wrap_width)) : std::vector<StyledText>{line};
+            for (const auto& row : wrapped)
+            {
+                document.lines.push_back(row);
+                document.origins.push_back(origin);
+            }
+        };
+        bool fenced = false;
+        char fence_char = 0;
+        std::size_t fence_size = 0;
+        std::string language;
+        for (std::size_t i = 0; i < source.size(); ++i)
+        {
+            const auto line = source[i];
+            const auto trimmed = trimLeft(line);
+            const auto marker = fenceMarker(trimmed);
+            if (!fenced && marker.second >= 3)
+            {
+                fenced = true;
+                fence_char = marker.first;
+                fence_size = marker.second;
+                const auto info = trim(trimmed.substr(marker.second));
+                language = std::string(info.substr(0,info.find_first_of(" \t{")));
+                continue;
+            }
+            if (fenced)
+            {
+                if (marker.first == fence_char && marker.second >= fence_size &&
+                    trim(trimmed.substr(marker.second)).empty())
+                {
+                    fenced = false;
+                    continue;
+                }
+                // A shorter fence, or code containing backticks, is not a terminator.
+                emit(highlightCode(line,language),i,0);
+                continue;
+            }
+            if (i+1 < source.size() && setextLevel(source[i+1]) != 0 && !trim(line).empty())
+            {
+                const int level = setextLevel(source[i+1]);
+                StyledText header = {{.text = level == 1 ? "▌ " : "  ",
+                    .color = ColorVariant::Primary,.bold = true}};
+                auto content = inlineText(trim(line),ColorVariant::Primary,true);
+                header.insert(header.end(),content.begin(),content.end());
+                emit(header,i);
+                ++i;
+                continue;
+            }
+            if (i+1 < source.size() && line.find('|') != std::string_view::npos)
+            {
+                const auto headers = tableCells(line);
+                if (tableSeparator(source[i+1],headers.size()))
+                {
+                    std::size_t last = i+2;
+                    while (last < source.size() && source[last].find('|') != std::string_view::npos &&
+                        !trim(source[last]).empty()) ++last;
+                    const auto alignments = tableAlignments(source[i+1]);
+                    std::vector<int> widths(headers.size(),3);
+                    const auto update = [&](const std::vector<std::string_view>& cells) {
+                        for (std::size_t c = 0; c < widths.size() && c < cells.size(); ++c)
+                            widths[c] = std::min(32,std::max(widths[c],detail::textCells(
+                                plainText(inlineText(cells[c])))));
+                    };
+                    update(headers);
+                    for (std::size_t j = i+2; j < last; ++j) update(tableCells(source[j]));
+                    StyledText header;
+                    appendTableRow(header,headers,widths,alignments,true);
+                    emit(header,i);
+                    std::string rule = "├";
+                    for (std::size_t c = 0; c < widths.size(); ++c)
+                    {
+                        for (int k = 0; k < widths[c]+2; ++k) rule += "─";
+                        rule += c+1 < widths.size() ? "┼" : "┤";
+                    }
+                    emit({{.text = std::move(rule),.color = ColorVariant::Info}},i+1);
+                    for (std::size_t j = i+2; j < last; ++j)
+                    {
+                        StyledText row;
+                        appendTableRow(row,tableCells(source[j]),widths,alignments,false);
+                        emit(row,j);
+                    }
+                    i = last-1;
+                    continue;
+                }
+            }
+            emit(renderNestedLine(line),i);
+            if (document.lines.size() >= static_cast<std::size_t>(std::numeric_limits<int>::max())) break;
+        }
+        return document;
+    }
+
+bool MarkdownView::startsWith(std::string_view value,std::string_view prefix)
+{
+        return value.substr(0,prefix.size()) == prefix;
+    }
+
+std::string_view MarkdownView::trimLeft(std::string_view value)
+{
+        const auto offset = value.find_first_not_of(" \t");
+        return offset == std::string_view::npos ? std::string_view{} : value.substr(offset);
+    }
+
+StyledText MarkdownView::inlineText(std::string_view text,ColorVariant base,
+                                 bool base_bold)
+{
+        StyledText spans;
+        std::size_t cursor = 0;
+        std::string plain;
+        const auto flush = [&] {
+            if (!plain.empty())
+            {
+                spans.push_back({.text = std::move(plain),.color = base,.bold = base_bold});
+                plain.clear();
+            }
+        };
+        while (cursor < text.size())
+        {
+            if (text[cursor] == '\\' && cursor+1 < text.size())
+            {
+                plain.push_back(text[cursor+1]);
+                cursor += 2;
+                continue;
+            }
+            if (text[cursor] == '`')
+            {
+                const auto close = text.find('`',cursor+1);
+                if (close != std::string_view::npos)
+                {
+                    flush();
+                    spans.push_back({.text = std::string(text.substr(cursor+1,close-cursor-1)),
+                        .color = ColorVariant::Info});
+                    cursor = close+1;
+                    continue;
+                }
+            }
+            if (cursor+1 < text.size() && (startsWith(text.substr(cursor),"**") ||
+                startsWith(text.substr(cursor),"__")))
+            {
+                const auto delimiter = text.substr(cursor,2);
+                const auto close = text.find(delimiter,cursor+2);
+                if (close != std::string_view::npos && close > cursor+2)
+                {
+                    flush();
+                    spans.push_back({.text = std::string(text.substr(cursor+2,close-cursor-2)),
+                        .color = base,.bold = true});
+                    cursor = close+2;
+                    continue;
+                }
+            }
+            if (startsWith(text.substr(cursor),"~~"))
+            {
+                const auto close = text.find("~~",cursor+2);
+                if (close != std::string_view::npos && close > cursor+2)
+                {
+                    flush();
+                    spans.push_back({.text = std::string(text.substr(cursor+2,close-cursor-2)),
+                        .color = ColorVariant::Warning,.strikethrough = true});
+                    cursor = close+2;
+                    continue;
+                }
+            }
+            if (text[cursor] == '*' || text[cursor] == '_')
+            {
+                const auto close = text.find(text[cursor],cursor+1);
+                if (close != std::string_view::npos && close > cursor+1)
+                {
+                    flush();
+                    spans.push_back({.text = std::string(text.substr(cursor+1,close-cursor-1)),
+                        .color = ColorVariant::Info,.bold = base_bold,.italic = true});
+                    cursor = close+1;
+                    continue;
+                }
+            }
+            if (text[cursor] == '<')
+            {
+                const auto end = text.find('>',cursor+1);
+                if (end != std::string_view::npos)
+                {
+                    const auto target = text.substr(cursor+1,end-cursor-1);
+                    if (startsWith(target,"https://") || startsWith(target,"http://") ||
+                        startsWith(target,"mailto:"))
+                    {
+                        flush();
+                        spans.push_back({.text = std::string(target),
+                            .color = ColorVariant::Primary,.underline = true});
+                        cursor = end+1;
+                        continue;
+                    }
+                }
+            }
+            if (text[cursor] == '[')
+            {
+                const auto bracket = text.find("](",cursor+1);
+                if (bracket != std::string_view::npos)
+                {
+                    const auto end = text.find(')',bracket+2);
+                    if (end != std::string_view::npos)
+                    {
+                        flush();
+                        spans.push_back({.text = std::string(text.substr(cursor+1,bracket-cursor-1)),
+                            .color = ColorVariant::Primary,.underline = true});
+                        cursor = end+1;
+                        continue;
+                    }
+                }
+            }
+            plain.push_back(text[cursor++]);
+        }
+        flush();
+        return spans;
+    }
+
+StyledText MarkdownView::highlightCode(std::string_view line,std::string_view language)
+{
+        StyledText result = {{.text = "  ",.color = ColorVariant::Info}};
+        if (language != "cpp" && language != "c++" && language != "c" &&
+            language != "python" && language != "py" && language != "bash" &&
+            language != "sh" && language != "json" && language != "js" &&
+            language != "javascript" && language != "ts" && language != "typescript")
+        {
+            detail::appendSpan(result,std::string(line),ColorVariant::Info,false);
+            return result;
+        }
+        const auto word = [](const char c) {
+            return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+        };
+        const auto keyword = [language](std::string_view token) {
+            constexpr std::string_view common = " if else for while return class struct const auto void int bool float double true false nullptr new delete def import from as in is None True False function let var export async await interface type public private protected include namespace using template typename ";
+            const std::string value = " "+std::string(token)+" ";
+            if (common.find(value) != std::string_view::npos) return true;
+            return (language == "bash" || language == "sh") &&
+                std::string_view(" echo fi then do done local export source ").find(value) != std::string_view::npos;
+        };
+        for (std::size_t i = 0; i < line.size();)
+        {
+            if ((line[i] == '#' && (language == "python" || language == "py" ||
+                language == "bash" || language == "sh")) ||
+                line.substr(i,2) == "//")
+            {
+                detail::appendSpan(result,std::string(line.substr(i)),ColorVariant::Success,false);
+                break;
+            }
+            if (line[i] == '\"' || line[i] == '\'')
+            {
+                const auto quote = line[i];
+                const auto start = i++;
+                while (i < line.size())
+                {
+                    if (line[i] == '\\' && i+1 < line.size()) { i += 2; continue; }
+                    if (line[i++] == quote) break;
+                }
+                detail::appendSpan(result,std::string(line.substr(start,i-start)),ColorVariant::Warning,false);
+                continue;
+            }
+            if (word(line[i]))
+            {
+                const auto start = i++;
+                while (i < line.size() && word(line[i])) ++i;
+                const auto token = line.substr(start,i-start);
+                const auto color = keyword(token) ? ColorVariant::Primary :
+                    (std::isdigit(static_cast<unsigned char>(token.front())) != 0 ?
+                        ColorVariant::Warning : ColorVariant::Info);
+                detail::appendSpan(result,std::string(token),color,keyword(token));
+                continue;
+            }
+            detail::appendSpan(result,std::string(1,line[i++]),ColorVariant::Info,false);
+        }
+        return result;
+    }
+
+StyledText MarkdownView::renderLine(std::string_view line)
+{
+        const auto value = trimLeft(line);
+        if (value.empty()) return {};
+        std::size_t hashes = 0;
+        while (hashes < value.size() && hashes < 6 && value[hashes] == '#') ++hashes;
+        if (hashes > 0 && hashes < value.size() && value[hashes] == ' ')
+        {
+            StyledText result = {{.text = std::string(hashes == 1 ? "▌ " : "  "),
+                .color = ColorVariant::Primary,.bold = true}};
+            auto content = inlineText(value.substr(hashes+1),ColorVariant::Primary,true);
+            result.insert(result.end(),content.begin(),content.end());
+            return result;
+        }
+        if (startsWith(value,"> "))
+        {
+            StyledText result = {{.text = "│ ",.color = ColorVariant::Info}};
+            auto content = inlineText(value.substr(2));
+            result.insert(result.end(),content.begin(),content.end());
+            return result;
+        }
+        if (value == "---" || value == "***" || value == "___")
+            return {{.text = "────────────────────────",.color = ColorVariant::Info}};
+        if (startsWith(value,"- [ ] ") || startsWith(value,"* [ ] "))
+        {
+            StyledText result = {{.text = "  □ ",.color = ColorVariant::Info}};
+            auto content = inlineText(value.substr(6));
+            result.insert(result.end(),content.begin(),content.end());
+            return result;
+        }
+        if (startsWith(value,"- [x] ") || startsWith(value,"- [X] ") ||
+            startsWith(value,"* [x] ") || startsWith(value,"* [X] "))
+        {
+            StyledText result = {{.text = "  ☑ ",.color = ColorVariant::Success}};
+            auto content = inlineText(value.substr(6));
+            result.insert(result.end(),content.begin(),content.end());
+            return result;
+        }
+        if (startsWith(value,"- ") || startsWith(value,"* ") || startsWith(value,"+ "))
+        {
+            StyledText result = {{.text = "  • ",.color = ColorVariant::Primary}};
+            auto content = inlineText(value.substr(2));
+            result.insert(result.end(),content.begin(),content.end());
+            return result;
+        }
+        std::size_t digits = 0;
+        while (digits < value.size() && value[digits] >= '0' && value[digits] <= '9') ++digits;
+        if (digits > 0 && digits+1 < value.size() && value[digits] == '.' && value[digits+1] == ' ')
+        {
+            StyledText result = {{.text = "  "+std::string(value.substr(0,digits+1))+" ",
+                .color = ColorVariant::Primary}};
+            auto content = inlineText(value.substr(digits+2));
+            result.insert(result.end(),content.begin(),content.end());
+            return result;
+        }
+        return inlineText(line);
+    }
+
+Component MarkdownView::create(Props props)
+{
+        auto state = std::make_shared<DynamicDocument>();
+        state->markdown = std::move(props.markdown);
+        state->wrap = props.wrap;
+        state->fixed_width = props.wrap_width;
+        const int initial_width = props.wrap ? (props.wrap_width > 0 ? props.wrap_width :
+            std::max(0,props.layout.width.value_or(0)-(props.show_scrollbar ? 1 : 0))) : 0;
+        state->rendered = renderDocument(state->markdown,initial_width);
+        state->width = initial_width;
+        return VirtualList({.item_count = static_cast<int>(state->rendered.lines.size()),
+            .item_styled = [state](int index) -> StyledText {
+                return state->rendered.lines[static_cast<std::size_t>(index)];
+            },.on_width_change = [state](int width,int offset) -> std::pair<int,int> {
+                const int target = state->wrap ? (state->fixed_width > 0 ? state->fixed_width : width) : 0;
+                if (target != state->width)
+                {
+                    std::size_t origin = 0;
+                    if (offset >= 0 && static_cast<std::size_t>(offset) < state->rendered.origins.size())
+                        origin = state->rendered.origins[static_cast<std::size_t>(offset)];
+                    state->rendered = renderDocument(state->markdown,target);
+                    state->width = target;
+                    const auto it = std::lower_bound(state->rendered.origins.begin(),
+                        state->rendered.origins.end(),origin);
+                    offset = static_cast<int>(it-state->rendered.origins.begin());
+                }
+                return {static_cast<int>(state->rendered.lines.size()),offset};
+            },.on_click_position = [state,callback = std::move(props.on_source_line_click)](int, int index) {
+                if (callback && index >= 0 && static_cast<std::size_t>(index) < state->rendered.origins.size())
+                    callback(state->rendered.origins[static_cast<std::size_t>(index)]);
+            },.key = std::move(props.key),.layout = props.layout,
+            .disabled = props.disabled,.show_scrollbar = props.show_scrollbar});
+    }
+
+} /* End of namespace terion */

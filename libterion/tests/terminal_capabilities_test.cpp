@@ -27,8 +27,8 @@ TEST(TerminalCapabilities, EmitsPointerShapeChangesForInteractiveComponents)
         return Column({.children = {
             Typography({.text = "Label"}),
             TextField({.value = "Edit",.key = "edit",.on_change = [](std::string) {},
-                .size = ButtonSize::Compact}),
-            Button({.text = "Click",.key = "click",.on_click = [] {},.size = ButtonSize::Compact}),
+                .size = ControlSize::Compact}),
+            Button({.text = "Click",.key = "click",.on_click = [] {},.size = ControlSize::Compact}),
             Box({.children = {Typography({.text = "Box"})},.layout = {.width = 20,.height = 3}})
         }});
     });

@@ -80,7 +80,7 @@ private:
                 .key="header",.variant=ButtonVariant::Text,.disabled=item.disabled,
                 .on_click=[expanded=props.expanded,id,multiple=props.multiple,
                     callback=props.on_change] {if (callback) callback(toggle(expanded,id,multiple));},
-                .size=ButtonSize::Compact}));
+                .size=ControlSize::Compact}));
             if (props.keep_mounted)
                 section.emplace_back(TabPanel({.children={Box({.children=std::move(item.children),
                         .key="body",.layout={.padding=1,.gap=1}})},

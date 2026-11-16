@@ -20,7 +20,7 @@ int main()
                 .variant = TypographyVariant::H2}),
             Tabs({.options = {{"Overview","overview"},{"Settings","settings"},
                 {"Disabled","disabled",true},{"About","about"}},
-                .value = page,.key = "main-tabs",.on_change = [&](std::string value) { active.set(std::move(value)); }}),
+                .selected_key = page,.key = "main-tabs",.on_selection_change = [&](std::string value) { active.set(std::move(value)); }}),
             TabPanel({.children = {
                 Typography({.text = "Overview",.variant = TypographyVariant::H2}),
                 Typography({.text = "This is a retained, composable tab panel."}),

@@ -27,9 +27,9 @@ int main()
                 },.layout = {.gap = 2}}),
                 Typography({.text = "Sizes"}),
                 Row({.children = {
-                    Button({.text = "Compact",.size = ButtonSize::Compact}),
+                    Button({.text = "Compact",.size = ControlSize::Compact}),
                     Button({.text = "Medium",.variant = ButtonVariant::Contained}),
-                    Button({.text = "Large",.variant = ButtonVariant::Outlined,.size = ButtonSize::Large})
+                    Button({.text = "Large",.variant = ButtonVariant::Outlined,.size = ControlSize::Large})
                 },.layout = {.gap = 2,.align_items = AlignItems::Center}}),
                 Typography({.text = "Disabled"}),
                 Row({.children = {

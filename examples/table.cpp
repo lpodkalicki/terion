@@ -40,9 +40,9 @@ int main()
                     }
                     return cell;
                 },
-                .value = selected.get(),.key = "nodes",
+                .selected_key = selected.get(),.key = "nodes",
                 .layout = {.height = 12},
-                .on_change = [&](std::string value) { selected.set(std::move(value)); }}),
+                .on_selection_change = [&](std::string value) { selected.set(std::move(value)); }}),
             Typography({.text = "Selected: "+selected.get()})
         },.layout = {.padding = 1,.gap = 1}});
     });

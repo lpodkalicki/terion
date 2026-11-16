@@ -37,7 +37,7 @@ public:
                 (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
                  std::function<void(std::string)>{}),
             .placeholder = std::move(props.placeholder),.disabled = props.disabled,
-            .button_size = props.size,.select_options = std::move(props.options),
+            .control_size = props.size,.select_options = std::move(props.options),
             .autocomplete_query = std::move(props.query),
             .autocomplete_on_input_change = std::move(props.on_input_change),.form_default_value = props.default_value.value_or(props.value),.uncontrolled_value = props.default_value.has_value()})
     {}
