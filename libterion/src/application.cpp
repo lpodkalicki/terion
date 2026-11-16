@@ -128,6 +128,7 @@ void Application::renderOnce()
         timings.reconcile = reconcile_end-build_end;
         if (auto* root = reconciler_.root())
         {
+            root->setLayoutTheme(theme_);
             if (root->layoutDirty() || last_component_layout_size_ != buffer.size())
             {
                 root->layout(Constraints{.maximum = buffer.size()});

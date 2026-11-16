@@ -18,13 +18,20 @@ public:
         std::string key = {};
         LayoutStyle layout = {};
         int columns = 2;
+        int min_column_width = 0; // 0: fixed; >0: collapse columns on narrow screens.
     }; /* End of struct Props */
 
-    explicit Grid(Props props) :
-        Component({.type = Component::Type::Grid,.key = std::move(props.key),
+    explicit Grid(Props props) : Component(create(std::move(props))) {}
+
+private:
+    static Component create(Props props)
+    {
+        if (props.min_column_width > 0)
+            props.layout.grid_min_column_width = props.min_column_width;
+        return Component({.type = Component::Type::Grid,.key = std::move(props.key),
             .children = std::move(props.children),.layout = props.layout,
-            .columns = props.columns})
-    {}
+            .columns = props.columns});
+    }
 }; /* End of class Grid */
 
 } /* End of namespace terion */

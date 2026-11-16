@@ -26,13 +26,6 @@ enum class ButtonVariant
     Contained
 }; /* End of enum ButtonVariant */
 
-enum class ButtonSize
-{
-    Compact,
-    Medium,
-    Large
-}; /* End of enum ButtonSize */
-
 enum class CheckboxVariant
 {
     Default,

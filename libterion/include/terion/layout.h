@@ -42,6 +42,24 @@ struct Constraints
     }
 }; /* End of struct Constraints */
 
+// Computes a safe number of columns without overflowing on large constraints.
+// A min_column_width of zero disables adaptive layout (the legacy behavior).
+[[nodiscard]] constexpr int responsiveColumns(int available_width, int requested_columns,
+    int gap, int min_column_width) noexcept
+{
+    const int requested = std::max(1,requested_columns);
+    if (min_column_width <= 0) return requested;
+    const long long space = std::max(0,available_width);
+    const long long separation = std::max(0,gap);
+    const long long minimum = std::max(1,min_column_width);
+    const long long count = (space+separation)/(minimum+separation);
+    return static_cast<int>(std::clamp(count,1LL,static_cast<long long>(requested)));
+}
+
+// Explicit design tokens override literal padding/gap values when requested.
+// Unspecified preserves the old per-component layout behavior.
+enum class SpacingToken { Unspecified, None, Small, Medium, Large };
+
 struct LayoutStyle
 {
     std::optional<int> width = std::nullopt;
@@ -56,6 +74,9 @@ struct LayoutStyle
     JustifyContent justify_content = JustifyContent::Start;
     AlignItems align_items = AlignItems::Start;
     bool clip = false;
+    int grid_min_column_width = 0; // Grid only; zero retains fixed columns.
+    SpacingToken padding_token = SpacingToken::Unspecified;
+    SpacingToken gap_token = SpacingToken::Unspecified;
 
     bool operator==(const LayoutStyle&) const = default;
 }; /* End of struct LayoutStyle */

@@ -145,11 +145,55 @@ bool RenderNode::scrollTableHorizontal(const int delta)
     return true;
 }
 
+namespace {
+
+int resolveToken(const int legacy, const SpacingToken token, const Theme& theme) noexcept
+{
+    if (token == SpacingToken::Unspecified) return std::max(0,legacy);
+    if (token == SpacingToken::None) return 0;
+    int steps = token == SpacingToken::Small ? 1 :
+        token == SpacingToken::Medium ? 2 : 3;
+    if (theme.density == ComponentDensity::Compact) steps = std::max(1,steps-1);
+    if (theme.density == ComponentDensity::Spacious) ++steps;
+    return static_cast<int>(std::clamp(static_cast<long long>(std::max(0,theme.spacing.unit))*steps,
+        0LL,static_cast<long long>(std::numeric_limits<int>::max())));
+}
+
+} /* End anonymous namespace */
+
+int RenderNode::resolvedPadding() const noexcept
+{
+    return resolveToken(style_.padding,style_.padding_token,layout_theme_);
+}
+
+int RenderNode::resolvedGap() const noexcept
+{
+    return resolveToken(style_.gap,style_.gap_token,layout_theme_);
+}
+
+void RenderNode::setLayoutTheme(const Theme& inherited)
+{
+    const Theme& effective = resolvedTheme(inherited);
+    if (layout_theme_ != effective)
+    {
+        if (layout_theme_.density != effective.density ||
+            layout_theme_.spacing != effective.spacing)
+            layout_dirty_ = true;
+        layout_theme_ = effective;
+        paint_dirty_ = true;
+    }
+    for (const auto& child : children_)
+    {
+        child->setLayoutTheme(effective);
+        if (child->layout_dirty_) layout_dirty_ = true;
+    }
+}
+
 Size RenderNode::measure(const Constraints& constraints) const
 {
     if (type_ == Component::Type::TabPanel && !tab_panel_active_) return {};
-    const int padding = std::max(0,style_.padding) + (border_ ? 1 : 0);
-    const int gap = std::max(0,style_.gap);
+    const int padding = resolvedPadding() + (border_ ? 1 : 0);
+    const int gap = resolvedGap();
     Size content{};
 
     if (type_ == Component::Type::Divider)
@@ -177,10 +221,10 @@ Size RenderNode::measure(const Constraints& constraints) const
     }
     else if (type_ == Component::Type::Button)
     {
-        const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
-        content = {.width = addBounded(textWidth(text_),padding * 2 +
+        const auto metrics = layout_theme_.controlMetrics(button_size_);
+        content = {.width = addBounded(textWidth(text_),metrics.horizontal_padding * 2 +
             (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
-            .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
+            .height = metrics.height};
     }
     else if (type_ == Component::Type::Checkbox || type_ == Component::Type::Switch ||
         type_ == Component::Type::Radio)
@@ -189,10 +233,10 @@ Size RenderNode::measure(const Constraints& constraints) const
     }
     else if (type_ == Component::Type::DropdownMenu)
     {
-        const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
-        content = {.width = addBounded(textWidth(text_),padding*2+2+
+        const auto metrics = layout_theme_.controlMetrics(button_size_);
+        content = {.width = addBounded(textWidth(text_),metrics.horizontal_padding*2+2+
             (button_variant_ == ButtonVariant::Outlined ? 2 : 0)),
-            .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
+            .height = metrics.height};
     }
     else if (type_ == Component::Type::RadioGroup)
     {
@@ -234,13 +278,13 @@ Size RenderNode::measure(const Constraints& constraints) const
         type_ == Component::Type::PasswordField || type_ == Component::Type::Select ||
         type_ == Component::Type::Autocomplete)
     {
-        const int padding = button_size_ == ButtonSize::Large ? 3 : button_size_ == ButtonSize::Compact ? 1 : 2;
+        const auto metrics = layout_theme_.controlMetrics(button_size_);
         int content_width = std::max(textWidth(text_),textWidth(placeholder_));
         if (type_ == Component::Type::Select || type_ == Component::Type::Autocomplete)
             for (const auto& option : select_options_) content_width = std::max(content_width,textWidth(option.label));
-        content = {.width = addBounded(content_width,padding * 2 +
+        content = {.width = addBounded(content_width,metrics.horizontal_padding * 2 +
             ((type_ == Component::Type::Select || type_ == Component::Type::Autocomplete) ? 3 : text_field_variant_ == TextFieldVariant::Outlined ? 2 : 0)),
-            .height = button_size_ == ButtonSize::Compact ? 1 : button_size_ == ButtonSize::Large ? 5 : 3};
+            .height = metrics.height};
     }
     else if (type_ == Component::Type::Text)
     {
@@ -250,7 +294,7 @@ Size RenderNode::measure(const Constraints& constraints) const
     {
         const int inset = addBounded(padding,padding);
         const int available_width = std::max(0,constraints.maximum.width - std::min(inset,constraints.maximum.width));
-        const int gap_space = std::max(0,style_.gap);
+        const int gap_space = resolvedGap();
         int width = 0;
         int height = 0;
         int visible = 0;
@@ -268,8 +312,10 @@ Size RenderNode::measure(const Constraints& constraints) const
     else if (type_ == Component::Type::Grid)
     {
         const int inset = addBounded(padding,padding);
-        const int columns = std::max(1,columns_);
-        const int inner_width = std::max(0,constraints.maximum.width - std::min(inset,constraints.maximum.width));
+        const int maximum_width = std::max(0,constraints.maximum.width);
+        const int target_width = style_.width ? std::min(maximum_width,std::max(0,*style_.width)) : maximum_width;
+        const int inner_width = std::max(0,target_width - std::min(inset,target_width));
+        const int columns = responsiveColumns(inner_width,columns_,gap,style_.grid_min_column_width);
         const int available_width = std::max(0,inner_width - static_cast<int>(std::min(
             static_cast<long long>(inner_width),static_cast<long long>(columns - 1) * gap)));
         const int cell_width = available_width / columns;
@@ -408,14 +454,14 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
         type_ == Component::Type::DropdownMenu || type_ == Component::Type::Divider ||
         type_ == Component::Type::Progress || type_ == Component::Type::Slider) return;
 
-    const int padding = std::max(0,style_.padding) + (border_ ? 1 : 0);
-    const int gap = std::max(0,style_.gap);
+    const int padding = resolvedPadding() + (border_ ? 1 : 0);
+    const int gap = resolvedGap();
     const int inset = addBounded(padding,padding);
     const int inner_width = std::max(0,size.width - inset);
     const int inner_height = std::max(0,size.height - inset);
     if (type_ == Component::Type::ScrollView)
     {
-        const int gap = std::max(0,style_.gap);
+        const int gap = resolvedGap();
         std::vector<Size> sizes;
         const auto measure_content = [&](const int width) {
             sizes.clear();
@@ -457,7 +503,7 @@ void RenderNode::layout(const Constraints& constraints, const Point origin)
     }
     if (type_ == Component::Type::Grid)
     {
-        const int columns = std::max(1,columns_);
+        const int columns = responsiveColumns(inner_width,columns_,gap,style_.grid_min_column_width);
         const int available_width = std::max(0,inner_width - static_cast<int>(std::min(
             static_cast<long long>(inner_width),static_cast<long long>(columns - 1) * gap)));
         const int column_width = available_width / columns;
@@ -2111,7 +2157,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             painter.text(x+2,bounds_.y+std::min(1,bounds_.height-1),
                 clipText(option.label,std::max(0,visible_width-3)),tab_style);
             const TextStyle underline {.foreground = selected && !inactive ? palette.primary :
-                focused && !inactive ? palette.muted : palette.surface,.background = base};
+                focused && !inactive ? (theme ? theme->focusColor() : palette.primary) :
+                    palette.surface,.background = base};
             painter.horizontalLine(x,bounds_.y+bounds_.height-1,visible_width,underline);
             x += width;
         }
@@ -2153,13 +2200,15 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         painter.fillBackground(bounds_,background_color);
         if (outlined)
         {
+            TextStyle border_style = button_style;
+            if (focused && theme && theme->focus_color) border_style.foreground = theme->focusColor();
             if (compact)
             {
-                painter.put(bounds_.x,bounds_.y,"▏",button_style);
-                if (bounds_.width > 1) painter.put(bounds_.x+bounds_.width-1,bounds_.y,"▕",button_style);
+                painter.put(bounds_.x,bounds_.y,"▏",border_style);
+                if (bounds_.width > 1) painter.put(bounds_.x+bounds_.width-1,bounds_.y,"▕",border_style);
             }
             else
-                painter.border(bounds_,focused ? BorderStyle::Heavy : BorderStyle::Rounded,button_style);
+                painter.border(bounds_,focused ? BorderStyle::Heavy : BorderStyle::Rounded,border_style);
         }
         const int inset = outlined ? 1 : 0;
         const int label_width = std::max(0,bounds_.width - inset * 2);
@@ -2181,7 +2230,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         painter.fillBackground(bounds_,bg);
         const auto draw = [&](const int y, const bool checked, const bool disabled,
             const bool radio, const std::string_view label) {
-            const Color fg = disabled ? palette.muted : checked || focused ? accent : palette.foreground;
+            const Color fg = disabled ? palette.muted : focused && theme && theme->focus_color ?
+                theme->focusColor() : checked ? accent : palette.foreground;
             const TextStyle indicator {.foreground = fg,.background = bg,.bold = focused};
             const TextStyle label_style {.foreground = disabled ? palette.muted : palette.foreground,.background = bg};
             std::string marker;
@@ -2235,7 +2285,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         if (outlined)
         {
             TextStyle outline = style;
-            outline.foreground = disabled_ ? palette.muted : focused ? palette.primary : palette.muted;
+            outline.foreground = disabled_ ? palette.muted : focused ?
+                (theme ? theme->focusColor() : palette.primary) : palette.muted;
             if (compact)
             {
                 painter.put(bounds_.x,bounds_.y,"▏",outline);
@@ -2266,7 +2317,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
             .background = background_color};
         painter.fillBackground(bounds_,background_color);
         TextStyle outline = style;
-        outline.foreground = disabled_ ? palette.muted : focused || select_open_ ? palette.primary :
+        const Color focus_color = theme ? theme->focusColor() : palette.primary;
+        outline.foreground = disabled_ ? palette.muted : focused || select_open_ ? focus_color :
             hovered ? blendColor(palette.muted,palette.primary,55) : palette.muted;
         if (bounds_.height >= 3) painter.border(bounds_,focused || select_open_ ? BorderStyle::Heavy : BorderStyle::Rounded,outline);
         else
@@ -2315,7 +2367,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         if (outlined)
         {
             TextStyle outline = field_style;
-            outline.foreground = disabled_ ? palette.muted : focused ? palette.primary :
+            const Color focus_color = theme ? theme->focusColor() : palette.primary;
+            outline.foreground = disabled_ ? palette.muted : focused ? focus_color :
                 hovered ? blendColor(palette.muted,palette.primary,55) : palette.muted;
             if (compact)
             {
@@ -2327,7 +2380,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         else if ((focused || hovered) && bounds_.height > 1)
         {
             TextStyle underline = field_style;
-            underline.foreground = focused ? palette.primary : blendColor(palette.muted,palette.primary,55);
+            underline.foreground = focused ? (theme ? theme->focusColor() : palette.primary) :
+                blendColor(palette.muted,palette.primary,55);
             painter.horizontalLine(bounds_.x,bounds_.y+bounds_.height-1,bounds_.width,underline);
         }
         const int inset = outlined ? 2 : 1;
@@ -2415,7 +2469,8 @@ void RenderNode::paint(Painter& painter, const std::string_view focused_id,
         {
             const Palette palette = theme ? theme->palette : Theme::dark().palette;
             const bool focused = focused_id == std::to_string(id_);
-            const TextStyle divider {.foreground = focused ? palette.primary : palette.muted,
+            const TextStyle divider {.foreground = focused ?
+                (theme ? theme->focusColor() : palette.primary) : palette.muted,
                 .background = effective_background.value_or(palette.background),.bold = focused};
             if (split_direction_ == SplitDirection::Horizontal)
                 painter.verticalLine(handle.x,handle.y,handle.height,divider);

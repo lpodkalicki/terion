@@ -160,6 +160,8 @@ public:
     void paintDialog(Painter& painter, Size screen, const Theme& theme,
         std::string_view focused_id = {}) const;
 
+    // Propagate layout-affecting theme tokens through the retained tree.
+    void setLayoutTheme(const Theme& inherited);
     [[nodiscard]] Size measure(const Constraints& constraints) const;
     void layout(const Constraints& constraints, Point origin = {});
     void paint(Painter& painter, std::string_view focused_id = {}, std::string_view hovered_id = {},
@@ -173,6 +175,9 @@ public:
 private:
     friend class Reconciler;
 
+    [[nodiscard]] int resolvedPadding() const noexcept;
+    [[nodiscard]] int resolvedGap() const noexcept;
+
     RenderNode(std::uint64_t id, Component::Type type, std::string key) :
         id_(id), type_(type), key_(std::move(key))
     {}
@@ -182,6 +187,7 @@ private:
     std::string key_;
     bool layout_dirty_ = true;
     bool paint_dirty_ = true;
+    Theme layout_theme_ = Theme::dark();
     std::string text_;
     LayoutStyle style_;
     TextStyle text_style_;

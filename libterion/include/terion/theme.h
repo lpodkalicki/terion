@@ -5,12 +5,26 @@
 #ifndef TERION_THEME_H
 #define TERION_THEME_H
 
+#include <algorithm>
+#include <optional>
 #include <string_view>
 #include <terion/render/color.h>
 
 namespace terion {
 
 enum class ColorVariant { Default, Primary, Success, Warning, Error, Info };
+
+// Component density is independent of terminal font size. Comfortable retains
+// the original measurements of all existing components.
+enum class ComponentDensity { Compact, Comfortable, Spacious };
+enum class ButtonSize { Compact, Medium, Large };
+
+struct ControlMetrics
+{
+    int height = 3;
+    int horizontal_padding = 2;
+    bool operator==(const ControlMetrics&) const = default;
+}; /* End of struct ControlMetrics */
 
 struct Palette
 {
@@ -82,7 +96,27 @@ struct Theme
     Palette palette = {};
     Spacing spacing = {};
     ScrollbarStyle scrollbar = {};
+    ComponentDensity density = ComponentDensity::Comfortable;
+    // If not specified, keyboard focus uses the palette primary color.
+    std::optional<Color> focus_color = std::nullopt;
     bool operator==(const Theme&) const = default;
+
+    [[nodiscard]] constexpr Color focusColor() const noexcept
+    {
+        return focus_color.value_or(palette.primary);
+    }
+
+    [[nodiscard]] constexpr ControlMetrics controlMetrics(const ButtonSize size) const noexcept
+    {
+        const int height = size == ButtonSize::Compact ? 1 : size == ButtonSize::Large ? 5 : 3;
+        const int padding = size == ButtonSize::Compact ? 1 : size == ButtonSize::Large ? 3 : 2;
+        const int height_delta = density == ComponentDensity::Compact ? -2 :
+            density == ComponentDensity::Spacious ? 2 : 0;
+        const int padding_delta = density == ComponentDensity::Compact ? -1 :
+            density == ComponentDensity::Spacious ? 1 : 0;
+        return {.height = std::max(1,height+height_delta),
+            .horizontal_padding = std::max(1,padding+padding_delta)};
+    }
 
     static constexpr Theme dark() { return {}; }
     static constexpr Theme light()

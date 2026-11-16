@@ -46,7 +46,7 @@ Rect RenderNode::scrollbarTrack() const
     }
     if (type_ != Component::Type::ScrollView || !scrollbar_visible_ || !scroll_.scrollable() ||
         bounds_.width <= 0) return {};
-    const int inset = std::max(0,style_.padding) + (border_ ? 1 : 0);
+    const int inset = resolvedPadding() + (border_ ? 1 : 0);
     return {.x = bounds_.x+bounds_.width-inset-1,
         .y = bounds_.y+inset,.width = 1,.height = scroll_.viewport()};
 }
