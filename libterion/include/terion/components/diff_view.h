@@ -6,6 +6,7 @@
 #define TERION_COMPONENTS_DIFF_VIEW_H
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
@@ -17,10 +18,20 @@
 
 namespace terion {
 
-// Read-only unified diff viewer. Expects unified diff input (e.g. git diff).
+enum class DiffViewMode { Unified, SideBySide };
+
+// A unified-diff viewer. The source is never changed by highlighting or navigation.
 class DiffView : public Component
 {
 public:
+    struct Hunk
+    {
+        std::size_t source_line = 0; // zero-based line in unified diff text
+        int old_start = 0;
+        int new_start = 0;
+        std::string header;
+    };
+
     struct Props
     {
         std::string diff = {};
@@ -29,79 +40,103 @@ public:
         LayoutStyle layout = {};
         bool disabled = false;
         bool show_scrollbar = true;
-        bool wrap = false; // By default preserve the exact unified diff line layout.
+        bool wrap = false;
         int wrap_width = 0;
-    }; /* End of struct Props */
+        DiffViewMode mode = DiffViewMode::Unified;
+        bool highlight_intraline = false;
+        int active_hunk = -1; // zero-based index into hunks(); -1: none
+        std::function<void(std::size_t)> on_source_line_click = {};
+    };
 
     explicit DiffView(Props props) : Component(create(std::move(props))) {}
 
+    // Retained for backward compatibility with #132.
     [[nodiscard]] static std::vector<StyledText> render(std::string_view diff,
                                                          bool show_line_numbers = true,int wrap_width = 0)
     {
+        return renderDocument(diff,DiffViewMode::Unified,show_line_numbers,wrap_width,false).lines;
+    }
+
+    [[nodiscard]] static std::vector<StyledText> renderEnhanced(
+        std::string_view diff,DiffViewMode mode = DiffViewMode::Unified,
+        bool show_line_numbers = true,int width = 80,bool highlight_intraline = true)
+    {
+        return renderDocument(diff,mode,show_line_numbers,width,highlight_intraline).lines;
+    }
+
+    [[nodiscard]] static std::vector<Hunk> hunks(std::string_view diff)
+    {
+        std::vector<Hunk> result;
+        for (const auto& line : parse(diff))
+            if (line.kind == Kind::Hunk)
+                result.push_back({line.source_line,line.old_number,line.new_number,line.text});
+        return result;
+    }
+
+    // Return the original bytes of a hunk (including original newline encoding),
+    // stopping at the next hunk or file boundary. Useful for Clipboard::set().
+    [[nodiscard]] static std::string hunkText(std::string_view diff,std::size_t hunk_index)
+    {
+        const auto spans = hunks(diff);
+        if (hunk_index >= spans.size()) return {};
+        const auto lines = sourceLines(diff);
+        const std::size_t begin_line = spans[hunk_index].source_line;
+        std::size_t end_line = lines.size();
+        if (hunk_index+1 < spans.size()) end_line = spans[hunk_index+1].source_line;
+        for (std::size_t i = begin_line+1; i < end_line; ++i)
+            if (startsWith(lines[i],"diff --git ")) { end_line = i; break; }
+        const auto offsetOfLine = [diff](std::size_t line_index) {
+            std::size_t offset = 0;
+            for (std::size_t line = 0; line < line_index && offset < diff.size(); ++line)
+            {
+                const auto newline = diff.find('\n',offset);
+                if (newline == std::string_view::npos) return diff.size();
+                offset = newline+1;
+            }
+            return offset;
+        };
+        const auto begin = offsetOfLine(begin_line);
+        const auto end = offsetOfLine(end_line);
+        return std::string(diff.substr(begin,end-begin));
+    }
+
+private:
+    enum class Kind { Header, Hunk, Context, Removed, Added, Warning, Other };
+
+    struct SourceRow
+    {
+        std::string text;
+        Kind kind = Kind::Other;
+        int old_number = 0;
+        int new_number = 0;
+        std::size_t source_line = 0;
+    };
+
+    struct Document
+    {
         std::vector<StyledText> lines;
+        std::vector<std::size_t> origins;
+    };
+
+    static bool startsWith(std::string_view text,std::string_view prefix)
+    {
+        return text.substr(0,prefix.size()) == prefix;
+    }
+
+    static std::vector<std::string> sourceLines(std::string_view diff)
+    {
+        std::vector<std::string> lines;
         std::size_t begin = 0;
-        int old_line = 0;
-        int new_line = 0;
-        bool have_hunk = false;
         while (begin < diff.size())
         {
             const auto end = diff.find('\n',begin);
             auto line = diff.substr(begin,end == std::string_view::npos ? diff.size()-begin : end-begin);
             if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
-            ColorVariant color = ColorVariant::Default;
-            bool bold = false;
-            std::string prefix;
-            if (startsWith(line,"diff --git ")) have_hunk = false;
-            if (startsWith(line,"@@"))
-            {
-                int old_start = 0;
-                int new_start = 0;
-                have_hunk = parseHunk(line,old_start,new_start);
-                if (have_hunk) { old_line = old_start; new_line = new_start; }
-                color = ColorVariant::Info;
-                bold = true;
-            }
-            else if (startsWith(line,"diff --git ") || startsWith(line,"index ") ||
-                     startsWith(line,"--- ") || startsWith(line,"+++ ") ||
-                     startsWith(line,"new file mode ") || startsWith(line,"deleted file mode "))
-            {
-                color = ColorVariant::Primary;
-                bold = true;
-            }
-            else if (!line.empty() && line.front() == '+' && have_hunk)
-            {
-                color = ColorVariant::Success;
-                if (show_line_numbers) prefix = numberColumn(0,new_line);
-                ++new_line;
-            }
-            else if (!line.empty() && line.front() == '-' && have_hunk)
-            {
-                color = ColorVariant::Error;
-                if (show_line_numbers) prefix = numberColumn(old_line,0);
-                ++old_line;
-            }
-            else if (!line.empty() && line.front() == ' ' && have_hunk)
-            {
-                if (show_line_numbers) prefix = numberColumn(old_line,new_line);
-                ++old_line;
-                ++new_line;
-            }
-            else if (startsWith(line,"\\ No newline")) color = ColorVariant::Warning;
-            StyledText row;
-            if (!prefix.empty()) row.push_back({.text = std::move(prefix),.color = ColorVariant::Info});
-            row.push_back({.text = std::string(line),.color = color,.bold = bold});
-            lines.push_back(std::move(row));
-            if (lines.size() >= static_cast<std::size_t>(std::numeric_limits<int>::max())) break;
+            lines.emplace_back(line);
             if (end == std::string_view::npos) break;
             begin = end+1;
         }
-        return detail::wrapLines(lines,wrap_width);
-    }
-
-private:
-    static bool startsWith(std::string_view text,std::string_view prefix)
-    {
-        return text.substr(0,prefix.size()) == prefix;
+        return lines;
     }
 
     static bool parseNumber(std::string_view line,std::size_t& index,int& value)
@@ -119,6 +154,7 @@ private:
 
     static bool parseHunk(std::string_view line,int& old_start,int& new_start)
     {
+        if (!startsWith(line,"@@ ")) return false;
         auto index = line.find('-');
         if (index == std::string_view::npos) return false;
         ++index;
@@ -139,15 +175,304 @@ private:
         return field(old_number)+" "+field(new_number)+" │ ";
     }
 
+    static std::string sideNumber(int number)
+    {
+        auto text = number > 0 ? std::to_string(number) : std::string{};
+        if (text.size() < 5) text.insert(0,5-text.size(),' ');
+        return text+" ";
+    }
+
+    static std::vector<SourceRow> parse(std::string_view diff)
+    {
+        std::vector<SourceRow> result;
+        int old_line = 0;
+        int new_line = 0;
+        bool in_hunk = false;
+        const auto lines = sourceLines(diff);
+        for (std::size_t i = 0; i < lines.size(); ++i)
+        {
+            SourceRow row;
+            row.text = lines[i];
+            row.source_line = i;
+            if (startsWith(row.text,"diff --git ")) in_hunk = false;
+            if (startsWith(row.text,"@@ "))
+            {
+                in_hunk = parseHunk(row.text,old_line,new_line);
+                if (in_hunk)
+                {
+                    row.kind = Kind::Hunk;
+                    row.old_number = old_line;
+                    row.new_number = new_line;
+                }
+            }
+            else if (startsWith(row.text,"diff --git ") || startsWith(row.text,"index ") ||
+                     startsWith(row.text,"--- ") || startsWith(row.text,"+++ ") ||
+                     startsWith(row.text,"new file mode ") || startsWith(row.text,"deleted file mode ") ||
+                     startsWith(row.text,"rename from ") || startsWith(row.text,"rename to "))
+                row.kind = Kind::Header;
+            else if (in_hunk && !row.text.empty() && row.text[0] == '-')
+            {
+                row.kind = Kind::Removed;
+                row.old_number = old_line++;
+            }
+            else if (in_hunk && !row.text.empty() && row.text[0] == '+')
+            {
+                row.kind = Kind::Added;
+                row.new_number = new_line++;
+            }
+            else if (in_hunk && !row.text.empty() && row.text[0] == ' ')
+            {
+                row.kind = Kind::Context;
+                row.old_number = old_line++;
+                row.new_number = new_line++;
+            }
+            else if (startsWith(row.text,"\\ No newline")) row.kind = Kind::Warning;
+            result.push_back(std::move(row));
+        }
+        return result;
+    }
+
+    static ColorVariant colorFor(Kind kind)
+    {
+        switch (kind)
+        {
+            case Kind::Header: return ColorVariant::Primary;
+            case Kind::Hunk: return ColorVariant::Info;
+            case Kind::Removed: return ColorVariant::Error;
+            case Kind::Added: return ColorVariant::Success;
+            case Kind::Warning: return ColorVariant::Warning;
+            default: return ColorVariant::Default;
+        }
+    }
+
+    // Intra-line comparison operates on grapheme clusters, never byte offsets.
+    // Common prefix and suffix are left untouched; only changed graphemes are emphasized.
+    static StyledText changedText(const SourceRow& row,const SourceRow* counterpart,
+                                  bool highlight,bool include_marker)
+    {
+        const ColorVariant color = colorFor(row.kind);
+        if (!highlight || counterpart == nullptr || row.text.empty() || counterpart->text.empty())
+            return {{.text = include_marker ? row.text : row.text.substr(1),.color = color}};
+        const auto glyphs = [](std::string_view text) {
+            std::vector<std::string> result;
+            for (std::size_t pos = 0; pos < text.size();)
+            {
+                const auto glyph = nextGrapheme(text,pos);
+                if (!glyph.bytes) break;
+                result.emplace_back(text.substr(pos,glyph.bytes));
+                pos += glyph.bytes;
+            }
+            return result;
+        };
+        const auto lhs = glyphs(std::string_view(row.text).substr(1));
+        const auto rhs = glyphs(std::string_view(counterpart->text).substr(1));
+        std::size_t prefix = 0;
+        while (prefix < lhs.size() && prefix < rhs.size() && lhs[prefix] == rhs[prefix]) ++prefix;
+        std::size_t suffix = 0;
+        while (suffix < lhs.size()-prefix && suffix < rhs.size()-prefix &&
+            lhs[lhs.size()-suffix-1] == rhs[rhs.size()-suffix-1]) ++suffix;
+        StyledText spans;
+        if (include_marker) spans.push_back({.text = row.text.substr(0,1),.color = color});
+        const auto append = [&](std::size_t first,std::size_t last,bool changed) {
+            std::string text;
+            for (std::size_t i = first; i < last; ++i) text += lhs[i];
+            if (!text.empty()) spans.push_back({.text = std::move(text),.color = color,
+                .bold = changed,.underline = changed});
+        };
+        append(0,prefix,false);
+        append(prefix,lhs.size()-suffix,true);
+        append(lhs.size()-suffix,lhs.size(),false);
+        return spans;
+    }
+
+    static StyledText unifiedLine(const SourceRow& row,const SourceRow* counterpart,
+                                  bool numbers,bool highlight)
+    {
+        StyledText result;
+        if (numbers && (row.kind == Kind::Removed || row.kind == Kind::Added || row.kind == Kind::Context))
+            result.push_back({.text = numberColumn(row.old_number,row.new_number),.color = ColorVariant::Info});
+        auto content = (row.kind == Kind::Removed || row.kind == Kind::Added) ?
+            changedText(row,counterpart,highlight,true) :
+            StyledText{{.text = row.text,.color = colorFor(row.kind),
+                .bold = row.kind == Kind::Header || row.kind == Kind::Hunk}};
+        result.insert(result.end(),std::make_move_iterator(content.begin()),std::make_move_iterator(content.end()));
+        return result;
+    }
+
+    static StyledText clipPad(const StyledText& source,int width)
+    {
+        StyledText result;
+        int used = 0;
+        bool full = false;
+        for (const auto& span : source)
+        {
+            if (full) break;
+            StyledSpan clipped = span;
+            clipped.text.clear();
+            for (std::size_t pos = 0; pos < span.text.size();)
+            {
+                const auto glyph = nextGrapheme(span.text,pos);
+                if (!glyph.bytes) break;
+                if (used+glyph.columns > width) { full = true; break; }
+                clipped.text += span.text.substr(pos,glyph.bytes);
+                pos += glyph.bytes;
+                used += glyph.columns;
+            }
+            if (!clipped.text.empty()) result.push_back(std::move(clipped));
+            if (used >= width) break;
+        }
+        if (used < width) result.push_back({.text = std::string(static_cast<std::size_t>(width-used),' ')});
+        return result;
+    }
+
+    static StyledText sideLine(const SourceRow* left,const SourceRow* right,int width,bool numbers,
+                               bool highlight)
+    {
+        const int left_width = std::max(1,(width-3)/2);
+        const int right_width = std::max(1,width-3-left_width);
+        const auto side = [&](const SourceRow* row,const SourceRow* counterpart,int pane_width,bool old) {
+            StyledText result;
+            if (numbers) result.push_back({.text = sideNumber(row ? (old ? row->old_number : row->new_number) : 0),
+                .color = ColorVariant::Info});
+            if (row)
+            {
+                auto content = changedText(*row,counterpart,highlight,false);
+                result.insert(result.end(),std::make_move_iterator(content.begin()),std::make_move_iterator(content.end()));
+            }
+            return clipPad(result,pane_width);
+        };
+        auto result = side(left,right,left_width,true);
+        result.push_back({.text = " │ ",.color = ColorVariant::Info});
+        auto rhs = side(right,left,right_width,false);
+        result.insert(result.end(),std::make_move_iterator(rhs.begin()),std::make_move_iterator(rhs.end()));
+        return result;
+    }
+
+    static Document renderDocument(std::string_view diff,DiffViewMode mode,bool numbers,int width,bool highlight)
+    {
+        Document doc;
+        const auto rows = parse(diff);
+        const bool side_by_side = mode == DiffViewMode::SideBySide && width >= 18;
+        const auto emit = [&](const StyledText& text,std::size_t origin) {
+            auto wrapped = !side_by_side && width > 0 ? detail::wrapStyled(text,width) :
+                std::vector<StyledText>{text};
+            for (auto& line : wrapped)
+            {
+                doc.lines.push_back(std::move(line));
+                doc.origins.push_back(origin);
+            }
+        };
+        for (std::size_t i = 0; i < rows.size();)
+        {
+            const auto& row = rows[i];
+            if (row.kind == Kind::Removed)
+            {
+                std::size_t end_removed = i;
+                while (end_removed < rows.size() && rows[end_removed].kind == Kind::Removed) ++end_removed;
+                std::size_t end_added = end_removed;
+                while (end_added < rows.size() && rows[end_added].kind == Kind::Added) ++end_added;
+                if (side_by_side)
+                {
+                    const auto count = std::max(end_removed-i,end_added-end_removed);
+                    for (std::size_t k = 0; k < count; ++k)
+                    {
+                        const auto* left = i+k < end_removed ? &rows[i+k] : nullptr;
+                        const auto* right = end_removed+k < end_added ? &rows[end_removed+k] : nullptr;
+                        emit(sideLine(left,right,width,numbers,highlight),
+                            left ? left->source_line : right->source_line);
+                    }
+                }
+                else
+                {
+                    for (std::size_t k = i; k < end_added; ++k)
+                    {
+                        const auto& current = rows[k];
+                        const SourceRow* partner = nullptr;
+                        if (current.kind == Kind::Removed && end_removed+(k-i) < end_added)
+                            partner = &rows[end_removed+(k-i)];
+                        else if (current.kind == Kind::Added && i+(k-end_removed) < end_removed)
+                            partner = &rows[i+(k-end_removed)];
+                        emit(unifiedLine(current,partner,numbers,highlight),current.source_line);
+                    }
+                }
+                i = end_added;
+                continue;
+            }
+            if (side_by_side && row.kind == Kind::Added)
+                emit(sideLine(nullptr,&row,width,numbers,false),row.source_line);
+            else if (side_by_side && row.kind == Kind::Context)
+                emit(sideLine(&row,&row,width,numbers,false),row.source_line);
+            else if (side_by_side)
+                emit(clipPad(unifiedLine(row,nullptr,false,false),width),row.source_line);
+            else emit(unifiedLine(row,nullptr,numbers,false),row.source_line);
+            ++i;
+            if (doc.lines.size() >= static_cast<std::size_t>(std::numeric_limits<int>::max())) break;
+        }
+        return doc;
+    }
+
+    struct DynamicDocument
+    {
+        std::string diff;
+        Document rendered;
+        DiffViewMode mode = DiffViewMode::Unified;
+        bool show_line_numbers = true;
+        bool wrap = false;
+        bool highlight = false;
+        int fixed_width = 0;
+        int width = -1;
+        std::size_t selected_origin = std::numeric_limits<std::size_t>::max();
+    };
+
     static Component create(Props props)
     {
-        auto lines = std::make_shared<const std::vector<StyledText>>(
-            render(props.diff,props.show_line_numbers,props.wrap ? (props.wrap_width > 0 ?
-                props.wrap_width : std::max(0,props.layout.width.value_or(0)-
-                (props.show_scrollbar ? 1 : 0))) : 0));
-        return VirtualList({.item_count = static_cast<int>(lines->size()),
-            .item_styled = [lines](int index) -> StyledText {
-                return (*lines)[static_cast<std::size_t>(index)];
+        auto state = std::make_shared<DynamicDocument>();
+        state->diff = std::move(props.diff);
+        state->mode = props.mode;
+        state->show_line_numbers = props.show_line_numbers;
+        state->wrap = props.wrap;
+        state->highlight = props.highlight_intraline;
+        state->fixed_width = props.wrap_width;
+        const auto locations = hunks(state->diff);
+        if (props.active_hunk >= 0 && static_cast<std::size_t>(props.active_hunk) < locations.size())
+            state->selected_origin = locations[static_cast<std::size_t>(props.active_hunk)].source_line;
+        const int available = std::max(0,props.layout.width.value_or(0)-(props.show_scrollbar ? 1 : 0));
+        const int requested = props.wrap_width > 0 ? props.wrap_width : available;
+        const int initial_width = props.mode == DiffViewMode::SideBySide || props.wrap ? requested : 0;
+        state->rendered = renderDocument(state->diff,state->mode,state->show_line_numbers,
+            initial_width,state->highlight);
+        state->width = initial_width;
+        const auto selected_it = std::lower_bound(state->rendered.origins.begin(),
+            state->rendered.origins.end(),state->selected_origin);
+        const int selected_index = state->selected_origin == std::numeric_limits<std::size_t>::max() ||
+            selected_it == state->rendered.origins.end() || *selected_it != state->selected_origin ?
+            -1 : static_cast<int>(selected_it-state->rendered.origins.begin());
+        return VirtualList({.item_count = static_cast<int>(state->rendered.lines.size()),
+            .item_styled = [state](int index) -> StyledText {
+                return state->rendered.lines[static_cast<std::size_t>(index)];
+            },.on_width_change = [state](int columns,int offset) -> std::pair<int,int> {
+                const int available_width = state->fixed_width > 0 ? state->fixed_width : columns;
+                const int target = state->mode == DiffViewMode::SideBySide || state->wrap ? available_width : 0;
+                if (target != state->width)
+                {
+                    std::size_t origin = 0;
+                    if (offset >= 0 && static_cast<std::size_t>(offset) < state->rendered.origins.size())
+                        origin = state->rendered.origins[static_cast<std::size_t>(offset)];
+                    state->rendered = renderDocument(state->diff,state->mode,state->show_line_numbers,
+                        target,state->highlight);
+                    state->width = target;
+                    const auto it = std::lower_bound(state->rendered.origins.begin(),
+                        state->rendered.origins.end(),origin);
+                    offset = static_cast<int>(it-state->rendered.origins.begin());
+                }
+                return {static_cast<int>(state->rendered.lines.size()),offset};
+            },.selected_index = selected_index,
+            .item_is_selected = [state](int index) {
+                return index >= 0 && static_cast<std::size_t>(index) < state->rendered.origins.size() &&
+                    state->rendered.origins[static_cast<std::size_t>(index)] == state->selected_origin;
+            },.on_click_position = [state,callback = std::move(props.on_source_line_click)](int,int index) {
+                if (callback && index >= 0 && static_cast<std::size_t>(index) < state->rendered.origins.size())
+                    callback(state->rendered.origins[static_cast<std::size_t>(index)]);
             },.key = std::move(props.key),.layout = props.layout,
             .disabled = props.disabled,.show_scrollbar = props.show_scrollbar});
     }

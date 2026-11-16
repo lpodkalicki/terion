@@ -4,6 +4,7 @@
 
 #include <terion/render/differential_renderer.h>
 #include <terion/grapheme.h>
+#include <terion/emoji_compat.h>
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -23,6 +24,7 @@ void DifferentialRenderer::render(const ScreenBuffer& current, TerminalBackend& 
 {
     const auto size = current.size();
     const bool full = !previous_ || previous_->size() != size;
+    const bool emoji_compatibility = backend.capabilities().emoji_compatibility;
     std::string output;
     if (full) output += "\033[2J";
     std::optional<TextStyle> style;
@@ -39,21 +41,32 @@ void DifferentialRenderer::render(const ScreenBuffer& current, TerminalBackend& 
             }
         }
 
-        // A terminal is not required to compose every emoji sequence into exactly
-        // the width our grapheme table predicts. When a wide glyph is inserted,
-        // removed or moved, clear and repaint the complete row. Otherwise terminal
-        // remnants may survive outside the changed cell range after Backspace.
+        // The terminal can disagree with our cell widths for emoji and characters
+        // with East Asian Ambiguous width (for example the middle dot or box lines).
+        // When such a row changes, the previous frame is not a reliable description
+        // of its physical cells: clear and paint it from a known cursor position.
+        // This also removes remnants after deleting or replacing wide graphemes.
+        const auto nonAscii = [](const Cell& cell) {
+            // A grapheme can start with ASCII and still contain Unicode
+            // (for example e + U+0301 COMBINING ACUTE ACCENT).
+            return std::any_of(cell.grapheme.begin(),cell.grapheme.end(),
+                [](unsigned char c) { return c >= 0x80; });
+        };
         bool repaint_row = false;
         if (!full)
         {
+            bool changed = false;
+            bool has_unicode = false;
+            bool changed_wide = false;
             for (int x = 0; x < size.width; ++x)
             {
-                if (dirty[x] && (current.at(x,y).width != 1 || previous_->at(x,y).width != 1))
-                {
-                    repaint_row = true;
-                    break;
-                }
+                const auto& now = current.at(x,y);
+                const auto& before = previous_->at(x,y);
+                changed |= dirty[x];
+                has_unicode |= nonAscii(now) || nonAscii(before);
+                changed_wide |= dirty[x] && (now.width != 1 || before.width != 1);
             }
+            repaint_row = changed && (has_unicode || changed_wide);
         }
         if (repaint_row)
         {
@@ -76,7 +89,14 @@ void DifferentialRenderer::render(const ScreenBuffer& current, TerminalBackend& 
             const auto& cell = current.at(x,y);
             if (!dirty[x] || cell.width == 0) { ++x; continue; }
 
-            if (cursor.x != x || cursor.y != y)
+            // Vertical separators are structural alignment landmarks. Never
+            // reach them by predicted cursor advance: a terminal may draw a
+            // preceding grapheme (especially an emoji sequence) with a width
+            // different from our cell model. Re-anchor *before* the separator,
+            // not only after earlier Unicode output.
+            const bool vertical_separator = cell.grapheme == "│" || cell.grapheme == "┃" ||
+                cell.grapheme == "║" || cell.grapheme == "┆" || cell.grapheme == "┊";
+            if (vertical_separator || cursor.x != x || cursor.y != y)
             {
                 output += "\033[" + std::to_string(y+1) + ";" + std::to_string(x+1) + "H";
             }
@@ -86,14 +106,17 @@ void DifferentialRenderer::render(const ScreenBuffer& current, TerminalBackend& 
                 style = cell.style;
             }
 
-            output += cell.grapheme;
-            // Do not trust the terminal's cursor advance after a wide or
-            // multi-codepoint grapheme (ZWJ, flags, combining marks, etc.).
-            // Reposition absolutely before the next changed cell so cursor
-            // styles and subsequent characters cannot drift on Terminal.app.
-            const auto first = decodeUtf8(cell.grapheme,0);
-            const bool complex = cell.width == 2 || (first.bytes && first.bytes < cell.grapheme.size());
-            cursor = {.x = complex ? -1 : x+cell.width,.y = y};
+            if (emoji_compatibility && cell.grapheme.size() > 3)
+                output += compatibleTerminalGrapheme(cell.grapheme,cell.width);
+            else
+                output += cell.grapheme;
+            // A single non-ASCII codepoint can also be ambiguous-width in a
+            // terminal (e.g. U+00B7 MIDDLE DOT and U+2502 BOX DRAWINGS).
+            // Re-anchor after *every* non-ASCII grapheme, not only multi-codepoint
+            // emoji and two-cell glyphs. The following ASCII and separators then
+            // start at their actual, absolute screen columns.
+            const bool uncertain_advance = cell.width != 1 || nonAscii(cell);
+            cursor = {.x = uncertain_advance ? -1 : x+cell.width,.y = y};
             x += cell.width;
         }
     }

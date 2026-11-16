@@ -199,3 +199,80 @@ TEST(Graphemes, TextAreaBackspaceDeletesCompleteEmojiSequences)
     EXPECT_EQ(screen.at(1,1).grapheme,"A");
     EXPECT_EQ(screen.at(2,1).grapheme,"Z");
 }
+
+TEST(Graphemes, DifferentialRendererReanchorsAfterAmbiguousWidthUnicode)
+{
+    ScreenBuffer screen({.width = 24,.height = 1});
+    Painter painter(screen);
+    // U+00B7 and U+2502 have ambiguous terminal width; neither is a
+    // multi-codepoint grapheme nor a two-cell glyph in Terion's cell model.
+    painter.text(0,0,"A·B│C🇵🇱D");
+    EXPECT_EQ(screen.at(1,0).width,1);
+    EXPECT_EQ(screen.at(3,0).width,1);
+    EXPECT_EQ(screen.at(5,0).width,2);
+    EXPECT_EQ(screen.at(7,0).grapheme,"D");
+
+    HeadlessTerminalBackend backend({24,1});
+    DifferentialRenderer renderer;
+    renderer.render(screen,backend);
+    const std::string output = backend.output();
+    // The terminal must not determine the start of the next glyph implicitly.
+    EXPECT_NE(output.find("·\033[1;3HB"),std::string::npos);
+    EXPECT_NE(output.find("│\033[1;5HC"),std::string::npos);
+    EXPECT_NE(output.find("🇵🇱\033[1;8HD"),std::string::npos);
+}
+
+TEST(Graphemes, DifferentialRendererRepaintsChangedRowsWithUncertainWidth)
+{
+    ScreenBuffer screen({.width = 24,.height = 2});
+    Painter painter(screen);
+    painter.text(0,0,"Polska 🇵🇱 · left │ right");
+    painter.text(0,1,"Plain ASCII");
+    HeadlessTerminalBackend backend({24,2});
+    DifferentialRenderer renderer;
+    renderer.render(screen,backend);
+    backend.clearOutput();
+
+    // Changing an ASCII glyph on a Unicode row must not leave remnants if
+    // a terminal previously rendered the adjacent emoji as narrower/wider.
+    painter.put(0,0,"Z");
+    renderer.render(screen,backend);
+    EXPECT_NE(backend.output().find("\033[1;1H\033[2K"),std::string::npos);
+    EXPECT_EQ(backend.output().find("\033[2;1H\033[2K"),std::string::npos);
+    backend.clearOutput();
+    renderer.render(screen,backend);
+    EXPECT_TRUE(backend.output().empty());
+}
+
+TEST(Graphemes, VerticalSeparatorsHaveAbsoluteCursorAnchorsAfterEmoji)
+{
+    ScreenBuffer screen({.width = 24,.height = 3});
+    Painter painter(screen);
+    painter.text(0,0,"Polska 🇵🇱 · UTF-8");
+    painter.text(0,1,"Family 👨‍👩‍👧 and e\u0301");
+    painter.text(0,2,"Plain ASCII");
+    painter.verticalLine(21,0,3);
+
+    for (int row = 0; row < 3; ++row)
+        ASSERT_EQ(screen.at(21,row).grapheme,"│");
+
+    HeadlessTerminalBackend backend({24,3});
+    DifferentialRenderer renderer;
+    renderer.render(screen,backend);
+    const std::string output = backend.output();
+    // The glyph must be drawn after a CUP to its own absolute column,
+    // rather than following a run of spaces based on estimated widths.
+    for (int row = 1; row <= 3; ++row)
+    {
+        const std::string cursor = "\033[" + std::to_string(row) + ";22H";
+        const auto pos = output.find(cursor);
+        ASSERT_NE(pos,std::string::npos);
+        EXPECT_NE(output.find("│",pos+cursor.size()),std::string::npos);
+    }
+
+    backend.clearOutput();
+    painter.put(1,0,"X");
+    renderer.render(screen,backend);
+    EXPECT_NE(backend.output().find("\033[1;22H"),std::string::npos);
+    EXPECT_EQ(backend.output().find("\033[2;22H"),std::string::npos);
+}

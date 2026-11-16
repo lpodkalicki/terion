@@ -294,3 +294,46 @@ providers and asynchronous validators are not yet part of this API.
 
 Run `form_advanced` for a working demo of cross-field validation, state
 inspection, programmatic changes, focus, and reset.
+
+## Markdown & Diff Enhancements (#137a)
+
+`MarkdownView` now recognizes Setext headings (`===`/`---`), GFM table-column
+alignment (`:---`, `:---:`, `---:`), escaped table pipes and URI autolinks
+(`<https://...>`). Fenced blocks may use three or more backticks or tildes;
+only a matching fence of at least the original length closes the block. An
+optional language tag can include metadata (`cpp title=...`). The terminal
+renderer is intentionally a practical subset of CommonMark/GFM, not a complete
+HTML-capable Markdown engine.
+
+`MarkdownView::outline(markdown)` returns heading levels, titles and 0-based
+source-line indices. `MarkdownView::Props::on_source_line_click` reports the
+corresponding source line after wrapping and resize; applications can use it
+to synchronize an editor view.
+
+`DiffView` adds `DiffViewMode::SideBySide`, opt-in intra-line highlighting
+(`highlight_intraline`), a controlled `active_hunk`, and
+`on_source_line_click`. `DiffView::hunks(diff)` returns the source locations of
+unified-diff `@@` sections; `DiffView::hunkText(diff,index)` returns original
+source bytes of one hunk for copying. Unicode intra-line highlighting compares
+whole grapheme clusters. Side-by-side columns are clipped/padded according to
+the current terminal width. When fewer than 18 columns are available, the
+view temporarily falls back to unified mode. Both modes preserve the viewed
+source line across terminal resize.
+
+```cpp
+DiffView({
+    .diff = unified_diff,
+    .layout = {.width = 80,.height = 18},
+    .mode = DiffViewMode::SideBySide,
+    .highlight_intraline = true,
+    .active_hunk = selected_hunk,
+    .on_source_line_click = onDiffLineClick
+});
+```
+
+`DiffView::render()` remains backward-compatible; `renderEnhanced()` exposes
+the new static rendering options. Intra-line changes are underlined and bold;
+this is a visual comparison, not a semantic word-level diff algorithm.
+
+Run `markdown_diff_advanced` to explore resizable Markdown and diff panels,
+view modes, hunk navigation, and copying a hunk to the clipboard.

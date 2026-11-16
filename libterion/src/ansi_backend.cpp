@@ -17,12 +17,15 @@
 using namespace terion;
 
 TerminalCapabilities AnsiTerminalBackend::detectCapabilities(const std::string_view terminal_program,
-    const std::string_view pointer_override)
+    const std::string_view pointer_override,const std::string_view emoji_override)
 {
     TerminalCapabilities capabilities;
     capabilities.mouse_pointer_shape = terminal_program == "kitty" || terminal_program == "ghostty";
+    capabilities.emoji_compatibility = terminal_program == "Apple_Terminal";
     if (pointer_override == "1") capabilities.mouse_pointer_shape = true;
     if (pointer_override == "0") capabilities.mouse_pointer_shape = false;
+    if (emoji_override == "1") capabilities.emoji_compatibility = true;
+    if (emoji_override == "0") capabilities.emoji_compatibility = false;
     return capabilities;
 }
 
@@ -186,8 +189,9 @@ AnsiTerminalBackend::AnsiTerminalBackend()
 {
     const char* terminal_program = std::getenv("TERM_PROGRAM");
     const char* pointer_override = std::getenv("TERION_MOUSE_POINTER_SHAPE");
+    const char* emoji_override = std::getenv("TERION_EMOJI_COMPAT");
     capabilities_ = detectCapabilities(terminal_program ? terminal_program : "",
-        pointer_override ? pointer_override : "");
+        pointer_override ? pointer_override : "",emoji_override ? emoji_override : "");
     if (!::isatty(STDIN_FILENO) || !::isatty(STDOUT_FILENO)) throw std::runtime_error("Terion requires a TTY");
     if (::tcgetattr(STDIN_FILENO,&previous_) != 0) throw std::runtime_error("tcgetattr failed");
     termios raw = previous_;

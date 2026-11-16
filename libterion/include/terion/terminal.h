@@ -85,6 +85,8 @@ struct TerminalCapabilities
     // All-motion tracking (1003) is optional; wheel/click/drag need only 1006 + 1002.
     bool mouse_all_motion = true;
     bool mouse_pointer_shape = false;
+    // Terminal does not reliably compose multi-codepoint emoji into one glyph.
+    bool emoji_compatibility = false;
     bool actively_probed = false;
 }; /* End of struct TerminalCapabilities */
 
@@ -202,7 +204,7 @@ class AnsiTerminalBackend final : public TerminalBackend
 {
 public:
     [[nodiscard]] static TerminalCapabilities detectCapabilities(std::string_view terminal_program,
-        std::string_view pointer_override = {});
+        std::string_view pointer_override = {},std::string_view emoji_override = {});
 
     AnsiTerminalBackend();
     ~AnsiTerminalBackend() override;
