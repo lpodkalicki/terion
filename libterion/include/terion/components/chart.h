@@ -15,6 +15,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <terion/components/virtual_list.h>
@@ -33,6 +34,14 @@ public:
         std::vector<double> values;
         ColorVariant color = ColorVariant::Primary;
         bool operator==(const Series&) const = default;
+    };
+
+    // Horizontal thresholds are drawn in shared-Y mode only.
+    struct ReferenceLine
+    {
+        double value = 0;
+        std::string label = {};
+        ColorVariant color = ColorVariant::Warning;
     };
 
     struct Bounds
@@ -68,6 +77,9 @@ public:
         std::optional<std::size_t> cursor = std::nullopt;
         bool show_tooltip = false;
         std::function<void(std::size_t,std::size_t)> on_view_change = {};
+        std::vector<ReferenceLine> reference_lines = {};
+        bool show_grid = false;
+        std::string y_unit = {};
     }; /* End of struct Props */
 
     explicit Chart(Props props) : Component(create(std::move(props))) {}
@@ -127,7 +139,9 @@ public:
         int width,int height,Variant variant = Variant::Line,bool show_x_axis = true,
         bool show_y_axis = true,bool show_legend = true,bool zero_baseline = false,
         bool auto_scale = true,double y_min = 0,double y_max = 1,
-        std::size_t start_index = 0,bool independent_y_axes = false)
+        std::size_t start_index = 0,bool independent_y_axes = false,
+        const std::vector<ReferenceLine>& reference_lines = {},bool show_grid = false,
+        std::string_view y_unit = {})
     {
         if (width <= 0 || height <= 0) return {};
         const int margin = show_y_axis && width >= 14 ? 9 : 0;
@@ -218,6 +232,29 @@ public:
             }
             painted.push_back(canvas.rows());
         }
+        // Draw reference overlays on separate canvases. Series pixels take precedence.
+        // Values are meaningful only on the common Y domain.
+        render::Canvas grid(pixel_width,pixel_height);
+        std::vector<std::vector<std::string>> thresholds;
+        if (show_grid)
+            for (int level = 1; level < 4; ++level)
+            {
+                const int y = (pixel_height-1)*level/4;
+                for (int x = 0; x < pixel_width; x += 4) grid.point(x,y);
+            }
+        if (!independent_y_axes)
+            for (const auto& reference : reference_lines)
+            {
+                render::Canvas threshold(pixel_width,pixel_height);
+                if (std::isfinite(reference.value) && reference.value >= bounds.min &&
+                    reference.value <= bounds.max)
+                {
+                    const int y = y_of(reference.value,bounds);
+                    for (int x = 0; x < pixel_width; x += 2) threshold.point(x,y);
+                }
+                thresholds.push_back(threshold.rows());
+            }
+        const auto grid_rows = grid.rows();
         std::vector<StyledText> output;
         output.reserve(static_cast<std::size_t>(height));
         for (int y = 0; y < plot_height; ++y)
@@ -230,6 +267,7 @@ public:
                     << (independent_y_axes ? 100.0*(plot_height-1-y)/std::max(1,plot_height-1) :
                     bounds.max-(bounds.max-bounds.min)*y/std::max(1,plot_height-1));
                 auto display = label.str();
+                display += y_unit;
                 if (display.size() > 7) display.resize(7);
                 row.push_back({std::string(7-display.size(),' ')+display+" │",ColorVariant::Info});
             }
@@ -244,6 +282,34 @@ public:
                     if (offset+3 > encoded.size()) continue;
                     const auto current = encoded.substr(offset,3);
                     if (current != "\xE2\xA0\x80") { glyph = current; color = series[k].color; }
+                }
+                if (glyph == " " && !independent_y_axes)
+                    for (std::size_t k = 0; k < thresholds.size(); ++k)
+                    {
+                        const auto& encoded = thresholds[k][static_cast<std::size_t>(y)];
+                        const auto offset = static_cast<std::size_t>(x)*3;
+                        if (offset+3 > encoded.size()) continue;
+                        const auto current = encoded.substr(offset,3);
+                        if (current != "\xE2\xA0\x80")
+                        {
+                            glyph = current;
+                            color = reference_lines[k].color;
+                            break;
+                        }
+                    }
+                if (glyph == " " && show_grid)
+                {
+                    const auto& encoded = grid_rows[static_cast<std::size_t>(y)];
+                    const auto offset = static_cast<std::size_t>(x)*3;
+                    if (offset+3 <= encoded.size())
+                    {
+                        const auto current = encoded.substr(offset,3);
+                        if (current != "\xE2\xA0\x80")
+                        {
+                            glyph = current;
+                            color = ColorVariant::Info;
+                        }
+                    }
                 }
                 if (!row.empty() && row.back().color == color) row.back().text += glyph;
                 else row.push_back({glyph,color});
@@ -274,11 +340,55 @@ public:
                 if (occupied+label.size() > static_cast<std::size_t>(width)) break;
                 row.push_back({label,item.color,true});
             }
+            if (!independent_y_axes)
+                for (const auto& reference : reference_lines)
+                {
+                    if (reference.label.empty()) continue;
+                    const std::string label = " ! " + reference.label;
+                    std::size_t occupied = 0;
+                    for (const auto& span : row) occupied += span.text.size();
+                    if (occupied+label.size() > static_cast<std::size_t>(width)) break;
+                    row.push_back({label,reference.color,true});
+                }
             output.push_back(std::move(row));
         }
         return output;
     }
 
+
+    // Reduction helper for external data providers. Retains original sample indices,
+    // including spikes and gaps, so callers can map back to original timestamps.
+    struct SamplePoint
+    {
+        std::size_t index;
+        double value;
+    };
+
+    [[nodiscard]] static std::vector<SamplePoint> minMaxSample(
+        const std::vector<double>& values,std::size_t buckets)
+    {
+        std::vector<SamplePoint> result;
+        if (values.empty() || buckets == 0) return result;
+        const auto sections = std::min(buckets,values.size());
+        result.reserve(sections*2);
+        for (std::size_t bucket=0; bucket<sections; ++bucket)
+        {
+            const auto begin = bucket*values.size()/sections;
+            const auto end = (bucket+1)*values.size()/sections;
+            std::size_t minimum=values.size(),maximum=values.size();
+            for (std::size_t i=begin;i<end;++i)
+            {
+                if (!std::isfinite(values[i])) continue;
+                if (minimum==values.size() || values[i]<values[minimum]) minimum=i;
+                if (maximum==values.size() || values[i]>values[maximum]) maximum=i;
+            }
+            if (minimum==values.size()) continue;
+            if (minimum>maximum) std::swap(minimum,maximum);
+            result.push_back({minimum,values[minimum]});
+            if (maximum!=minimum) result.push_back({maximum,values[maximum]});
+        }
+        return result;
+    }
 
     [[nodiscard]] static std::size_t sampleCount(const std::vector<Series>& series,
         const std::vector<double>& values = {})
@@ -385,6 +495,9 @@ private:
         std::optional<std::size_t> cursor;
         bool show_tooltip = false;
         std::function<void(std::size_t,std::size_t)> on_view_change;
+        std::vector<ReferenceLine> reference_lines;
+        bool show_grid = false;
+        std::string y_unit;
     };
 
     static Component create(Props props)
@@ -403,6 +516,9 @@ private:
         model->cursor = props.cursor;
         model->show_tooltip = props.show_tooltip;
         model->on_view_change = std::move(props.on_view_change);
+        model->reference_lines = std::move(props.reference_lines);
+        model->show_grid = props.show_grid;
+        model->y_unit = std::move(props.y_unit);
         model->show_x_axis = props.show_x_axis;
         model->show_y_axis = props.show_y_axis;
         model->show_legend = props.show_legend;
@@ -422,7 +538,8 @@ private:
                 const int plot_height = model->height-(model->show_tooltip ? 1 : 0);
                 model->styled_lines = renderAdvanced(visible_series,width,plot_height,model->variant,
                     model->show_x_axis,model->show_y_axis,model->show_legend,model->zero_baseline,
-                    model->auto_scale,model->y_min,model->y_max,view.first+model->sample_offset,model->independent_y_axes);
+                    model->auto_scale,model->y_min,model->y_max,view.first+model->sample_offset,
+                    model->independent_y_axes,model->reference_lines,model->show_grid,model->y_unit);
                 if (model->cursor && view.second && *model->cursor >= view.first &&
                     *model->cursor-view.first < view.second)
                 {
