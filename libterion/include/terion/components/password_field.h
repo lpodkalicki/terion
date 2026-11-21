@@ -18,6 +18,7 @@ public:
         std::optional<std::string> default_value = std::nullopt;
         std::string placeholder = {};
         std::string key = {};
+        std::string id = {};
         bool disabled = false;
         bool read_only = false;
         bool reveal = false;
@@ -31,7 +32,7 @@ public:
     }; /* End of struct Props */
 
     explicit PasswordField(Props props) :
-        Component({.type = Type::PasswordField,.key = std::move(props.key),
+        Component({.type = Type::PasswordField,.key = std::move(props.key),.id = std::move(props.id),
             .text = props.default_value.value_or(props.value),.layout = props.layout,
             .on_change = props.on_change ? std::move(props.on_change) :
                 (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :

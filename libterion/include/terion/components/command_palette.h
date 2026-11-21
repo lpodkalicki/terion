@@ -40,6 +40,7 @@ public:
         std::string title = "Command palette";
         std::string placeholder = "Search commands...";
         std::string key = {};
+        std::string id = {};
         int width = 56;
         std::function<void(std::string)> on_query_change = {};
         std::function<void(std::string)> on_execute = {};
@@ -72,7 +73,7 @@ private:
             .options = std::move(options),
             .query = std::move(props.query),
             .placeholder = std::move(props.placeholder),
-            .key = "command_search",
+            .key = "command_search",.id = props.id,
             .layout = {.width = std::max(12,props.width-6)},
             .on_change = [on_execute,on_close](std::string id) {
                 if (on_execute) on_execute(std::move(id));
@@ -83,7 +84,7 @@ private:
         return Dialog({
             .open = props.open,
             .title = std::move(props.title),
-            .key = std::move(props.key),
+            .key = std::move(props.key),.id = std::move(props.id),
             .width = props.width,
             .on_close = on_close,
             .children = std::move(children),

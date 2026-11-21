@@ -19,6 +19,7 @@ public:
         Component child;
         std::vector<SelectOption> options = {};
         std::string key = {};
+        std::string id = {};
         bool disabled = false;
         std::function<void(std::string)> on_select = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
@@ -26,7 +27,7 @@ public:
     }; /* End of struct Props */
 
     explicit ContextMenu(Props props) :
-        Component({.type = Type::ContextMenu,.key = std::move(props.key),
+        Component({.type = Type::ContextMenu,.key = std::move(props.key),.id = std::move(props.id),
             .children = {std::move(props.child)},
             .on_event_capture = std::move(props.on_event_capture),
             .on_event = std::move(props.on_event),

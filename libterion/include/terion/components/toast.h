@@ -28,11 +28,12 @@ public:
         ToastSeverity severity = ToastSeverity::Info;
         int duration_ms = 3500;
         std::string key = {};
+        std::string id = {};
         std::function<void()> on_close = {};
     }; /* End of struct Props */
 
     explicit Toast(Props props) :
-        Component({.type = Type::Toast,.key = std::move(props.key),
+        Component({.type = Type::Toast,.key = std::move(props.key),.id = std::move(props.id),
             .text = std::move(props.message),.toast_open = props.open,
             .toast_duration_ms = props.duration_ms,
             .toast_severity = static_cast<int>(props.severity),

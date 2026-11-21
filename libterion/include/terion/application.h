@@ -45,7 +45,7 @@ struct ShortcutOptions
 {
     ShortcutPriority priority = ShortcutPriority::AfterFocused;
     ShortcutScope scope = ShortcutScope::Global;
-    // FocusScope: scope key or runtime id; FocusedControl: component key or runtime id.
+    // Public id of a FocusScope or focused control (not its reconciliation key).
     std::string target = {};
 }; /* End of struct ShortcutOptions */
 
@@ -90,10 +90,11 @@ public:
 
     [[nodiscard]] FocusManager& focus() noexcept { return focus_; }
     [[nodiscard]] ToastManager& toasts() noexcept { return toasts_; }
-    bool focus(std::string_view component_key);
+    bool focus(std::string_view component_id);
     void blur() noexcept { focus_.blur(); invalidate(); }
-    [[nodiscard]] std::string_view focused() const noexcept { return focus_.current(); }
-    [[nodiscard]] bool hasFocus(std::string_view component_key) const;
+    [[nodiscard]] bool hasFocusedControl() const noexcept { return !focus_.current().empty(); }
+    [[nodiscard]] bool hasFocus(std::string_view component_id) const;
+    [[nodiscard]] std::string focusedId() const;
     void setTheme(Theme theme) { theme_ = std::move(theme); base_frame_cache_.reset(); invalidate(); }
     [[nodiscard]] const Theme& theme() const noexcept { return theme_; }
     [[nodiscard]] const Reconciler& reconciler() const noexcept { return reconciler_; }
@@ -164,6 +165,7 @@ private:
     FocusManager focus_;
     Theme theme_;
     std::vector<std::string> component_focus_ids_;
+    std::unordered_map<std::string,std::string> component_public_focus_ids_;
     std::unordered_map<std::string,std::string> scope_focus_history_;
     std::string hovered_component_id_;
     std::string pressed_button_id_;

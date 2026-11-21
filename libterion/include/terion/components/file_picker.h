@@ -32,6 +32,7 @@ public:
         std::string search = {};
         std::string title = "Select file";
         std::string key = {};
+        std::string id = {};
         bool show_hidden = false;
         FilePickerIconStyle icon_style = FilePickerIconStyle::Symbols;
         bool show_breadcrumbs = true;

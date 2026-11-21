@@ -16,6 +16,7 @@ public:
     {
         std::string text = {};
         std::string key = {};
+        std::string id = {};
         ButtonVariant variant = ButtonVariant::Outlined;
         ColorVariant color = ColorVariant::Primary;
         bool disabled = false;
@@ -29,7 +30,7 @@ public:
     }; /* End of struct Props */
 
     explicit Button(Props props) :
-        Component({.type = Type::Button,.key = std::move(props.key),.text = std::move(props.text),
+        Component({.type = Type::Button,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.text),
             .layout = props.layout,.text_style = props.style,.color_variant = props.color,
             .on_click = std::move(props.on_click),
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),

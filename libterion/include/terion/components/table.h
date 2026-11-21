@@ -20,6 +20,7 @@ public:
         std::function<TableCellFormat(const TableRow&,std::size_t)> format_cell = {};
         std::string selected_key = {};
         std::string key = {};
+        std::string id = {};
         bool disabled = false;
         LayoutStyle layout = {};
         int horizontal_offset = -1;
@@ -30,7 +31,7 @@ public:
     }; /* End of struct Props */
 
     explicit Table(Props props) :
-        Component({.type = Type::Table,.key = std::move(props.key),.text = std::move(props.selected_key),
+        Component({.type = Type::Table,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.selected_key),
             .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
             .on_event = std::move(props.on_event),.on_change = std::move(props.on_selection_change),
             .disabled = props.disabled,.table_columns = std::move(props.columns),

@@ -510,7 +510,7 @@ Component Chart::create(Props props)
                 const auto index = static_cast<std::size_t>(std::lround(
                     static_cast<double>(relative)*(view.second-1)/usable));
                 model->on_point_click(view.first+index);
-            },.key = std::move(props.key),.layout = props.layout,
+            },.key = std::move(props.key),.id = std::move(props.id),.layout = props.layout,
             .show_scrollbar = props.show_scrollbar,
             .on_event = [model](ComponentEvent& event) {
                 if (!model->on_view_change || event.event.key != Key::Mouse ||

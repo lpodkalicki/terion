@@ -19,6 +19,14 @@ See [docs/api-conventions.md](docs/api-conventions.md) for naming, component `Pr
 callback conventions and the canonical, pre-release API. #139d removes legacy
 aliases and duplicate selection props; see [migration instructions](docs/migration-139d.md) before updating.
 
+## Component identity and focus (#139e)
+
+Use `key` only to retain component state during reconciliation, and `id` to
+address a focusable control through `Application::focus(id)`, `hasFocus(id)`,
+`focusedId()` and scoped shortcuts. The old key-based lookup is removed.
+See [component identity & focus](docs/component-identity-focus.md) and
+`examples/identity_focus.cpp`.
+
 ## Design
 
 - Public rendering primitives: `Cell`, `ScreenBuffer`, `Painter`, `DifferentialRenderer`.

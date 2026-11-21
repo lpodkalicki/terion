@@ -13,10 +13,10 @@ TEST(Dialog, RestoresPreviousFocusAfterModalScopeCloses)
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 60,.height = 20}));
     app.render([&] {
         return Column({.children = {
-            Button({.text = "First",.key = "first",.on_click = [] {}}),
-            Button({.text = "Open",.key = "open",.on_click = [&] { opened.set(true); }}),
+            Button({.text = "First",.key = "first",.id = "first",.on_click = [] {}}),
+            Button({.text = "Open",.key = "open",.id = "open",.on_click = [&] { opened.set(true); }}),
             Dialog({.open = opened.get(),.title = "Dialog",.on_close = [&] { opened.set(false); },
-                .children = {Button({.text = "Inside",.key = "inside",.on_click = [] {}})}})
+                .children = {Button({.text = "Inside",.key = "inside",.id = "inside",.on_click = [] {}})}})
         }});
     });
     app.renderOnce();
@@ -58,8 +58,8 @@ TEST(Dialog, CapturesInputAndInvokesActions)
     Application dialog_app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 50,.height = 16}));
     dialog_app.render([&] {
         return Column({.children = {
-            Button({.text = "Background",.key = "background",.on_click = [&] { ++background_clicks; }}),
-            Dialog({.open = show_dialog.get(),.title = "Confirm",.message = "Proceed?",.key = "modal",
+            Button({.text = "Background",.key = "background",.id = "background",.on_click = [&] { ++background_clicks; }}),
+            Dialog({.open = show_dialog.get(),.title = "Confirm",.message = "Proceed?",.key = "modal",.id = "modal",
                 .on_confirm = [&] { ++confirmations; show_dialog.set(false); },
                 .on_close = [&] { show_dialog.set(false); }})
         }});

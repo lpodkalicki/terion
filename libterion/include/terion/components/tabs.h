@@ -17,6 +17,7 @@ public:
         std::vector<TabOption> options = {};
         std::string selected_key = {};
         std::string key = {};
+        std::string id = {};
         bool disabled = false;
         LayoutStyle layout = {};
         std::function<void(std::string)> on_selection_change = {};
@@ -25,7 +26,7 @@ public:
     }; /* End of struct Props */
 
     explicit Tabs(Props props) :
-        Component({.type = Type::Tabs,.key = std::move(props.key),.text = std::move(props.selected_key),
+        Component({.type = Type::Tabs,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.selected_key),
             .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
             .on_event = std::move(props.on_event),.on_change = std::move(props.on_selection_change),
             .disabled = props.disabled,.tab_options = std::move(props.options)})

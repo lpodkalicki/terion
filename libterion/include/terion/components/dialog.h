@@ -19,6 +19,7 @@ public:
         std::string title = {};
         std::string message = {};
         std::string key = {};
+        std::string id = {};
         std::string confirm_text = "Confirm";
         std::string cancel_text = "Cancel";
         int width = 48;
@@ -38,7 +39,7 @@ private:
     static Component::Props makeProps(Props props)
     {
         const bool show_actions = props.show_actions.value_or(props.children.empty());
-        return {.type = Type::Dialog,.key = std::move(props.key),
+        return {.type = Type::Dialog,.key = std::move(props.key),.id = std::move(props.id),
             .text = std::move(props.message),.children = std::move(props.children),
             .on_click = std::move(props.on_confirm),
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),

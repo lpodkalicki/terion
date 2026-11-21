@@ -106,7 +106,7 @@ TEST(ShortcutConsistency, EditingKeysTakePrecedenceOverGlobalShortcuts)
 {
     Clipboard::clear();
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{40,8}));
-    app.render([] { return TextArea({.value = "hello",.key = "editor",.layout = {.width = 30,.height = 6}}); });
+    app.render([] { return TextArea({.value = "hello",.key = "editor",.id = "editor",.layout = {.width = 30,.height = 6}}); });
     app.renderOnce();
     int global_copies = 0;
     app.addShortcut({.key = Key::Character,.character = U'c',.ctrl = true},
@@ -121,7 +121,7 @@ TEST(ShortcutConsistency, BeforeFocusedCanExplicitlyOverrideEditingKeys)
 {
     Clipboard::clear();
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{40,8}));
-    app.render([] { return TextField({.value = "hello",.key = "editor"}); });
+    app.render([] { return TextField({.value = "hello",.key = "editor",.id = "editor"}); });
     app.renderOnce();
     int count = 0;
     app.addShortcut({.key = Key::Character,.character = U'c',.ctrl = true},
@@ -132,11 +132,11 @@ TEST(ShortcutConsistency, BeforeFocusedCanExplicitlyOverrideEditingKeys)
     EXPECT_TRUE(Clipboard::get().empty());
 }
 
-TEST(ShortcutConsistency, ShortcutCanTargetFocusedControlByComponentKey)
+TEST(ShortcutConsistency, ShortcutCanTargetFocusedControlByPublicId)
 {
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{60,10}));
     app.render([] { return Column({.children = {
-        TextField({.key = "first"}),TextField({.key = "second"})
+        TextField({.key = "first",.id = "first"}),TextField({.key = "second",.id = "second"})
     }}); });
     app.renderOnce();
     int first = 0;
@@ -155,12 +155,12 @@ TEST(ShortcutConsistency, ShortcutCanTargetFocusedControlByComponentKey)
     EXPECT_EQ(second,1);
 }
 
-TEST(ShortcutConsistency, ShortcutCanTargetActiveFocusScopeByKey)
+TEST(ShortcutConsistency, ShortcutCanTargetActiveFocusScopeByPublicId)
 {
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{60,10}));
     app.render([] { return FocusScope({.children = {
-        TextField({.key = "editor"})
-    },.key = "workspace",.active = true}); });
+        TextField({.key = "editor",.id = "editor"})
+    },.key = "workspace",.id = "workspace",.active = true}); });
     app.renderOnce();
     int count = 0;
     app.addShortcut({.key = Key::Character,.character = U'k',.ctrl = true},
@@ -188,7 +188,7 @@ TEST(ShortcutConsistency, ModalDialogShieldsUnderlyingGlobalShortcuts)
 {
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{60,20}));
     app.render([] { return Dialog({.open = true,.title = "Modal",.children = {
-        TextField({.key = "modal-input"})
+        TextField({.key = "modal-input",.id = "modal-input"})
     }}); });
     app.renderOnce();
     int global = 0;

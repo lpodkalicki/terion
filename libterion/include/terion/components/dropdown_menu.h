@@ -17,6 +17,7 @@ public:
         std::string label = "Menu";
         std::vector<SelectOption> options = {};
         std::string key = {};
+        std::string id = {};
         bool disabled = false;
         ButtonVariant variant = ButtonVariant::Text;
         LayoutStyle layout = {};
@@ -27,7 +28,7 @@ public:
     }; /* End of struct Props */
 
     explicit DropdownMenu(Props props) :
-        Component({.type = Type::DropdownMenu,.key = std::move(props.key),
+        Component({.type = Type::DropdownMenu,.key = std::move(props.key),.id = std::move(props.id),
             .text = std::move(props.label),.layout = props.layout,
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .on_change = std::move(props.on_select),.disabled = props.disabled,

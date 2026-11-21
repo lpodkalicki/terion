@@ -16,6 +16,7 @@ public:
     {
         std::vector<Component> children = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         std::optional<BorderStyle> border = std::nullopt;
         std::optional<Color> background = std::nullopt;
@@ -24,7 +25,7 @@ public:
     }; /* End of struct Props */
 
     explicit Box(Props props) :
-        Component({.type = Type::Box,.key = std::move(props.key),
+        Component({.type = Type::Box,.key = std::move(props.key),.id = std::move(props.id),
             .children = std::move(props.children),.layout = props.layout,
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .border = props.border,.background = props.background})

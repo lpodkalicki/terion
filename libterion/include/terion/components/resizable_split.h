@@ -21,6 +21,7 @@ public:
         int min_first = 3;
         int min_second = 3;
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         std::function<void(int)> on_change = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
@@ -36,7 +37,7 @@ private:
     {
         if (props.children.size() != 2)
             throw std::invalid_argument("ResizableSplit requires exactly two children");
-        return {.type = Type::ResizableSplit,.key = std::move(props.key),
+        return {.type = Type::ResizableSplit,.key = std::move(props.key),.id = std::move(props.id),
             .children = std::move(props.children),.layout = props.layout,
             .on_event_capture = std::move(props.on_event_capture),
             .on_event = std::move(props.on_event),.split_direction = props.direction,

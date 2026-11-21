@@ -10,7 +10,7 @@ using namespace terion;
 TEST(RenderCache, ReusesBaseWhenTreeIsUnchanged)
 {
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 32,.height = 8}));
-    app.render([] { return Column({.children = {Typography({.text = "Ready",.key = "status"})}}); });
+    app.render([] { return Column({.children = {Typography({.text = "Ready",.key = "status",.id = "status"})}}); });
     app.renderOnce();
     EXPECT_EQ(app.renderStats().base_paints,1u);
     EXPECT_EQ(app.renderStats().cache_hits,0u);
@@ -50,8 +50,8 @@ TEST(RenderCache, PreservesFocusRenderingAfterChange)
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{.width = 32,.height = 8}));
     app.render([] { return Column({.children = {
         Typography({.text = "Caption"}),
-        Button({.text = "One",.key = "one",.on_click = [] {}}),
-        Button({.text = "Two",.key = "two",.on_click = [] {}})
+        Button({.text = "One",.key = "one",.id = "one",.on_click = [] {}}),
+        Button({.text = "Two",.key = "two",.id = "two",.on_click = [] {}})
     }}); });
     app.renderOnce();
     EXPECT_TRUE(app.focus("two"));

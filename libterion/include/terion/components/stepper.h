@@ -53,6 +53,7 @@ public:
         bool linear = true;
         bool allow_navigation = true;
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {.gap = 1};
         std::function<void(std::size_t)> on_change = {};
         // Advanced step options.
@@ -130,8 +131,8 @@ private:
                     .key="separator-"+std::to_string(i)}));
         }
         if (props.orientation == StepperOrientation::Vertical)
-            return Column({.children=std::move(entries),.key=std::move(props.key),.layout=props.layout});
-        return Row({.children=std::move(entries),.key=std::move(props.key),.layout=props.layout});
+            return Column({.children=std::move(entries),.key=std::move(props.key),.id = std::move(props.id),.layout=props.layout});
+        return Row({.children=std::move(entries),.key=std::move(props.key),.id = std::move(props.id),.layout=props.layout});
     }
 }; /* End of class Stepper */
 

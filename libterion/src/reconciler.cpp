@@ -199,6 +199,7 @@ Component Reconciler::expand(const Component& component, const std::string& path
         if (props.key.empty()) return result;
         auto actual = result.props();
         actual.key = props.key;
+        if (!props.id.empty()) actual.id = props.id;
         return Component(std::move(actual));
     }
     if (props.type == Component::Type::ContextProvider)
@@ -216,6 +217,7 @@ Component Reconciler::expand(const Component& component, const std::string& path
         if (props.key.empty()) return child;
         auto actual = child.props();
         actual.key = props.key;
+        if (!props.id.empty()) actual.id = props.id;
         return Component(std::move(actual));
     }
     if (props.type == Component::Type::Function)
@@ -236,6 +238,7 @@ Component Reconciler::expand(const Component& component, const std::string& path
         // The instance's key controls identity, not the implementation's root key.
         auto actual = result.props();
         actual.key = props.key;
+        if (!props.id.empty()) actual.id = props.id;
         auto expanded = expand(Component(std::move(actual)),path + "/fn");
         if (!same_identity)
         {
@@ -327,6 +330,7 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
     }
     node->text_ = next_text;
     node->uncontrolled_value_ = props.uncontrolled_value;
+    node->public_id_ = props.id;
     node->style_ = props.layout;
     node->text_style_ = props.text_style;
     node->text_style_spec_ = props.text_style_spec;

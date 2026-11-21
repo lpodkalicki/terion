@@ -26,7 +26,7 @@ std::string activeControl(const Application& app)
     if (app.hasFocus("focus-editor")) return "Focus editor button";
     if (app.hasFocus("focus-search")) return "Focus search button";
     if (app.hasFocus("focus-action")) return "Focus action button";
-    return app.focused().empty() ? "(none)" : "Other control";
+    return !app.hasFocusedControl() ? "(none)" : "Other control";
 }
 
 } /* End of anonymous namespace */
@@ -47,8 +47,8 @@ int main()
     State<int> function_count{0};
     State<bool> show_help{false};
 
-    const auto focus_to = [&](const char* key, const char* description) {
-        status.set(app.focus(key) ? std::string("Focused: ") + description :
+    const auto focus_to = [&](const char* id, const char* description) {
+        status.set(app.focus(id) ? std::string("Focused: ") + description :
             std::string("Cannot focus: ") + description);
     };
 
@@ -110,29 +110,29 @@ int main()
         };
         const auto focus_buttons = [&] {
             return Row({.children = {
-                Button({.text = "Editor",.key = "focus-editor",
+                Button({.text = "Editor",.key = "focus-editor",.id = "focus-editor",
                     .on_click = [&] { focus_to("editor","Markdown editor"); },
                     .size = ControlSize::Compact}),
-                Button({.text = "Search",.key = "focus-search",
+                Button({.text = "Search",.key = "focus-search",.id = "focus-search",
                     .on_click = [&] { focus_to("search","Search field"); },
                     .size = ControlSize::Compact}),
-                Button({.text = "Action",.key = "focus-action",
+                Button({.text = "Action",.key = "focus-action",.id = "focus-action",
                     .on_click = [&] { focus_to("action","Action button"); },
                     .size = ControlSize::Compact})
             },.layout = {.gap = 1}});
         };
         const auto action_button = [&] {
-            return Button({.text = "Run action [F4]",.key = "action",
+            return Button({.text = "Run action [F4]",.key = "action",.id = "action",
                 .on_click = [&] { status.set("Action button activated"); },
                 .size = ControlSize::Compact});
         };
         const auto editor_field = [&] {
-            return TextArea({.value = editor.get(),.key = "editor",.soft_wrap = true,
+            return TextArea({.value = editor.get(),.key = "editor",.id = "editor",.soft_wrap = true,
                 .layout = {.width = editor_width,.height = editor_height},
                 .on_change = [&](std::string text) { editor.set(std::move(text)); }});
         };
         const auto search_field = [&] {
-            return TextField({.value = search.get(),.key = "search",
+            return TextField({.value = search.get(),.key = "search",.id = "search",
                 .layout = {.width = sidebar_width},
                 .on_change = [&](std::string text) { search.set(std::move(text)); },
                 .size = ControlSize::Compact});
@@ -177,7 +177,7 @@ int main()
                     "Last function: "+last_function.get()+" ("+
                     std::to_string(function_count.get())+" total) | F1 for help"})
             },.layout = {.width = size.width,.height = size.height,.padding = 1,.gap = 1}})
-        },.key = "workspace",.active = true});
+        },.key = "workspace",.id = "workspace",.active = true});
     });
     return app.run();
 }

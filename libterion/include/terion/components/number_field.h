@@ -19,6 +19,7 @@ public:
         std::optional<FormValue> default_value = std::nullopt;
         std::string placeholder = {};
         std::string key = {};
+        std::string id = {};
         double min_value = -1.0e100;
         double max_value = 1.0e100;
         double step = 1.0;
@@ -49,7 +50,7 @@ private:
         else if (const auto* number = std::get_if<double>(&selected)) initial = *number;
         else if (const auto* integer = std::get_if<std::int64_t>(&selected))
             initial = static_cast<double>(*integer);
-        return {.type = Type::NumberField,.key = std::move(props.key),
+        return {.type = Type::NumberField,.key = std::move(props.key),.id = std::move(props.id),
             .text = detail::toText(selected),.layout = props.layout,
             .on_change = props.on_change ? std::move(props.on_change) :
                 (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :

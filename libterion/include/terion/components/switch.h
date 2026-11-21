@@ -16,6 +16,7 @@ public:
     {
         std::string label = {};
         std::string key = {};
+        std::string id = {};
         bool checked = false;
         std::optional<bool> default_checked = std::nullopt;
         CheckboxVariant variant = CheckboxVariant::Default;
@@ -28,7 +29,7 @@ public:
     }; /* End of struct Props */
 
     explicit Switch(Props props) :
-        Component({.type = Type::Switch,.key = std::move(props.key),.text = std::move(props.label),
+        Component({.type = Type::Switch,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.label),
             .layout = props.layout,.color_variant = props.color,.on_toggle = props.on_change ? std::move(props.on_change) :
                 (props.default_checked ? std::function<void(bool)>{[](bool) {}} :
                  std::function<void(bool)>{}),

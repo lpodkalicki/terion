@@ -107,8 +107,8 @@ inline Component bindFormField(Component component,const std::shared_ptr<FormSta
         if (previous_blur) previous_blur();
         if (on_change) on_change(state->status());
     };
-    // Ensure an unnamed control can be addressed through Application::focus().
-    if (control.key.empty()) control.key = name;
+    // Form field names are public focus identifiers, not reconciliation keys.
+    if (control.id.empty()) control.id = name;
     std::vector<Component> children;
     if (!marker.form_field_label.empty())
         children.emplace_back(Typography({.text = marker.form_field_label}));
@@ -117,7 +117,7 @@ inline Component bindFormField(Component component,const std::shared_ptr<FormSta
     if (!error.empty())
         children.emplace_back(Typography({.text = error,.color = ColorVariant::Error}));
     return Column({.children = std::move(children),
-        .key = marker.key.empty() ? name : marker.key,.layout = marker.layout});
+        .key = marker.key.empty() ? name : marker.key,.id = marker.id,.layout = marker.layout});
 }
 
 inline Component bindFormTree(const Component& component,const std::shared_ptr<FormState>& state,
@@ -139,6 +139,7 @@ public:
     {
         std::vector<Component> children = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         std::string submit_text = "Submit";
         std::string reset_text = "Reset";
@@ -147,7 +148,7 @@ public:
         std::shared_ptr<FormController> controller = {};
         std::function<void(FormStatus)> on_state_change = {};
         // Called with the first invalid field name in declaration order; use
-        // app.focus(name) (or your own key mapping) to move focus to it.
+        // app.focus(name) (or an explicit public id) to move focus to it.
         std::function<void(const std::string&)> on_invalid = {};
         std::function<void(const FormValues&)> on_submit = {};
         std::function<void()> on_reset = {};
@@ -159,6 +160,7 @@ private:
     static Component create(Props props)
     {
         const auto key = props.key;
+        const auto id = props.id;
         auto factory = component([props = std::move(props)]() -> Component {
             std::vector<detail::FormFieldDefinition> fields;
             detail::collectFormFields(props.children,fields);
@@ -175,7 +177,7 @@ private:
             if (props.show_actions)
             {
                 std::vector<Component> actions;
-                actions.emplace_back(Button({.text = props.submit_text,.key = "form-submit",
+                actions.emplace_back(Button({.text = props.submit_text,.key = "form-submit",.id = "form-submit",
                     .disabled = state->status().submitting,
                     .on_click = [state,on_submit = props.on_submit,on_invalid = props.on_invalid,
                         on_change = props.on_state_change] {
@@ -183,7 +185,7 @@ private:
                         if (!valid && on_invalid) on_invalid(state->firstError());
                         if (on_change) on_change(state->status());
                     }}));
-                actions.emplace_back(Button({.text = props.reset_text,.key = "form-reset",
+                actions.emplace_back(Button({.text = props.reset_text,.key = "form-reset",.id = "form-reset",
                     .on_click = [state,on_reset = props.on_reset,on_change = props.on_state_change] {
                         state->reset();
                         if (on_reset) on_reset();
@@ -194,7 +196,7 @@ private:
             }
             return Column({.children = std::move(children),.layout = props.layout});
         });
-        return factory().keyed(key);
+        return factory().keyed(key).identified(id);
     }
 }; /* End of class Form */
 

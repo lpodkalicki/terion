@@ -16,6 +16,7 @@ public:
     {
         std::string label = {};
         std::string key = {};
+        std::string id = {};
         bool checked = false;
         ColorVariant color = ColorVariant::Primary;
         bool disabled = false;
@@ -26,7 +27,7 @@ public:
     }; /* End of struct Props */
 
     explicit Radio(Props props) :
-        Component({.type = Type::Radio,.key = std::move(props.key),.text = std::move(props.label),
+        Component({.type = Type::Radio,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.label),
             .layout = props.layout,.color_variant = props.color,.on_toggle = std::move(props.on_change),
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
             .disabled = props.disabled,.checked = props.checked})

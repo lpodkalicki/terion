@@ -169,6 +169,7 @@ public:
     {
         Type type = Type::Column;
         std::string key = {};
+        std::string id = {}; // Public identity; does not affect reconciliation.
         std::string text = {};
         std::vector<Component> children = {};
         std::function<Component()> render_function = {};
@@ -282,6 +283,19 @@ public:
     static Component box(std::vector<Component> children, LayoutStyle layout = {}, std::string key = {});
 
     [[nodiscard]] const Props& props() const noexcept { return props_; }
+
+    [[nodiscard]] Component identified(std::string id) const &
+    {
+        auto props = props_;
+        props.id = std::move(id);
+        return Component(std::move(props));
+    }
+
+    [[nodiscard]] Component identified(std::string id) &&
+    {
+        props_.id = std::move(id);
+        return std::move(*this);
+    }
 
     [[nodiscard]] Component keyed(std::string key) const &
     {

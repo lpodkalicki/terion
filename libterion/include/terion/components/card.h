@@ -18,6 +18,7 @@ public:
         std::string title = {};
         std::vector<Component> children = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {.padding = 1,.gap = 1};
         std::optional<BorderStyle> border = BorderStyle::Rounded;
         std::optional<Color> background = std::nullopt;
@@ -36,7 +37,7 @@ private:
             for (auto& child : props.children) content.push_back(std::move(child));
             props.children = std::move(content);
         }
-        return Component({.type = Type::Box,.key = std::move(props.key),
+        return Component({.type = Type::Box,.key = std::move(props.key),.id = std::move(props.id),
             .children = std::move(props.children),.layout = props.layout,
             .border = props.border,.background = props.background,.surface_tone = SurfaceTone::Surface});
     }

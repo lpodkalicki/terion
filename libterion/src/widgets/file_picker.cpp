@@ -283,7 +283,7 @@ Component FilePicker::create(Props props)
                     on_filename_change(entry.name);
             },
             .on_activate = activate,
-            .key = "file_picker_items",
+            .key = "file_picker_items",.id = props.id,
             .layout = {.width = std::max(12,props.width-6),.height = std::max(3,props.height)}}));
         children.emplace_back(Typography({
             .text = !props.show_selection_info ? "" : selected_index >= 0 ?
@@ -318,7 +318,7 @@ Component FilePicker::create(Props props)
                 .on_click = [result,on_confirm] { if (on_confirm) on_confirm(result); }})
         },.layout = {.gap = 1}}));
         return Dialog({.open = props.open,.title = std::move(props.title),
-            .key = std::move(props.key),.width = props.width,.on_close = on_close,
+            .key = std::move(props.key),.id = std::move(props.id),.width = props.width,.on_close = on_close,
             .children = std::move(children),.show_actions = false});
     }
 

@@ -49,7 +49,7 @@ int main()
                 .controller = controller,
                 .on_state_change = [&](FormStatus next) { status.set(next); },
                 .on_invalid = [&](const std::string& name) {
-                    (void)app.focus(name); // FormField supplies the default input key.
+                    (void)app.focus(name); // FormField supplies the public focus id.
                     message.set("Validation failed at: " + name);
                 },
                 .on_submit = [&](const FormValues& values) {

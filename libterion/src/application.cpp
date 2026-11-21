@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <thread>
 #include <algorithm>
+#include <unordered_set>
 #include <charconv>
 #include <terion/application.h>
 #include <terion/clipboard.h>
@@ -22,14 +23,13 @@ Application::Application(std::unique_ptr<TerminalBackend> backend) :
     if (!backend_) throw std::invalid_argument("backend is null");
 }
 
-bool Application::focus(const std::string_view component_key)
+bool Application::focus(const std::string_view component_id)
 {
-    if (!reconciler_.root() || component_key.empty()) return false;
-    // Composite components may have a keyed non-focusable wrapper and an input
-    // with the same key. Prefer the first matching *focusable* node, not the
-    // first matching node in tree order.
+    if (!reconciler_.root() || component_id.empty()) return false;
+    // Reconciliation keys never identify controls for public focus requests.
+    // Non-focusable wrappers may also carry an id; only registered targets win.
     const auto find = [&](const auto& self, const RenderNode& node) -> bool {
-        if (node.key() == component_key && focus_.focus(std::to_string(node.id()))) return true;
+        if (node.publicId() == component_id && focus_.focus(std::to_string(node.id()))) return true;
         for (const auto& child : node.children())
             if (self(self,*child)) return true;
         return false;
@@ -39,13 +39,26 @@ bool Application::focus(const std::string_view component_key)
     return true;
 }
 
-bool Application::hasFocus(const std::string_view component_key) const
+bool Application::hasFocus(const std::string_view component_id) const
 {
     if (!reconciler_.root() || focus_.current().empty()) return false;
     const auto find = [&](const auto& self, const RenderNode& node) -> bool {
-        if (node.key() == component_key && focus_.current() == std::to_string(node.id())) return true;
+        if (node.publicId() == component_id && focus_.current() == std::to_string(node.id())) return true;
         for (const auto& child : node.children()) if (self(self,*child)) return true;
         return false;
+    };
+    return find(find,*reconciler_.root());
+}
+
+std::string Application::focusedId() const
+{
+    if (!reconciler_.root() || focus_.current().empty()) return {};
+    const auto target = focus_.current();
+    const auto find = [&](const auto& self, const RenderNode& node) -> std::string {
+        if (std::to_string(node.id()) == target) return node.publicId();
+        for (const auto& child : node.children())
+            if (auto result = self(self,*child); !result.empty()) return result;
+        return {};
     };
     return find(find,*reconciler_.root());
 }
@@ -76,10 +89,9 @@ bool Application::shortcutTargetMatches(const ShortcutOptions& options) const
         focus_.activeScope() : focus_.current();
     // An empty focus identity must never match even if the target is "0".
     if (actual.empty()) return false;
-    if (actual == options.target) return true;
     if (!reconciler_.root()) return false;
     const auto find = [&](const auto& self, const RenderNode& node) -> bool {
-        if (node.key() == options.target && std::to_string(node.id()) == actual) return true;
+        if (node.publicId() == options.target && std::to_string(node.id()) == actual) return true;
         for (const auto& child : node.children())
             if (self(self,*child)) return true;
         return false;
@@ -197,6 +209,11 @@ void Application::syncFocusTargets()
     const std::string previous_scope(focus_.activeScope());
     const bool previous_targets = !component_focus_ids_.empty();
     const auto previous_ids = std::move(component_focus_ids_);
+    const auto previous_public_ids = std::move(component_public_focus_ids_);
+    const auto previous_public = previous_public_ids.find(previous_focus);
+    const std::string previous_public_id = previous_public == previous_public_ids.end() ?
+        std::string{} : previous_public->second;
+    std::unordered_set<std::string> used_public_ids;
     const auto* dialog = overlays_.activeDialog();
     std::string next_scope = dialog ? std::to_string(dialog->id()) : std::string{};
     if (!dialog && reconciler_.root())
@@ -223,6 +240,7 @@ void Application::syncFocusTargets()
 
     const auto visit = [&](const auto& self, RenderNode& node, const std::string& scope) -> void {
         if (!node.tabPanelActive()) return;
+        const auto focus_count_before = component_focus_ids_.size();
         if (node.type() == Component::Type::Dialog)
         {
             if (!node.dialog_open()) return;
@@ -317,6 +335,13 @@ void Application::syncFocusTargets()
             focus_.add(id,[&node](const Event& event) { return node.handleSplitKey(event); },scope);
             component_focus_ids_.push_back(id);
         }
+        if (component_focus_ids_.size() != focus_count_before && !node.publicId().empty())
+        {
+            const auto identity = scope + '\0' + node.publicId();
+            if (!used_public_ids.insert(identity).second)
+                throw std::invalid_argument("duplicate focus id in the same scope: " + node.publicId());
+            component_public_focus_ids_.emplace(component_focus_ids_.back(),node.publicId());
+        }
         for (const auto& child : node.children()) self(self,*child,scope);
     };
     if (auto* root = reconciler_.root()) visit(visit,*root,{});
@@ -325,7 +350,15 @@ void Application::syncFocusTargets()
             focus_.remove(id);
     focus_.reorder(component_focus_ids_);
     focus_.setActiveScope(next_scope);
-    if (previous_scope == next_scope && !previous_focus.empty()) focus_.focus(previous_focus);
+    if (previous_scope == next_scope && !previous_focus.empty())
+    {
+        // Keep the public focus identity even when the reconciler creates a new
+        // runtime node (e.g. after changing its key). Anonymous nodes retain
+        // the existing runtime-id behavior.
+        if (!focus_.focus(previous_focus) && !previous_public_id.empty())
+            for (const auto& [runtime_id, public_id] : component_public_focus_ids_)
+                if (public_id == previous_public_id && focus_.focus(runtime_id)) break;
+    }
     if (previous_scope == next_scope && previous_focus.empty() && previous_targets) focus_.blur();
     if (previous_scope != next_scope)
     {

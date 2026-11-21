@@ -35,8 +35,8 @@ header-only definitions. CMake automatically includes the new files.
 - `.default_value` / `.default_checked` seed an uncontrolled input, with local
   edits retained by the reconciler while `key` is stable.
 - The `FormState` behind a `Form` controls its nested inputs and supports reset.
-- `key` is still used for reconciliation identity and focus lookup (#139e will
-  separate the two responsibilities).
+- `key` is only used for reconciliation identity; `.id` is used for public focus
+  and shortcut targeting (see #139e).
 
 ## Selection
 
@@ -80,3 +80,8 @@ Removed duplicate fields include `Table/Tabs/TreeView::value/on_change`,
    external consumers depending on them; migrate all examples/tests together.
 6. Keep sources under `src/` free of public `#include` cycles. Forward-declare
    only when the required type is complete where used.
+
+## Component identity and focus (#139e)
+
+`key` is exclusively a reconciliation key. `id` is the public focus/shortcut identity.
+See [component-identity-focus.md](component-identity-focus.md) for contracts and migration.

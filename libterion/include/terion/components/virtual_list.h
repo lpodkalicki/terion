@@ -31,6 +31,7 @@ public:
         std::function<void(int)> on_activate = {};
         std::function<void(int,int)> on_click_position = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         bool disabled = false;
         bool show_scrollbar = true;
@@ -39,7 +40,7 @@ public:
     }; /* End of struct Props */
 
     explicit VirtualList(Props props) :
-        Component({.type = Type::VirtualList,.key = std::move(props.key),
+        Component({.type = Type::VirtualList,.key = std::move(props.key),.id = std::move(props.id),
             .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
             .on_event = std::move(props.on_event),.disabled = props.disabled,
             .scrollbar_visible = props.show_scrollbar,

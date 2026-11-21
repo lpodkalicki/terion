@@ -18,11 +18,12 @@ public:
         Component child;
         std::string text;
         std::string key = {};
+        std::string id = {};
         bool disabled = false;
     }; /* End of struct Props */
 
     explicit Tooltip(Props props) :
-        Component({.type = Type::Tooltip,.key = std::move(props.key),
+        Component({.type = Type::Tooltip,.key = std::move(props.key),.id = std::move(props.id),
             .text = std::move(props.text),.children = {std::move(props.child)},
             .disabled = props.disabled})
     {}

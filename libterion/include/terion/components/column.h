@@ -16,13 +16,14 @@ public:
     {
         std::vector<Component> children = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         std::function<void(ComponentEvent&)> on_event_capture = {};
         std::function<void(ComponentEvent&)> on_event = {};
     }; /* End of struct Props */
 
     explicit Column(Props props) :
-        Component({.type = Type::Column,.key = std::move(props.key),
+        Component({.type = Type::Column,.key = std::move(props.key),.id = std::move(props.id),
             .children = std::move(props.children),.layout = props.layout,
             .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event)})
     {}

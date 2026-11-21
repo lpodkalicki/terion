@@ -19,10 +19,11 @@ public:
         Component child = Component::column({});
         std::function<Component(const std::string&)> fallback = {};
         std::string key = {};
+        std::string id = {};
     };
 
     explicit ErrorBoundary(Props props) :
-        Component({.type = Type::ErrorBoundary,.key = std::move(props.key),
+        Component({.type = Type::ErrorBoundary,.key = std::move(props.key),.id = std::move(props.id),
             .children = {std::move(props.child)},.error_fallback = std::move(props.fallback)})
     {
         if (!this->props().error_fallback)

@@ -16,6 +16,7 @@ public:
     {
         std::vector<Component> children = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         int columns = 2;
         int min_column_width = 0; // 0: fixed; >0: collapse columns on narrow screens.
@@ -28,7 +29,7 @@ private:
     {
         if (props.min_column_width > 0)
             props.layout.grid_min_column_width = props.min_column_width;
-        return Component({.type = Component::Type::Grid,.key = std::move(props.key),
+        return Component({.type = Component::Type::Grid,.key = std::move(props.key),.id = std::move(props.id),
             .children = std::move(props.children),.layout = props.layout,
             .columns = props.columns});
     }

@@ -127,7 +127,7 @@ TEST(FormAdvanced, ControllerSupportsProgrammaticValidationAndReset)
                     return std::get<std::string>(v) == values.get<std::string>("title") ?
                         std::nullopt : std::optional<std::string>("Mismatch");
                 }})
-        },.key = "form",.validation_mode = FormValidationMode::OnBlur,
+        },.key = "form",.id = "form",.validation_mode = FormValidationMode::OnBlur,
             .controller = controller});
     };
     EXPECT_FALSE(controller->ready());

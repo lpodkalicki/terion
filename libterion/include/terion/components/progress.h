@@ -16,6 +16,7 @@ public:
     {
         double value = 0.0;
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {.width = 20};
         TextStyle style = {};
         ProgressVariant variant = ProgressVariant::Blocks;
@@ -25,7 +26,7 @@ public:
         std::optional<TextStyleSpec> style_spec = std::nullopt;
     }; /* End of struct Props */
 
-    explicit Progress(Props props) : Component({.type = Type::Progress,.key = std::move(props.key),
+    explicit Progress(Props props) : Component({.type = Type::Progress,.key = std::move(props.key),.id = std::move(props.id),
         .layout = props.layout,.text_style = props.style,.color_variant = props.color,.value = props.value,
         .progress_variant = props.variant,.progress_indeterminate = props.indeterminate,
         .progress_show_percentage = props.show_percentage,

@@ -21,6 +21,7 @@ public:
         double max = 100.0;
         double step = 1.0;
         std::string key = {};
+        std::string id = {};
         bool disabled = false;
         bool show_value = true;
         ColorVariant color = ColorVariant::Primary;
@@ -28,7 +29,7 @@ public:
         LayoutStyle layout = {.width = 25};
     }; /* End of struct Props */
 
-    explicit Slider(Props props) : Component({.type = Type::Slider,.key = std::move(props.key),
+    explicit Slider(Props props) : Component({.type = Type::Slider,.key = std::move(props.key),.id = std::move(props.id),
         .layout = props.layout,.color_variant = props.color,.disabled = props.disabled,.value = props.value,
         .slider_min = props.min,.slider_max = props.max,.slider_step = props.step,
         .slider_show_value = props.show_value,.slider_on_change = std::move(props.on_change)})

@@ -23,6 +23,7 @@ public:
         Component control = Component::text("");
         std::function<std::optional<std::string>(const FormValue&,const FormValues&)> validator = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
     }; /* End of struct Props */
 
@@ -32,7 +33,7 @@ private:
     static Component create(Props props)
     {
         if (props.name.empty()) throw std::invalid_argument("FormField requires a nonempty name");
-        return Component({.type = Type::FormFieldMarker,.key = std::move(props.key),
+        return Component({.type = Type::FormFieldMarker,.key = std::move(props.key),.id = std::move(props.id),
             .children = {std::move(props.control)},.layout = props.layout,
             .form_field_name = std::move(props.name),
             .form_field_label = std::move(props.label),

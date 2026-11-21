@@ -35,6 +35,7 @@ public:
         std::string diff = {};
         bool show_line_numbers = true;
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         bool disabled = false;
         bool show_scrollbar = true;

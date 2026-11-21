@@ -594,7 +594,7 @@ Component MarkdownView::create(Props props)
             },.on_click_position = [state,callback = std::move(props.on_source_line_click)](int, int index) {
                 if (callback && index >= 0 && static_cast<std::size_t>(index) < state->rendered.origins.size())
                     callback(state->rendered.origins[static_cast<std::size_t>(index)]);
-            },.key = std::move(props.key),.layout = props.layout,
+            },.key = std::move(props.key),.id = std::move(props.id),.layout = props.layout,
             .disabled = props.disabled,.show_scrollbar = props.show_scrollbar});
     }
 

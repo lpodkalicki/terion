@@ -18,6 +18,7 @@ public:
         std::string value = {};
         std::optional<std::string> default_value = std::nullopt;
         std::string key = {};
+        std::string id = {};
         bool disabled = false;
         ColorVariant color = ColorVariant::Primary;
         std::function<void(std::string)> on_change = {};
@@ -27,7 +28,7 @@ public:
     }; /* End of struct Props */
 
     explicit RadioGroup(Props props) :
-        Component({.type = Type::RadioGroup,.key = std::move(props.key),.text = props.default_value.value_or(props.value),
+        Component({.type = Type::RadioGroup,.key = std::move(props.key),.id = std::move(props.id),.text = props.default_value.value_or(props.value),
             .layout = props.layout,.color_variant = props.color,
             .on_event_capture = std::move(props.on_event_capture),
             .on_event = std::move(props.on_event),.on_change = props.on_change ? std::move(props.on_change) :

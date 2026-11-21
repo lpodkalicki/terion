@@ -35,6 +35,7 @@ public:
         std::vector<std::string> expanded = {};
         bool multiple = false;
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {.gap = 0};
         std::function<void(std::vector<std::string>)> on_change = {};
         // Keep content reconciled, but outside layout, painting, hit-testing and focus.
@@ -90,7 +91,7 @@ private:
                     .layout={.padding=1,.gap=1}}));
             sections.emplace_back(Column({.children=std::move(section),.key="section-"+item.id}));
         }
-        return Column({.children=std::move(sections),.key=std::move(props.key),.layout=props.layout});
+        return Column({.children=std::move(sections),.key=std::move(props.key),.id = std::move(props.id),.layout=props.layout});
     }
 }; /* End of class Accordion */
 

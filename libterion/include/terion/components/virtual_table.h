@@ -46,6 +46,7 @@ public:
         int horizontal_offset = 0;
         std::function<void(int)> on_horizontal_scroll = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         bool disabled = false;
         bool show_scrollbar = true;
@@ -203,11 +204,11 @@ private:
             .selected_index = selected_index,
             .item_is_selected = selected_key.empty() ? std::function<bool(int)>{} : selected_by_key,
             .on_selection_change = select_row,
-            .key = "rows",
+            .key = "rows",.id = props.id,
             .layout = {.width = table_width,.height = std::max(0,requested_height-1)},
             .disabled = disabled,
             .show_scrollbar = show_scrollbar}));
-        return Column({.children = std::move(children),.key = std::move(props.key),
+        return Column({.children = std::move(children),.key = std::move(props.key),.id = std::move(props.id),
             .layout = {.width = table_width,.height = std::max(1,requested_height),.clip = true}});
     }
 }; /* End of class VirtualTable */

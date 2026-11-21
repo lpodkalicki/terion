@@ -22,14 +22,15 @@ public:
     {
         std::vector<Component> children = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         StackDirection direction = StackDirection::Vertical;
     }; /* End of struct Props */
 
     explicit Stack(Props props) :
         Component(props.direction == StackDirection::Vertical ?
-            Component::column(std::move(props.children),std::move(props.key),props.layout) :
-            Component::row(std::move(props.children),std::move(props.key),props.layout))
+            Component::column(std::move(props.children),props.key,props.layout).identified(props.id) :
+            Component::row(std::move(props.children),props.key,props.layout).identified(props.id))
     {}
 }; /* End of class Stack */
 

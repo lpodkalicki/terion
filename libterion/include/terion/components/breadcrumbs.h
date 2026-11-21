@@ -35,6 +35,7 @@ public:
         std::vector<Item> items = {};
         std::string separator = " / ";
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {.gap = 0};
         std::function<void(std::string)> on_navigate = {};
         // 0: show all; >= 3: first item, overflow menu, last N items.
@@ -68,7 +69,7 @@ private:
         std::vector<Component> entries;
         const std::size_t count=props.items.size();
         entries.reserve(count*2);
-        if (count == 0) return Row({.key=std::move(props.key),.layout=props.layout});
+        if (count == 0) return Row({.key=std::move(props.key),.id = std::move(props.id),.layout=props.layout});
         const bool collapsed=props.max_visible_items >= 3 && count > props.max_visible_items;
         const std::size_t trailing=collapsed ? props.max_visible_items-2 : 0;
         const std::size_t hidden_end=collapsed ? count-trailing : 1;
@@ -110,7 +111,7 @@ private:
                 .size=ControlSize::Compact}));
             for (std::size_t i=hidden_end; i<count; ++i) add_item(i);
         }
-        return Row({.children=std::move(entries),.key=std::move(props.key),.layout=props.layout});
+        return Row({.children=std::move(entries),.key=std::move(props.key),.id = std::move(props.id),.layout=props.layout});
     }
 }; /* End of class Breadcrumbs */
 

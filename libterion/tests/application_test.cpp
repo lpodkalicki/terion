@@ -83,10 +83,10 @@ TEST(Application, DispatchesFocusAndMouseActionsToButtons)
     app.render([&] {
         return Column({.children = {
             Typography({.text = "Actions",.variant = TypographyVariant::H2}),
-            Button({.text = "First",.key = "first",.on_click = [&] { ++clicks; },.size = ControlSize::Compact}),
-            Button({.text = "Disabled",.key = "disabled",.disabled = true,.on_click = [&] { clicks += 100; },
+            Button({.text = "First",.key = "first",.id = "first",.on_click = [&] { ++clicks; },.size = ControlSize::Compact}),
+            Button({.text = "Disabled",.key = "disabled",.id = "disabled",.disabled = true,.on_click = [&] { clicks += 100; },
                 .size = ControlSize::Compact}),
-            Button({.text = "Second",.key = "second",.on_click = [&] { clicks += 10; },.size = ControlSize::Compact})
+            Button({.text = "Second",.key = "second",.id = "second",.on_click = [&] { clicks += 10; },.size = ControlSize::Compact})
         }});
     });
     app.renderOnce();
@@ -131,9 +131,9 @@ TEST(Application, EditsUtf8TextAndMovesFocus)
     State<std::string> input{std::string{}};
     app.render([&] {
         return Column({.children = {
-            TextField({.value = input.get(),.placeholder = "Name",.key = "name",
+            TextField({.value = input.get(),.placeholder = "Name",.key = "name",.id = "name",
                 .on_change = [&](std::string value) { input.set(std::move(value)); },.size = ControlSize::Compact}),
-            Button({.text = "OK",.key = "ok",.on_click = [&] { ++clicks; },.size = ControlSize::Compact})
+            Button({.text = "OK",.key = "ok",.id = "ok",.on_click = [&] { ++clicks; },.size = ControlSize::Compact})
         }});
     });
     app.renderOnce();
@@ -214,15 +214,15 @@ TEST(Application, DispatchesCustomEventsAndStopsHeadlessLoop)
     EXPECT_EQ(app.run(),0);
 }
 
-TEST(Application, FocusesKeyedComponentsAndRecoversWhenControlIsDisabled)
+TEST(Application, FocusesIdentifiedComponentsAndRecoversWhenControlIsDisabled)
 {
     Application app(std::make_unique<HeadlessTerminalBackend>(Size{40,10}));
     State<bool> available{true};
     app.render([&] {
         return Column({.children = {
-            Button({.text = "First",.key = "first",.on_click = [] {}}),
-            Button({.text = "Second",.key = "second",.disabled = !available.get(),.on_click = [] {}}),
-            Button({.text = "Third",.key = "third",.on_click = [] {}})
+            Button({.text = "First",.key = "first",.id = "first",.on_click = [] {}}),
+            Button({.text = "Second",.key = "second",.id = "second",.disabled = !available.get(),.on_click = [] {}}),
+            Button({.text = "Third",.key = "third",.id = "third",.on_click = [] {}})
         }});
     });
     app.renderOnce();
@@ -236,10 +236,10 @@ TEST(Application, FocusesKeyedComponentsAndRecoversWhenControlIsDisabled)
     app.renderOnce();
     EXPECT_FALSE(app.hasFocus("second"));
     EXPECT_FALSE(app.focus("second"));
-    EXPECT_FALSE(app.focused().empty());
+    EXPECT_FALSE(!app.hasFocusedControl());
 
     app.blur();
-    EXPECT_TRUE(app.focused().empty());
+    EXPECT_TRUE(!app.hasFocusedControl());
     EXPECT_TRUE(app.dispatchEvent(Event{.key = Key::BackTab}));
     EXPECT_TRUE(app.hasFocus("third"));
     EXPECT_TRUE(app.focus("first"));
@@ -273,7 +273,7 @@ TEST(Application, TerminalResizeRebuildsResponsiveLayoutAndKeepsKeyedFocus)
         const auto screen = app.backend().size();
         return Column({.children = {
             Typography({.text = screen.width < 76 ? "Compact" : "Wide"}),
-            Button({.text = "Action",.key = "action",.on_click = [&] { ++activations; }}),
+            Button({.text = "Action",.key = "action",.id = "action",.on_click = [&] { ++activations; }}),
             Typography({.text = "Footer"})
         },.layout = {.width = screen.width,.height = screen.height}});
     });

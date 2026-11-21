@@ -25,6 +25,7 @@ public:
     {
         std::vector<double> values = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {.width = 32,.height = 1};
         ColorVariant color = ColorVariant::Primary;
         Variant variant = Variant::Blocks;
@@ -95,7 +96,7 @@ private:
             .on_width_change = [values,row,variant = props.variant](int columns,int offset) {
                 *row = render(*values,columns,variant);
                 return std::pair<int,int>{1,offset};
-            },.key = std::move(props.key),.layout = props.layout,
+            },.key = std::move(props.key),.id = std::move(props.id),.layout = props.layout,
             .show_scrollbar = props.show_scrollbar});
     }
 }; /* End of class Sparkline */

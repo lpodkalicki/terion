@@ -27,6 +27,7 @@ public:
     [[nodiscard]] std::uint64_t id() const noexcept { return id_; }
     [[nodiscard]] Component::Type type() const noexcept { return type_; }
     [[nodiscard]] const std::string& key() const noexcept { return key_; }
+    [[nodiscard]] const std::string& publicId() const noexcept { return public_id_; }
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
     [[nodiscard]] bool checked() const noexcept { return checked_; }
     [[nodiscard]] const Theme& resolvedTheme(const Theme& fallback) const noexcept
@@ -186,6 +187,7 @@ private:
     std::uint64_t id_;
     Component::Type type_;
     std::string key_;
+    std::string public_id_;
     bool layout_dirty_ = true;
     bool paint_dirty_ = true;
     Theme layout_theme_ = Theme::dark();

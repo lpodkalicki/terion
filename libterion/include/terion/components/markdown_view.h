@@ -25,6 +25,7 @@ public:
     {
         std::string markdown = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         bool disabled = false;
         bool show_scrollbar = true;

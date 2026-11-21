@@ -22,6 +22,7 @@ public:
     {
         std::vector<Component> children = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {.padding = 1};
         PaperVariant variant = PaperVariant::Filled;
         std::optional<BorderStyle> border = std::nullopt;
@@ -29,7 +30,7 @@ public:
     }; /* End of struct Props */
 
     explicit Paper(Props props) :
-        Component({.type = Type::Box,.key = std::move(props.key),
+        Component({.type = Type::Box,.key = std::move(props.key),.id = std::move(props.id),
             .children = std::move(props.children),.layout = props.layout,
             .border = props.border ? props.border :
                 (props.variant == PaperVariant::Outlined ? std::optional<BorderStyle>{BorderStyle::Single} : std::nullopt),

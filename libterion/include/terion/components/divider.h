@@ -15,12 +15,13 @@ public:
     struct Props
     {
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         TextStyle style = {};
         std::optional<TextStyleSpec> style_spec = std::nullopt;
     }; /* End of struct Props */
 
-    explicit Divider(Props props) : Component({.type = Type::Divider,.key = std::move(props.key),
+    explicit Divider(Props props) : Component({.type = Type::Divider,.key = std::move(props.key),.id = std::move(props.id),
         .layout = props.layout,.text_style = props.style,
         .text_style_spec = std::move(props.style_spec)})
     {}

@@ -217,6 +217,7 @@ public:
         bool show_timestamp = true;
         bool show_level = true;
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {};
         bool disabled = false;
         bool show_scrollbar = true;
@@ -302,7 +303,7 @@ private:
                     static_cast<std::size_t>(index) < indices->size())
                     on_activate_sequence(buffer->at((*indices)[static_cast<std::size_t>(index)]).sequence);
             },
-            .key = std::move(props.key),.layout = props.layout,.disabled = props.disabled,
+            .key = std::move(props.key),.id = std::move(props.id),.layout = props.layout,.disabled = props.disabled,
             .show_scrollbar = props.show_scrollbar});
     }
 }; /* End of class LogView */

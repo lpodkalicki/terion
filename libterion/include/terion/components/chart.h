@@ -55,6 +55,7 @@ public:
         double y_max = 1;
         std::function<void(std::size_t)> on_point_click = {};
         std::string key = {};
+        std::string id = {};
         LayoutStyle layout = {.width = 48,.height = 12};
         ColorVariant color = ColorVariant::Primary;
         Variant variant = Variant::Line;
