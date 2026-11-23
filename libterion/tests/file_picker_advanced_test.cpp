@@ -136,9 +136,9 @@ TEST(FilePickerAdvanced, BreadcrumbsNavigateToParent)
     for (const auto& component : crumbs.children)
     {
         const auto& props = component.props();
-        if (props.text == temporary.path().filename().string() && props.on_click)
+        if (props.textData().text == temporary.path().filename().string() && props.actionData().on_click)
         {
-            props.on_click();
+            props.actionData().on_click();
             found_parent = true;
             break;
         }
@@ -158,8 +158,8 @@ TEST(FilePickerAdvanced, EditablePathNavigatesRelativeDirectory)
     const auto& row = picker.props().children[1].props();
     ASSERT_EQ(row.type,Component::Type::Row);
     ASSERT_EQ(row.children.size(),2U);
-    ASSERT_TRUE(row.children[1].props().on_click);
-    row.children[1].props().on_click();
+    ASSERT_TRUE(row.children[1].props().actionData().on_click);
+    row.children[1].props().actionData().on_click();
     EXPECT_EQ(destination,temporary.path() / "sub");
 }
 
@@ -181,7 +181,7 @@ TEST(FilePickerAdvanced, SaveModePreventsTraversalAndAccidentalOverwrite)
             confirmed = std::move(value);
         },.filename = "new.md"});
     ASSERT_FALSE(confirmButton(new_file).disabled);
-    confirmButton(new_file).on_click();
+    confirmButton(new_file).actionData().on_click();
     EXPECT_EQ(confirmed,temporary.path() / "new.md");
     EXPECT_FALSE(std::filesystem::exists(confirmed)); // picker does NOT write
 
@@ -190,7 +190,7 @@ TEST(FilePickerAdvanced, SaveModePreventsTraversalAndAccidentalOverwrite)
             confirmed = std::move(value);
         },.filename = "existing.md",.allow_overwrite = true});
     ASSERT_FALSE(confirmButton(overwrite).disabled);
-    confirmButton(overwrite).on_click();
+    confirmButton(overwrite).actionData().on_click();
     EXPECT_EQ(confirmed,temporary.path() / "existing.md");
 }
 
@@ -204,7 +204,7 @@ TEST(FilePickerAdvanced, SelectingExistingFileSetsSaveName)
             filename = std::move(value);
         }});
     const auto& list = picker.props().children[4].props();
-    ASSERT_EQ(list.virtual_item_count,1);
-    list.virtual_on_select(0);
+    ASSERT_EQ(list.virtualListData().virtual_item_count,1);
+    list.virtualListData().virtual_on_select(0);
     EXPECT_EQ(filename,"existing.md");
 }

@@ -40,21 +40,8 @@ public:
     }; /* End of struct Props */
 
     explicit VirtualList(Props props) :
-        Component({.type = Type::VirtualList,.key = std::move(props.key),.id = std::move(props.id),
-            .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
-            .on_event = std::move(props.on_event),.disabled = props.disabled,
-            .scrollbar_visible = props.show_scrollbar,
-            .virtual_item_count = std::max(0,props.item_count),
-            .virtual_item_text = std::move(props.item_text),
-            .virtual_item_styled = std::move(props.item_styled),
-            .virtual_on_width_change = std::move(props.on_width_change),
-            .virtual_selected_index = props.selected_index,
-            .virtual_item_is_selected = std::move(props.item_is_selected),
-            .virtual_row_height = std::max(1,props.row_height),
-            .virtual_follow_tail = props.follow_tail,
-            .virtual_on_select = std::move(props.on_selection_change),
-            .virtual_on_activate = std::move(props.on_activate),
-            .virtual_on_click_position = std::move(props.on_click_position)})
+        Component({.type = Type::VirtualList, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .scroll = Component::ScrollData{.scrollbar_visible = props.show_scrollbar},
+            .virtual_list = Component::VirtualListData{.virtual_item_count = std::max(0,props.item_count), .virtual_item_text = std::move(props.item_text), .virtual_item_styled = std::move(props.item_styled), .virtual_on_width_change = std::move(props.on_width_change), .virtual_selected_index = props.selected_index, .virtual_item_is_selected = std::move(props.item_is_selected), .virtual_row_height = std::max(1,props.row_height), .virtual_follow_tail = props.follow_tail, .virtual_on_select = std::move(props.on_selection_change), .virtual_on_activate = std::move(props.on_activate), .virtual_on_click_position = std::move(props.on_click_position)}})
     {}
 }; /* End of class VirtualList */
 

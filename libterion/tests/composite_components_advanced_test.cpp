@@ -31,10 +31,10 @@ TEST(StepperAdvanced, ExplicitStatusesAndVerticalOrientation)
     const auto& root=component.props();
     EXPECT_EQ(root.type,Component::Type::Column);
     ASSERT_EQ(root.children.size(),5u);
-    EXPECT_EQ(root.children[0].props().color_variant,ColorVariant::Success);
-    EXPECT_EQ(root.children[2].props().color_variant,ColorVariant::Error);
-    EXPECT_EQ(root.children[4].props().color_variant,ColorVariant::Warning);
-    EXPECT_NE(root.children[2].props().text.find("Invalid configuration"),std::string::npos);
+    EXPECT_EQ(root.children[0].props().textData().color_variant,ColorVariant::Success);
+    EXPECT_EQ(root.children[2].props().textData().color_variant,ColorVariant::Error);
+    EXPECT_EQ(root.children[4].props().textData().color_variant,ColorVariant::Warning);
+    EXPECT_NE(root.children[2].props().textData().text.find("Invalid configuration"),std::string::npos);
 }
 
 TEST(StepperAdvanced, ValidationPreventsNavigationWithoutDisablingBackwardSteps)
@@ -49,10 +49,10 @@ TEST(StepperAdvanced, ValidationPreventsNavigationWithoutDisablingBackwardSteps)
         }});
     const auto& buttons=stepper.props().children;
     ASSERT_EQ(buttons.size(),5u);
-    ASSERT_TRUE(static_cast<bool>(buttons[4].props().on_click));
-    buttons[4].props().on_click();
+    ASSERT_TRUE(static_cast<bool>(buttons[4].props().actionData().on_click));
+    buttons[4].props().actionData().on_click();
     EXPECT_EQ(selected,99u);
-    buttons[0].props().on_click();
+    buttons[0].props().actionData().on_click();
     EXPECT_EQ(selected,0u);
     EXPECT_EQ(validation_calls,2);
     EXPECT_TRUE(buttons[2].props().disabled);
@@ -117,14 +117,14 @@ TEST(BreadcrumbsAdvanced, CollapsesHiddenItemsIntoNavigableMenu)
     ASSERT_EQ(children.size(),7u);
     EXPECT_EQ(children[2].props().type,Component::Type::DropdownMenu);
     const auto& menu=children[2].props();
-    ASSERT_EQ(menu.select_options.size(),3u);
-    EXPECT_EQ(menu.select_options[0].label,"Workspace");
-    EXPECT_TRUE(menu.select_options[1].disabled);
-    ASSERT_TRUE(static_cast<bool>(menu.on_change));
-    menu.on_change("/w");
+    ASSERT_EQ(menu.choiceData().select_options.size(),3u);
+    EXPECT_EQ(menu.choiceData().select_options[0].label,"Workspace");
+    EXPECT_TRUE(menu.choiceData().select_options[1].disabled);
+    ASSERT_TRUE(static_cast<bool>(menu.actionData().on_change));
+    menu.actionData().on_change("/w");
     EXPECT_EQ(selected,"/w");
-    EXPECT_EQ(children[4].props().text,"Components");
-    EXPECT_EQ(children[6].props().text,"Stepper");
+    EXPECT_EQ(children[4].props().textData().text,"Components");
+    EXPECT_EQ(children[6].props().textData().text,"Stepper");
 }
 
 TEST(BreadcrumbsAdvanced, GraphemeAwareAbbreviationPreservesEmoji)

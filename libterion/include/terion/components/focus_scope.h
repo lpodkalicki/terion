@@ -24,10 +24,7 @@ public:
     }; /* End of struct Props */
 
     explicit FocusScope(Props props) :
-        Component({.type = Type::FocusScope,.key = std::move(props.key),.id = std::move(props.id),
-            .children = std::move(props.children),.layout = props.layout,
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .focus_scope_active = props.active})
+        Component({.type = Type::FocusScope, .key = std::move(props.key), .id = std::move(props.id), .children = std::move(props.children), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .overlay = Component::OverlayData{.focus_scope_active = props.active}})
     {}
 }; /* End of class FocusScope */
 

@@ -29,13 +29,12 @@ public:
     }; /* End of struct Props */
 
     explicit Select(Props props) :
-        Component({.type = Type::Select,.key = std::move(props.key),.id = std::move(props.id),.text = props.default_value.value_or(props.value),
-            .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
-            .on_event = std::move(props.on_event),.on_change = props.on_change ? std::move(props.on_change) :
+        Component({.type = Type::Select, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .text = Component::TextData{.text = props.default_value.value_or(props.value), .placeholder = std::move(props.placeholder)},
+            .input = Component::InputData{.control_size = props.size, .form_default_value = props.default_value.value_or(props.value), .uncontrolled_value = props.default_value.has_value()},
+            .action = Component::ActionData{.on_change = props.on_change ? std::move(props.on_change) :
                 (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
-                 std::function<void(std::string)>{}),
-            .placeholder = std::move(props.placeholder),.disabled = props.disabled,
-            .control_size = props.size,.select_options = std::move(props.options),.form_default_value = props.default_value.value_or(props.value),.uncontrolled_value = props.default_value.has_value()})
+                 std::function<void(std::string)>{})},
+            .choice = Component::ChoiceData{.select_options = std::move(props.options)}})
     {}
 }; /* End of class Select */
 

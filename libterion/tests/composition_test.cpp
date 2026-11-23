@@ -52,6 +52,6 @@ TEST(ComponentComposition, ComposesChildrenAndCallbacks)
         .on_click = [&] { invoked = true; }});
     ASSERT_EQ(panel.props().children.size(),2u);
     EXPECT_EQ(panel.props().children[0].props().key,"body");
-    panel.props().children[1].props().on_click();
+    panel.props().children[1].props().actionData().on_click();
     EXPECT_TRUE(invoked);
 }

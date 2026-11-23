@@ -8,20 +8,20 @@ using namespace terion;
 
 Component Component::text(std::string value, std::string key)
 {
-    return Component({.type = Type::Text,.key = std::move(key),.text = std::move(value),.children = {},.layout = {}});
+    return Component({.type = Type::Text, .key = std::move(key), .children = {}, .layout = {}, .text = Component::TextData{.text = std::move(value)}});
 }
 
 Component Component::column(std::vector<Component> children, std::string key, const LayoutStyle layout)
 {
-    return Component({.type = Type::Column,.key = std::move(key),.text = {},.children = std::move(children),.layout = layout});
+    return Component({.type = Type::Column, .key = std::move(key), .children = std::move(children), .layout = layout, .text = Component::TextData{.text = {}}});
 }
 
 Component Component::row(std::vector<Component> children, std::string key, const LayoutStyle layout)
 {
-    return Component({.type = Type::Row,.key = std::move(key),.text = {},.children = std::move(children),.layout = layout});
+    return Component({.type = Type::Row, .key = std::move(key), .children = std::move(children), .layout = layout, .text = Component::TextData{.text = {}}});
 }
 
 Component Component::box(std::vector<Component> children, const LayoutStyle layout, std::string key)
 {
-    return Component({.type = Type::Box,.key = std::move(key),.text = {},.children = std::move(children),.layout = layout});
+    return Component({.type = Type::Box, .key = std::move(key), .children = std::move(children), .layout = layout, .text = Component::TextData{.text = {}}});
 }

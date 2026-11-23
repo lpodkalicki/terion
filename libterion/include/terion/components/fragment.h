@@ -20,8 +20,7 @@ public:
     };
 
     explicit Fragment(Props props) :
-        Component({.type = Type::Fragment,.key = std::move(props.key),.id = std::move(props.id),
-            .children = std::move(props.children)})
+        Component({.type = Type::Fragment, .key = std::move(props.key), .id = std::move(props.id), .children = std::move(props.children)})
     {}
 };
 

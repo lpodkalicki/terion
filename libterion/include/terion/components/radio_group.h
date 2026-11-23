@@ -28,13 +28,12 @@ public:
     }; /* End of struct Props */
 
     explicit RadioGroup(Props props) :
-        Component({.type = Type::RadioGroup,.key = std::move(props.key),.id = std::move(props.id),.text = props.default_value.value_or(props.value),
-            .layout = props.layout,.color_variant = props.color,
-            .on_event_capture = std::move(props.on_event_capture),
-            .on_event = std::move(props.on_event),.on_change = props.on_change ? std::move(props.on_change) :
+        Component({.type = Type::RadioGroup, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .text = Component::TextData{.text = props.default_value.value_or(props.value), .color_variant = props.color},
+            .input = Component::InputData{.form_default_value = props.default_value.value_or(props.value), .uncontrolled_value = props.default_value.has_value()},
+            .action = Component::ActionData{.on_change = props.on_change ? std::move(props.on_change) :
                 (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
-                 std::function<void(std::string)>{}),
-            .disabled = props.disabled,.radio_options = std::move(props.options),.form_default_value = props.default_value.value_or(props.value),.uncontrolled_value = props.default_value.has_value()})
+                 std::function<void(std::string)>{})},
+            .choice = Component::ChoiceData{.radio_options = std::move(props.options)}})
     {}
 }; /* End of class RadioGroup */
 

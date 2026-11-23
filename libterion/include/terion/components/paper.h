@@ -30,11 +30,8 @@ public:
     }; /* End of struct Props */
 
     explicit Paper(Props props) :
-        Component({.type = Type::Box,.key = std::move(props.key),.id = std::move(props.id),
-            .children = std::move(props.children),.layout = props.layout,
-            .border = props.border ? props.border :
-                (props.variant == PaperVariant::Outlined ? std::optional<BorderStyle>{BorderStyle::Single} : std::nullopt),
-            .background = props.background,.surface_tone = SurfaceTone::Surface})
+        Component({.type = Type::Box, .key = std::move(props.key), .id = std::move(props.id), .children = std::move(props.children), .layout = props.layout, .surface = Component::SurfaceData{.border = props.border ? props.border :
+                (props.variant == PaperVariant::Outlined ? std::optional<BorderStyle>{BorderStyle::Single} : std::nullopt), .background = props.background, .surface_tone = SurfaceTone::Surface}})
     {}
 }; /* End of class Paper */
 

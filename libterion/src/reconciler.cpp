@@ -26,7 +26,7 @@ void validateKeys(const Component& component)
                 self(self,item.children);
             }
         };
-        check(check,component.props().tree_items);
+        check(check,component.props().treeData().tree_items);
     }
     std::unordered_set<std::string> keys;
     for (const auto& child : component.props().children)
@@ -99,8 +99,8 @@ void Reconciler::preflightTables(const Component& component, TableCounts& counts
     if (props.type == Component::Type::Table)
     {
         int visible = 0;
-        for (const auto& row : props.table_rows)
-            if (!props.table_filter || props.table_filter(row)) ++visible;
+        for (const auto& row : props.tableData().table_rows)
+            if (!props.tableData().table_filter || props.tableData().table_filter(row)) ++visible;
         counts.emplace(&component,visible);
     }
     for (const auto& child : props.children) preflightTables(child,counts);
@@ -147,7 +147,7 @@ Component Reconciler::expand(const Component& component, const std::string& path
     }
     if (props.type == Component::Type::ErrorBoundary)
     {
-        if (!props.error_fallback || props.children.size() != 1)
+        if (!props.renderFunctionData().error_fallback || props.children.size() != 1)
             throw std::invalid_argument("invalid error boundary");
 
         // Keep the failed branch isolated, including hook identity replacements.
@@ -194,7 +194,7 @@ Component Reconciler::expand(const Component& component, const std::string& path
             for (auto& [name,record] : saved_hooks)
                 hooks_.emplace(std::move(name),std::move(record));
             // The fallback is expanded outside the handler; its own errors propagate.
-            result = expand(props.error_fallback(error.what()),path + "/error-boundary/fallback");
+            result = expand(props.renderFunctionData().error_fallback(error.what()),path + "/error-boundary/fallback");
         }
         if (props.key.empty()) return result;
         auto actual = result.props();
@@ -204,14 +204,14 @@ Component Reconciler::expand(const Component& component, const std::string& path
     }
     if (props.type == Component::Type::ContextProvider)
     {
-        if (!props.enter_context || !props.exit_context || props.children.size() != 1)
+        if (!props.renderFunctionData().enter_context || !props.renderFunctionData().exit_context || props.children.size() != 1)
             throw std::invalid_argument("invalid context provider");
-        props.enter_context();
+        props.renderFunctionData().enter_context();
         struct ContextExit
         {
             const std::function<void()>& callback;
             ~ContextExit() { callback(); }
-        } exit{props.exit_context};
+        } exit{props.renderFunctionData().exit_context};
         auto child = expand(props.children.front(),path + "/provider" +
             std::to_string(props.key.size()) + ":" + props.key);
         if (props.key.empty()) return child;
@@ -222,15 +222,15 @@ Component Reconciler::expand(const Component& component, const std::string& path
     }
     if (props.type == Component::Type::Function)
     {
-        if (!props.render_function || !props.function_identity)
+        if (!props.renderFunctionData().render_function || !props.renderFunctionData().function_identity)
             throw std::invalid_argument("invalid function component");
         auto& record = hooks_[path];
-        const bool same_identity = record.identity == props.function_identity;
+        const bool same_identity = record.identity == props.renderFunctionData().function_identity;
         auto staged_slots = same_identity ? record.slots : std::vector<std::any>{};
         detail::HookContext context{staged_slots};
         Component result = [&] {
             detail::HookScope scope(context);
-            return props.render_function();
+            return props.renderFunctionData().render_function();
         }();
         if (context.position != staged_slots.size() ||
             (same_identity && record.hook_count && context.position != *record.hook_count))
@@ -244,7 +244,7 @@ Component Reconciler::expand(const Component& component, const std::string& path
         {
             if (record.identity) retired_hooks_.emplace_back(path,std::move(record));
             record = {};
-            record.identity = props.function_identity;
+            record.identity = props.renderFunctionData().function_identity;
         }
         record.slots = std::move(staged_slots);
         record.hook_count = context.position;
@@ -285,15 +285,15 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         if (node) ++stats_.removed;
         ++stats_.created;
         node.reset(new RenderNode(next_id_++,props.type,props.key));
-        node->cursor_byte_ = props.text.size();
+        node->cursor_byte_ = props.textData().text.size();
         created = true;
     }
     else ++stats_.reused;
 
     // A default_value seeds a retained RenderNode only once. Reusing the same
     // key must not replace local edits/selection with the initializer again.
-    const bool keep_local_value = !created && node->uncontrolled_value_ && props.uncontrolled_value;
-    const std::string next_text = keep_local_value ? node->text_ : props.text;
+    const bool keep_local_value = !created && node->uncontrolled_value_ && props.inputData().uncontrolled_value;
+    const std::string next_text = keep_local_value ? node->text_ : props.textData().text;
     const bool message_changed = node->text_ != next_text;
     // Only the simple leaf and container types have a complete sizing dependency list.
     // For interactive widgets, conservatively recompute layout until their properties
@@ -304,22 +304,22 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         props.type == Component::Type::Divider || props.type == Component::Type::Progress ||
         props.type == Component::Type::Slider;
     bool layout_dirty = created || !predictable_layout || message_changed ||
-        node->style_ != props.layout || node->border_ != props.border ||
-        node->columns_ != std::max(1,props.columns) ||
-        node->progress_show_percentage_ != props.progress_show_percentage ||
-        node->slider_show_value_ != props.slider_show_value;
+        node->style_ != props.layout || node->border_ != props.surfaceData().border ||
+        node->columns_ != std::max(1,props.surfaceData().columns) ||
+        node->progress_show_percentage_ != props.progressData().progress_show_percentage ||
+        node->slider_show_value_ != props.sliderData().slider_show_value;
     // Paint depends on visible properties as well as geometry. Callbacks and
     // event handlers do not affect pixels; interactive widgets remain dirty
     // until their visual state has a complete comparison strategy.
     bool paint_dirty = layout_dirty || node->theme_override_ != props.theme_override ||
-        node->text_style_ != props.text_style || node->text_style_spec_ != props.text_style_spec ||
-        node->color_variant_ != props.color_variant ||
-        node->background_ != props.background || node->surface_tone_ != props.surface_tone ||
-        node->value_ != props.value || node->disabled_ != props.disabled ||
-        node->progress_variant_ != props.progress_variant ||
-        node->progress_indeterminate_ != props.progress_indeterminate ||
-        node->slider_min_ != props.slider_min || node->slider_max_ != props.slider_max ||
-        node->slider_step_ != props.slider_step;
+        node->text_style_ != props.textData().text_style || node->text_style_spec_ != props.textData().text_style_spec ||
+        node->color_variant_ != props.textData().color_variant ||
+        node->background_ != props.surfaceData().background || node->surface_tone_ != props.surfaceData().surface_tone ||
+        node->value_ != props.actionData().value || node->disabled_ != props.disabled ||
+        node->progress_variant_ != props.progressData().progress_variant ||
+        node->progress_indeterminate_ != props.progressData().progress_indeterminate ||
+        node->slider_min_ != props.sliderData().slider_min || node->slider_max_ != props.sliderData().slider_max ||
+        node->slider_step_ != props.sliderData().slider_step;
     if (message_changed && !created &&
         (props.type == Component::Type::TextArea || props.type == Component::Type::TextField ||
          props.type == Component::Type::NumberField || props.type == Component::Type::PasswordField))
@@ -329,98 +329,98 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         node->edit_kind_ = RenderNode::EditKind::None;
     }
     node->text_ = next_text;
-    node->uncontrolled_value_ = props.uncontrolled_value;
+    node->uncontrolled_value_ = props.inputData().uncontrolled_value;
     node->public_id_ = props.id;
     node->style_ = props.layout;
-    node->text_style_ = props.text_style;
-    node->text_style_spec_ = props.text_style_spec;
-    node->color_variant_ = props.color_variant;
+    node->text_style_ = props.textData().text_style;
+    node->text_style_spec_ = props.textData().text_style_spec;
+    node->color_variant_ = props.textData().color_variant;
     node->theme_override_ = props.theme_override;
-    node->border_ = props.border;
-    node->background_ = props.background;
-    node->button_variant_ = props.button_variant;
-    node->control_size_ = props.control_size;
-    node->checkbox_variant_ = props.checkbox_variant;
-    node->input_variant_ = props.input_variant;
-    node->password_reveal_ = props.password_reveal;
-    node->password_mask_ = props.password_mask;
-    node->number_min_ = props.number_min;
-    node->number_max_ = props.number_max;
-    node->number_step_ = props.number_step;
-    node->text_area_min_rows_ = std::max(1,props.text_area_min_rows);
-    if (node->text_area_soft_wrap_ != props.text_area_soft_wrap)
+    node->border_ = props.surfaceData().border;
+    node->background_ = props.surfaceData().background;
+    node->button_variant_ = props.actionData().button_variant;
+    node->control_size_ = props.inputData().control_size;
+    node->checkbox_variant_ = props.actionData().checkbox_variant;
+    node->input_variant_ = props.inputData().input_variant;
+    node->password_reveal_ = props.inputData().password_reveal;
+    node->password_mask_ = props.inputData().password_mask;
+    node->number_min_ = props.inputData().number_min;
+    node->number_max_ = props.inputData().number_max;
+    node->number_step_ = props.inputData().number_step;
+    node->text_area_min_rows_ = std::max(1,props.inputData().text_area_min_rows);
+    if (node->text_area_soft_wrap_ != props.inputData().text_area_soft_wrap)
     {
         node->text_area_first_row_ = 0;
         node->text_area_last_wrap_width_ = -1;
         node->text_area_top_byte_ = 0;
     }
-    node->text_area_soft_wrap_ = props.text_area_soft_wrap;
-    node->read_only_ = props.read_only;
-    node->scroll_.setRequestedOffset(props.scroll_offset);
-    node->on_scroll_ = props.on_scroll;
-    node->scrollbar_visible_ = props.scrollbar_visible;
-    node->value_ = props.value;
-    node->progress_variant_ = props.progress_variant;
-    node->progress_indeterminate_ = props.progress_indeterminate;
-    node->progress_show_percentage_ = props.progress_show_percentage;
-    node->slider_min_ = props.slider_min;
-    node->slider_max_ = props.slider_max;
-    node->slider_step_ = props.slider_step;
-    node->slider_show_value_ = props.slider_show_value;
-    node->slider_on_change_ = props.slider_on_change;
-    node->columns_ = std::max(1,props.columns);
-    node->surface_tone_ = props.surface_tone;
-    node->on_click_ = props.on_click;
-    node->on_toggle_ = props.on_toggle;
+    node->text_area_soft_wrap_ = props.inputData().text_area_soft_wrap;
+    node->read_only_ = props.inputData().read_only;
+    node->scroll_.setRequestedOffset(props.scrollData().scroll_offset);
+    node->on_scroll_ = props.scrollData().on_scroll;
+    node->scrollbar_visible_ = props.scrollData().scrollbar_visible;
+    node->value_ = props.actionData().value;
+    node->progress_variant_ = props.progressData().progress_variant;
+    node->progress_indeterminate_ = props.progressData().progress_indeterminate;
+    node->progress_show_percentage_ = props.progressData().progress_show_percentage;
+    node->slider_min_ = props.sliderData().slider_min;
+    node->slider_max_ = props.sliderData().slider_max;
+    node->slider_step_ = props.sliderData().slider_step;
+    node->slider_show_value_ = props.sliderData().slider_show_value;
+    node->slider_on_change_ = props.sliderData().slider_on_change;
+    node->columns_ = std::max(1,props.surfaceData().columns);
+    node->surface_tone_ = props.surfaceData().surface_tone;
+    node->on_click_ = props.actionData().on_click;
+    node->on_toggle_ = props.actionData().on_toggle;
     node->on_event_capture_ = props.on_event_capture;
     node->on_event_ = props.on_event;
     node->on_blur_ = props.on_blur;
-    node->on_change_ = props.on_change;
-    node->placeholder_ = props.placeholder;
+    node->on_change_ = props.actionData().on_change;
+    node->placeholder_ = props.textData().placeholder;
     node->disabled_ = props.disabled;
-    node->select_options_ = props.select_options;
+    node->select_options_ = props.choiceData().select_options;
     if (props.type == Component::Type::Autocomplete)
     {
-        const bool requested_changed = node->autocomplete_requested_query_ != props.autocomplete_query;
+        const bool requested_changed = node->autocomplete_requested_query_ != props.choiceData().autocomplete_query;
         const bool value_changed = !created && message_changed;
-        node->autocomplete_all_options_ = props.select_options;
-        node->autocomplete_on_input_change_ = props.autocomplete_on_input_change;
+        node->autocomplete_all_options_ = props.choiceData().select_options;
+        node->autocomplete_on_input_change_ = props.choiceData().autocomplete_on_input_change;
         if (created || requested_changed)
-            node->autocomplete_query_ = props.autocomplete_query;
+            node->autocomplete_query_ = props.choiceData().autocomplete_query;
         else if (value_changed)
-            for (const auto& option : props.select_options)
-                if (option.value == props.text)
+            for (const auto& option : props.choiceData().select_options)
+                if (option.value == props.textData().text)
                 {
                     node->autocomplete_query_ = option.label;
                     break;
                 }
-        node->autocomplete_requested_query_ = props.autocomplete_query;
+        node->autocomplete_requested_query_ = props.choiceData().autocomplete_query;
         node->updateAutocompleteOptions();
     }
-    node->radio_options_ = props.radio_options;
-    node->tab_options_ = props.tab_options;
-    node->table_columns_ = props.table_columns;
-    node->table_rows_ = props.table_rows;
-    node->table_filter_ = props.table_filter;
-    node->table_format_cell_ = props.table_format_cell;
-    node->table_on_horizontal_scroll_ = props.table_on_horizontal_scroll;
-    if (props.table_horizontal_offset >= 0)
-        node->table_horizontal_offset_ = props.table_horizontal_offset;
+    node->radio_options_ = props.choiceData().radio_options;
+    node->tab_options_ = props.choiceData().tab_options;
+    node->table_columns_ = props.tableData().table_columns;
+    node->table_rows_ = props.tableData().table_rows;
+    node->table_filter_ = props.tableData().table_filter;
+    node->table_format_cell_ = props.tableData().table_format_cell;
+    node->table_on_horizontal_scroll_ = props.tableData().table_on_horizontal_scroll;
+    if (props.tableData().table_horizontal_offset >= 0)
+        node->table_horizontal_offset_ = props.tableData().table_horizontal_offset;
     const int previous_virtual_count = node->virtual_item_count_;
     const bool was_at_tail = node->virtual_scroll_.offset() == node->virtual_scroll_.maximum();
-    node->virtual_item_count_ = std::max(0,props.virtual_item_count);
-    node->virtual_on_width_change_ = props.virtual_on_width_change;
+    node->virtual_item_count_ = std::max(0,props.virtualListData().virtual_item_count);
+    node->virtual_on_width_change_ = props.virtualListData().virtual_on_width_change;
     if (created) node->virtual_last_width_ = -1;
-    node->virtual_follow_tail_ = props.virtual_follow_tail;
-    node->virtual_row_height_ = std::max(1,props.virtual_row_height);
-    node->virtual_item_text_ = props.virtual_item_text;
-    node->virtual_item_styled_ = props.virtual_item_styled;
-    node->virtual_on_select_ = props.virtual_on_select;
-    node->virtual_on_activate_ = props.virtual_on_activate;
-    node->virtual_on_click_position_ = props.virtual_on_click_position;
+    node->virtual_follow_tail_ = props.virtualListData().virtual_follow_tail;
+    node->virtual_row_height_ = std::max(1,props.virtualListData().virtual_row_height);
+    node->virtual_item_text_ = props.virtualListData().virtual_item_text;
+    node->virtual_item_styled_ = props.virtualListData().virtual_item_styled;
+    node->virtual_on_select_ = props.virtualListData().virtual_on_select;
+    node->virtual_on_activate_ = props.virtualListData().virtual_on_activate;
+    node->virtual_on_click_position_ = props.virtualListData().virtual_on_click_position;
     const int previous_selected = node->virtual_selected_index_;
-    node->virtual_selected_index_ = props.virtual_selected_index;
-    node->virtual_item_is_selected_ = props.virtual_item_is_selected;
+    node->virtual_selected_index_ = props.virtualListData().virtual_selected_index;
+    node->virtual_item_is_selected_ = props.virtualListData().virtual_item_is_selected;
     node->virtual_scroll_.configure(node->virtual_item_count_,node->virtual_scroll_.viewport());
     if (props.type == Component::Type::VirtualList && node->virtual_follow_tail_ &&
         node->virtual_item_count_ != previous_virtual_count && (created || was_at_tail))
@@ -429,47 +429,47 @@ void Reconciler::reconcile(std::unique_ptr<RenderNode>& node, const Component& c
         previous_selected != node->virtual_selected_index_ && node->virtual_selected_index_ >= 0 &&
         node->virtual_selected_index_ < node->virtual_item_count_)
         node->virtual_scroll_.revealItem(node->virtual_selected_index_);
-    node->tree_items_ = props.tree_items;
-    node->tree_expanded_ = props.tree_expanded;
-    node->tree_on_toggle_ = props.tree_on_toggle;
-    node->split_direction_ = props.split_direction;
-    node->split_position_ = props.split_position;
-    node->split_min_first_ = std::max(0,props.split_min_first);
-    node->split_min_second_ = std::max(0,props.split_min_second);
-    node->split_on_change_ = props.split_on_change;
-    if (node->tree_last_selected_ != props.text)
+    node->tree_items_ = props.treeData().tree_items;
+    node->tree_expanded_ = props.treeData().tree_expanded;
+    node->tree_on_toggle_ = props.treeData().tree_on_toggle;
+    node->split_direction_ = props.splitData().split_direction;
+    node->split_position_ = props.splitData().split_position;
+    node->split_min_first_ = std::max(0,props.splitData().split_min_first);
+    node->split_min_second_ = std::max(0,props.splitData().split_min_second);
+    node->split_on_change_ = props.splitData().split_on_change;
+    if (node->tree_last_selected_ != props.textData().text)
     {
-        node->tree_last_selected_ = props.text;
-        node->tree_pending_reveal_ = !props.text.empty();
+        node->tree_last_selected_ = props.textData().text;
+        node->tree_pending_reveal_ = !props.textData().text.empty();
     }
     node->tree_scroll_.configure(static_cast<int>(node->tree_visible_items().size()),
         node->tree_scroll_.viewport());
     if (props.type == Component::Type::Table)
         node->table_scroll_.configure(counts.at(&component),node->table_scroll_.viewport());
-    node->tab_panel_active_ = props.tab_panel_active;
-    if (!keep_local_value) node->checked_ = props.checked;
-    node->dialog_open_ = props.dialog_open;
-    node->toast_duration_ms_ = std::max(0,props.toast_duration_ms);
-    node->toast_severity_ = std::clamp(props.toast_severity,0,3);
-    node->toast_on_close_ = props.toast_on_close;
+    node->tab_panel_active_ = props.choiceData().tab_panel_active;
+    if (!keep_local_value) node->checked_ = props.actionData().checked;
+    node->dialog_open_ = props.overlayData().dialog_open;
+    node->toast_duration_ms_ = std::max(0,props.overlayData().toast_duration_ms);
+    node->toast_severity_ = std::clamp(props.overlayData().toast_severity,0,3);
+    node->toast_on_close_ = props.overlayData().toast_on_close;
     if (props.type == Component::Type::Toast)
     {
-        if (props.toast_open && (!node->toast_requested_ || message_changed))
+        if (props.overlayData().toast_open && (!node->toast_requested_ || message_changed))
         {
             node->toast_visible_ = true;
             node->toast_started_ = std::chrono::steady_clock::now();
         }
-        if (!props.toast_open) node->toast_visible_ = false;
-        node->toast_requested_ = props.toast_open;
+        if (!props.overlayData().toast_open) node->toast_visible_ = false;
+        node->toast_requested_ = props.overlayData().toast_open;
     }
-    node->focus_scope_active_ = props.focus_scope_active;
-    node->dialog_title_ = props.dialog_title;
-    node->dialog_confirm_text_ = props.dialog_confirm_text;
-    node->dialog_cancel_text_ = props.dialog_cancel_text;
-    node->dialog_width_ = props.dialog_width;
-    node->dialog_close_on_backdrop_ = props.dialog_close_on_backdrop;
-    node->dialog_show_actions_ = props.dialog_show_actions;
-    node->dialog_on_close_ = props.dialog_on_close;
+    node->focus_scope_active_ = props.overlayData().focus_scope_active;
+    node->dialog_title_ = props.overlayData().dialog_title;
+    node->dialog_confirm_text_ = props.overlayData().dialog_confirm_text;
+    node->dialog_cancel_text_ = props.overlayData().dialog_cancel_text;
+    node->dialog_width_ = props.overlayData().dialog_width;
+    node->dialog_close_on_backdrop_ = props.overlayData().dialog_close_on_backdrop;
+    node->dialog_show_actions_ = props.overlayData().dialog_show_actions;
+    node->dialog_on_close_ = props.overlayData().dialog_on_close;
     if (node->select_options_.empty() || node->disabled_) node->select_open_ = false;
     if (!node->select_options_.empty())
         node->select_highlight_ = std::clamp(node->select_highlight_,0,static_cast<int>(node->select_options_.size())-1);

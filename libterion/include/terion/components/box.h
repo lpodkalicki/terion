@@ -25,10 +25,7 @@ public:
     }; /* End of struct Props */
 
     explicit Box(Props props) :
-        Component({.type = Type::Box,.key = std::move(props.key),.id = std::move(props.id),
-            .children = std::move(props.children),.layout = props.layout,
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .border = props.border,.background = props.background})
+        Component({.type = Type::Box, .key = std::move(props.key), .id = std::move(props.id), .children = std::move(props.children), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .surface = Component::SurfaceData{.border = props.border, .background = props.background}})
     {}
 }; /* End of class Box */
 

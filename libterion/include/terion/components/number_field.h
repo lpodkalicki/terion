@@ -50,16 +50,8 @@ private:
         else if (const auto* number = std::get_if<double>(&selected)) initial = *number;
         else if (const auto* integer = std::get_if<std::int64_t>(&selected))
             initial = static_cast<double>(*integer);
-        return {.type = Type::NumberField,.key = std::move(props.key),.id = std::move(props.id),
-            .text = detail::toText(selected),.layout = props.layout,
-            .on_change = props.on_change ? std::move(props.on_change) :
-                (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
-                 std::function<void(std::string)>{}),.placeholder = std::move(props.placeholder),
-            .disabled = props.disabled,.read_only = props.read_only,
-            .number_min = props.min_value,.number_max = props.max_value,.number_step = props.step,
-            .control_size = props.size,.input_variant = props.variant,
-            .form_default_value = initial,
-            .form_validator = [validator = std::move(props.validator),min_value = props.min_value,
+        return {.type = Type::NumberField, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .disabled = props.disabled, .text = Component::TextData{.text = detail::toText(selected), .placeholder = std::move(props.placeholder), .text_style_spec = std::move(props.style_spec)},
+            .input = Component::InputData{.read_only = props.read_only, .number_min = props.min_value, .number_max = props.max_value, .number_step = props.step, .control_size = props.size, .input_variant = props.variant, .form_default_value = initial, .form_validator = [validator = std::move(props.validator),min_value = props.min_value,
                 max_value = props.max_value](const FormValue& value) -> std::optional<std::string> {
                 if (std::holds_alternative<std::monostate>(value)) return "Invalid number";
                 double number = 0;
@@ -70,8 +62,10 @@ private:
                 if (number < min_value || number > max_value) return "Number is out of range";
                 if (validator) return validator(number);
                 return std::nullopt;
-            },.uncontrolled_value = props.default_value.has_value(),
-            .text_style_spec = std::move(props.style_spec)};
+            }, .uncontrolled_value = props.default_value.has_value()},
+            .action = Component::ActionData{.on_change = props.on_change ? std::move(props.on_change) :
+                (props.default_value ? std::function<void(std::string)>{[](std::string) {}} :
+                 std::function<void(std::string)>{})}};
     }
 }; /* End of class NumberField */
 

@@ -30,13 +30,9 @@ public:
     }; /* End of struct Props */
 
     explicit Button(Props props) :
-        Component({.type = Type::Button,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.text),
-            .layout = props.layout,.text_style = props.style,.color_variant = props.color,
-            .on_click = std::move(props.on_click),
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .disabled = props.disabled,
-            .button_variant = props.variant,.control_size = props.size,
-            .text_style_spec = std::move(props.style_spec)})
+        Component({.type = Type::Button, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .text = Component::TextData{.text = std::move(props.text), .text_style = props.style, .color_variant = props.color, .text_style_spec = std::move(props.style_spec)},
+            .input = Component::InputData{.control_size = props.size},
+            .action = Component::ActionData{.on_click = std::move(props.on_click), .button_variant = props.variant}})
     {}
 }; /* End of class Button */
 

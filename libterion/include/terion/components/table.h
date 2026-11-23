@@ -31,14 +31,9 @@ public:
     }; /* End of struct Props */
 
     explicit Table(Props props) :
-        Component({.type = Type::Table,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.selected_key),
-            .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
-            .on_event = std::move(props.on_event),.on_change = std::move(props.on_selection_change),
-            .disabled = props.disabled,.table_columns = std::move(props.columns),
-            .table_rows = std::move(props.rows),.table_filter = std::move(props.filter),
-            .table_format_cell = std::move(props.format_cell),
-            .table_horizontal_offset = props.horizontal_offset,
-            .table_on_horizontal_scroll = std::move(props.on_horizontal_scroll)})
+        Component({.type = Type::Table, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .text = Component::TextData{.text = std::move(props.selected_key)},
+            .action = Component::ActionData{.on_change = std::move(props.on_selection_change)},
+            .table = Component::TableData{.table_columns = std::move(props.columns), .table_rows = std::move(props.rows), .table_filter = std::move(props.filter), .table_format_cell = std::move(props.format_cell), .table_horizontal_offset = props.horizontal_offset, .table_on_horizontal_scroll = std::move(props.on_horizontal_scroll)}})
     {}
 }; /* End of class Table */
 

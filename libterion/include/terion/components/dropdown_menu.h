@@ -28,12 +28,10 @@ public:
     }; /* End of struct Props */
 
     explicit DropdownMenu(Props props) :
-        Component({.type = Type::DropdownMenu,.key = std::move(props.key),.id = std::move(props.id),
-            .text = std::move(props.label),.layout = props.layout,
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .on_change = std::move(props.on_select),.disabled = props.disabled,
-            .button_variant = props.variant,.control_size = props.size,
-            .select_options = std::move(props.options)})
+        Component({.type = Type::DropdownMenu, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .text = Component::TextData{.text = std::move(props.label)},
+            .input = Component::InputData{.control_size = props.size},
+            .action = Component::ActionData{.on_change = std::move(props.on_select), .button_variant = props.variant},
+            .choice = Component::ChoiceData{.select_options = std::move(props.options)}})
     {}
 }; /* End of class DropdownMenu */
 

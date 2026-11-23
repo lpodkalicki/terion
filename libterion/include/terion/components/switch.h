@@ -29,13 +29,11 @@ public:
     }; /* End of struct Props */
 
     explicit Switch(Props props) :
-        Component({.type = Type::Switch,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.label),
-            .layout = props.layout,.color_variant = props.color,.on_toggle = props.on_change ? std::move(props.on_change) :
+        Component({.type = Type::Switch, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .text = Component::TextData{.text = std::move(props.label), .color_variant = props.color},
+            .input = Component::InputData{.form_default_value = props.default_checked.value_or(props.checked), .uncontrolled_value = props.default_checked.has_value()},
+            .action = Component::ActionData{.on_toggle = props.on_change ? std::move(props.on_change) :
                 (props.default_checked ? std::function<void(bool)>{[](bool) {}} :
-                 std::function<void(bool)>{}),
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .disabled = props.disabled,.checkbox_variant = props.variant,.checked = props.default_checked.value_or(props.checked),
-            .form_default_value = props.default_checked.value_or(props.checked),.uncontrolled_value = props.default_checked.has_value()})
+                 std::function<void(bool)>{}), .checkbox_variant = props.variant, .checked = props.default_checked.value_or(props.checked)}})
     {}
 }; /* End of class Switch */
 

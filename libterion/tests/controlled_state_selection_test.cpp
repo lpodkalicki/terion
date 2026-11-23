@@ -137,8 +137,8 @@ TEST(SelectionApi, TreeAndTabsAcceptSelectedKey)
 {
     const TreeView tree({.items = {{.key = "node",.label = "Node"}},.selected_key = "node"});
     const Tabs tabs({.options = {{"General","general"}},.selected_key = "general"});
-    EXPECT_EQ(tree.props().text,"node");
-    EXPECT_EQ(tabs.props().text,"general");
+    EXPECT_EQ(tree.props().textData().text,"node");
+    EXPECT_EQ(tabs.props().textData().text,"general");
 }
 
 TEST(SelectionApi, VirtualListUsesSingleSelectionCallback)

@@ -37,9 +37,7 @@ private:
             for (auto& child : props.children) content.push_back(std::move(child));
             props.children = std::move(content);
         }
-        return Component({.type = Type::Box,.key = std::move(props.key),.id = std::move(props.id),
-            .children = std::move(props.children),.layout = props.layout,
-            .border = props.border,.background = props.background,.surface_tone = SurfaceTone::Surface});
+        return Component({.type = Type::Box, .key = std::move(props.key), .id = std::move(props.id), .children = std::move(props.children), .layout = props.layout, .surface = Component::SurfaceData{.border = props.border, .background = props.background, .surface_tone = SurfaceTone::Surface}});
     }
 }; /* End of class Card */
 

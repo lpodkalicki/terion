@@ -33,12 +33,7 @@ private:
     static Component create(Props props)
     {
         if (props.name.empty()) throw std::invalid_argument("FormField requires a nonempty name");
-        return Component({.type = Type::FormFieldMarker,.key = std::move(props.key),.id = std::move(props.id),
-            .children = {std::move(props.control)},.layout = props.layout,
-            .form_field_name = std::move(props.name),
-            .form_field_label = std::move(props.label),
-            .form_field_required = props.required,
-            .form_field_validator = std::move(props.validator)});
+        return Component({.type = Type::FormFieldMarker, .key = std::move(props.key), .id = std::move(props.id), .children = {std::move(props.control)}, .layout = props.layout, .form = Component::FormData{.form_field_name = std::move(props.name), .form_field_label = std::move(props.label), .form_field_required = props.required, .form_field_validator = std::move(props.validator)}});
     }
 }; /* End of class FormField */
 

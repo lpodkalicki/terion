@@ -317,9 +317,7 @@ private:
     {
         auto bound = [function = function_,arguments = std::move(arguments)]()
             mutable -> Component { return std::apply(function,arguments); };
-        return Component({.type = Component::Type::Function,
-            .render_function = std::move(bound),
-            .function_identity = &detail::callable_component_identity<Function>});
+        return Component({.type = Component::Type::Function, .render_function = Component::RenderFunctionData{.render_function = std::move(bound), .function_identity = &detail::callable_component_identity<Function>}});
     }
     Function function_;
 };

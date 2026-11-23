@@ -37,8 +37,8 @@ TEST(ApiConventions, ControlSizeAppliesAcrossControlFamilies)
     const Button button({.text = "OK",.size = ControlSize::Compact});
     const Select select({.size = ControlSize::Large});
     const Autocomplete autocomplete({.size = ControlSize::Large});
-    EXPECT_EQ(button.props().control_size,ControlSize::Compact);
-    EXPECT_EQ(select.props().control_size,autocomplete.props().control_size);
+    EXPECT_EQ(button.props().inputData().control_size,ControlSize::Compact);
+    EXPECT_EQ(select.props().inputData().control_size,autocomplete.props().inputData().control_size);
 }
 
 TEST(ApiConventions, InputVariantIsSingleCanonicalEnum)
@@ -48,8 +48,8 @@ TEST(ApiConventions, InputVariantIsSingleCanonicalEnum)
                                .size = ControlSize::Compact});
     const PasswordField password({.variant = InputVariant::Outlined,
                                    .size = ControlSize::Compact});
-    EXPECT_EQ(field.props().input_variant,InputVariant::Filled);
-    EXPECT_EQ(number.props().input_variant,password.props().input_variant);
+    EXPECT_EQ(field.props().inputData().input_variant,InputVariant::Filled);
+    EXPECT_EQ(number.props().inputData().input_variant,password.props().inputData().input_variant);
 }
 
 TEST(ApiConventions, DesignatedInitializerOrderRemainsStable)
@@ -57,10 +57,10 @@ TEST(ApiConventions, DesignatedInitializerOrderRemainsStable)
     const TextField input({.value = "draft",.placeholder = "Name",.key = "name",
                             .read_only = true,.variant = InputVariant::Filled,
                             .size = ControlSize::Compact});
-    EXPECT_EQ(input.props().text,"draft");
-    EXPECT_EQ(input.props().placeholder,"Name");
+    EXPECT_EQ(input.props().textData().text,"draft");
+    EXPECT_EQ(input.props().textData().placeholder,"Name");
     EXPECT_EQ(input.props().key,"name");
-    EXPECT_EQ(input.props().read_only,true);
+    EXPECT_EQ(input.props().inputData().read_only,true);
 }
 
 TEST(ApiConventions, CanonicalCallbacksRetainTheirContracts)
@@ -72,10 +72,10 @@ TEST(ApiConventions, CanonicalCallbacksRetainTheirContracts)
     const TextField field({.on_change = [&](std::string value) {
         changed = std::move(value);
     },.size = ControlSize::Medium});
-    EXPECT_EQ(static_cast<bool>(button.props().on_click),true);
-    EXPECT_EQ(static_cast<bool>(field.props().on_change),true);
-    button.props().on_click();
-    field.props().on_change("new value");
+    EXPECT_EQ(static_cast<bool>(button.props().actionData().on_click),true);
+    EXPECT_EQ(static_cast<bool>(field.props().actionData().on_change),true);
+    button.props().actionData().on_click();
+    field.props().actionData().on_change("new value");
     EXPECT_EQ(clicks,1);
     EXPECT_EQ(changed,"new value");
 }

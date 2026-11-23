@@ -29,9 +29,7 @@ private:
     {
         if (props.min_column_width > 0)
             props.layout.grid_min_column_width = props.min_column_width;
-        return Component({.type = Component::Type::Grid,.key = std::move(props.key),.id = std::move(props.id),
-            .children = std::move(props.children),.layout = props.layout,
-            .columns = props.columns});
+        return Component({.type = Component::Type::Grid, .key = std::move(props.key), .id = std::move(props.id), .children = std::move(props.children), .layout = props.layout, .surface = Component::SurfaceData{.columns = props.columns}});
     }
 }; /* End of class Grid */
 

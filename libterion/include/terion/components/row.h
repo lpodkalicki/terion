@@ -23,9 +23,7 @@ public:
     }; /* End of struct Props */
 
     explicit Row(Props props) :
-        Component({.type = Type::Row,.key = std::move(props.key),.id = std::move(props.id),
-            .children = std::move(props.children),.layout = props.layout,
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event)})
+        Component({.type = Type::Row, .key = std::move(props.key), .id = std::move(props.id), .children = std::move(props.children), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event)})
     {}
 }; /* End of class Row */
 

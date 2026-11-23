@@ -40,10 +40,7 @@ private:
     static Component create(Props props)
     {
         if (props.variant != TypographyVariant::Body) props.style.bold = true;
-        return Component({.type = Type::Text,.key = std::move(props.key),.id = std::move(props.id),
-            .text = std::move(props.text),.text_style = props.style,.color_variant = props.color,
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .text_style_spec = std::move(props.style_spec)});
+        return Component({.type = Type::Text, .key = std::move(props.key), .id = std::move(props.id), .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .text = Component::TextData{.text = std::move(props.text), .text_style = props.style, .color_variant = props.color, .text_style_spec = std::move(props.style_spec)}});
     }
 }; /* End of class Typography */
 

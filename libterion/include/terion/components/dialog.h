@@ -39,15 +39,9 @@ private:
     static Component::Props makeProps(Props props)
     {
         const bool show_actions = props.show_actions.value_or(props.children.empty());
-        return {.type = Type::Dialog,.key = std::move(props.key),.id = std::move(props.id),
-            .text = std::move(props.message),.children = std::move(props.children),
-            .on_click = std::move(props.on_confirm),
-            .on_event_capture = std::move(props.on_event_capture),.on_event = std::move(props.on_event),
-            .dialog_open = props.open,.dialog_title = std::move(props.title),
-            .dialog_confirm_text = std::move(props.confirm_text),
-            .dialog_cancel_text = std::move(props.cancel_text),.dialog_width = props.width,
-            .dialog_close_on_backdrop = props.close_on_backdrop,.dialog_on_close = std::move(props.on_close),
-            .dialog_show_actions = show_actions};
+        return {.type = Type::Dialog, .key = std::move(props.key), .id = std::move(props.id), .children = std::move(props.children), .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .text = Component::TextData{.text = std::move(props.message)},
+            .action = Component::ActionData{.on_click = std::move(props.on_confirm)},
+            .overlay = Component::OverlayData{.dialog_open = props.open, .dialog_title = std::move(props.title), .dialog_confirm_text = std::move(props.confirm_text), .dialog_cancel_text = std::move(props.cancel_text), .dialog_width = props.width, .dialog_close_on_backdrop = props.close_on_backdrop, .dialog_on_close = std::move(props.on_close), .dialog_show_actions = show_actions}};
     }
 }; /* End of class Dialog */
 

@@ -29,10 +29,9 @@ public:
         LayoutStyle layout = {.width = 25};
     }; /* End of struct Props */
 
-    explicit Slider(Props props) : Component({.type = Type::Slider,.key = std::move(props.key),.id = std::move(props.id),
-        .layout = props.layout,.color_variant = props.color,.disabled = props.disabled,.value = props.value,
-        .slider_min = props.min,.slider_max = props.max,.slider_step = props.step,
-        .slider_show_value = props.show_value,.slider_on_change = std::move(props.on_change)})
+    explicit Slider(Props props) : Component({.type = Type::Slider, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .disabled = props.disabled, .text = Component::TextData{.color_variant = props.color},
+            .action = Component::ActionData{.value = props.value},
+            .slider = Component::SliderData{.slider_min = props.min, .slider_max = props.max, .slider_step = props.step, .slider_show_value = props.show_value, .slider_on_change = std::move(props.on_change)}})
     {}
 }; /* End of class Slider */
 

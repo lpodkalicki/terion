@@ -84,21 +84,21 @@ TEST(FilePicker, BrowsesAndConfirmsSelectedFile)
         },.on_confirm = [&](std::filesystem::path value) { confirmed = std::move(value); }});
     const auto& dialog = picker.props();
     EXPECT_EQ(dialog.type,Component::Type::Dialog);
-    EXPECT_TRUE(dialog.dialog_open);
+    EXPECT_TRUE(dialog.overlayData().dialog_open);
     ASSERT_EQ(dialog.children.size(),7U);
     const auto& list = dialog.children[4].props();
     EXPECT_EQ(list.type,Component::Type::VirtualList);
-    ASSERT_EQ(list.virtual_item_count,1);
-    EXPECT_EQ(list.virtual_item_text(0),"  ·     a.txt");
-    EXPECT_EQ(list.virtual_row_height,1);
-    ASSERT_TRUE(static_cast<bool>(list.virtual_on_select));
-    list.virtual_on_select(0);
+    ASSERT_EQ(list.virtualListData().virtual_item_count,1);
+    EXPECT_EQ(list.virtualListData().virtual_item_text(0),"  ·     a.txt");
+    EXPECT_EQ(list.virtualListData().virtual_row_height,1);
+    ASSERT_TRUE(static_cast<bool>(list.virtualListData().virtual_on_select));
+    list.virtualListData().virtual_on_select(0);
     EXPECT_EQ(selection,file);
     const auto& buttons = dialog.children[6].props().children;
     ASSERT_EQ(buttons.size(),2U);
-    ASSERT_TRUE(static_cast<bool>(buttons[1].props().on_click));
+    ASSERT_TRUE(static_cast<bool>(buttons[1].props().actionData().on_click));
     EXPECT_FALSE(buttons[1].props().disabled);
-    buttons[1].props().on_click();
+    buttons[1].props().actionData().on_click();
     EXPECT_EQ(confirmed,file);
 }
 
@@ -112,7 +112,7 @@ TEST(FilePicker, DirectoryModeConfirmsCurrentDirectory)
         }});
     const auto& button = picker.props().children.back().props().children[1].props();
     EXPECT_FALSE(button.disabled);
-    button.on_click();
+    button.actionData().on_click();
     EXPECT_EQ(confirmed,temporary.path());
 }
 
@@ -128,12 +128,12 @@ TEST(FilePicker, SingleClickSelectsDirectoryWithoutNavigating)
         .on_directory_change = [&](std::filesystem::path value) { destination = std::move(value); },
         .on_selection_change = [&](std::filesystem::path value) { selection = std::move(value); }});
     const auto& list = picker.props().children[4].props();
-    ASSERT_TRUE(static_cast<bool>(list.virtual_on_select));
-    ASSERT_TRUE(static_cast<bool>(list.virtual_on_activate));
-    list.virtual_on_select(0);
+    ASSERT_TRUE(static_cast<bool>(list.virtualListData().virtual_on_select));
+    ASSERT_TRUE(static_cast<bool>(list.virtualListData().virtual_on_activate));
+    list.virtualListData().virtual_on_select(0);
     EXPECT_EQ(selection,folder);
     EXPECT_TRUE(destination.empty());
-    list.virtual_on_activate(0);
+    list.virtualListData().virtual_on_activate(0);
     EXPECT_EQ(destination,folder);
 }
 
@@ -188,9 +188,9 @@ TEST(FilePicker, ShowsUnicodeIconsForDirectoriesAndFiles)
     const FilePicker picker({.open = true,.directory = temporary.path(),
         .icon_style = FilePickerIconStyle::Unicode});
     const auto& list = picker.props().children[4].props();
-    ASSERT_EQ(list.virtual_item_count,2);
-    EXPECT_EQ(list.virtual_item_text(0),"  📁    folder");
-    EXPECT_EQ(list.virtual_item_text(1),"  ·     example.txt");
+    ASSERT_EQ(list.virtualListData().virtual_item_count,2);
+    EXPECT_EQ(list.virtualListData().virtual_item_text(0),"  📁    folder");
+    EXPECT_EQ(list.virtualListData().virtual_item_text(1),"  ·     example.txt");
 }
 
 TEST(FilePicker, SupportsAsciiAndIconFreeFallbacks)
@@ -201,14 +201,14 @@ TEST(FilePicker, SupportsAsciiAndIconFreeFallbacks)
     const FilePicker ascii_picker({.open = true,.directory = temporary.path(),
         .icon_style = FilePickerIconStyle::Ascii});
     const auto& ascii_list = ascii_picker.props().children[4].props();
-    EXPECT_EQ(ascii_list.virtual_item_text(0),"  [DIR]   folder");
-    EXPECT_EQ(ascii_list.virtual_item_text(1),"  [FILE]  example.txt");
+    EXPECT_EQ(ascii_list.virtualListData().virtual_item_text(0),"  [DIR]   folder");
+    EXPECT_EQ(ascii_list.virtualListData().virtual_item_text(1),"  [FILE]  example.txt");
 
     const FilePicker plain_picker({.open = true,.directory = temporary.path(),
         .icon_style = FilePickerIconStyle::None});
     const auto& plain_list = plain_picker.props().children[4].props();
-    EXPECT_EQ(plain_list.virtual_item_text(0),"folder");
-    EXPECT_EQ(plain_list.virtual_item_text(1),"example.txt");
+    EXPECT_EQ(plain_list.virtualListData().virtual_item_text(0),"folder");
+    EXPECT_EQ(plain_list.virtualListData().virtual_item_text(1),"example.txt");
 }
 
 TEST(FilePicker, SymbolsUseStyledTextAndHighlightDirectories)
@@ -218,12 +218,12 @@ TEST(FilePicker, SymbolsUseStyledTextAndHighlightDirectories)
     std::ofstream(temporary.path() / "example.txt").put('x');
     const FilePicker picker({.open = true,.directory = temporary.path()});
     const auto& list = picker.props().children[4].props();
-    ASSERT_TRUE(static_cast<bool>(list.virtual_item_styled));
-    ASSERT_EQ(list.virtual_item_count,2);
-    EXPECT_EQ(list.virtual_item_text(0),"  ▸   folder");
-    EXPECT_EQ(list.virtual_item_text(1),"  ·   example.txt");
-    const auto folder = list.virtual_item_styled(0);
-    const auto file = list.virtual_item_styled(1);
+    ASSERT_TRUE(static_cast<bool>(list.virtualListData().virtual_item_styled));
+    ASSERT_EQ(list.virtualListData().virtual_item_count,2);
+    EXPECT_EQ(list.virtualListData().virtual_item_text(0),"  ▸   folder");
+    EXPECT_EQ(list.virtualListData().virtual_item_text(1),"  ·   example.txt");
+    const auto folder = list.virtualListData().virtual_item_styled(0);
+    const auto file = list.virtualListData().virtual_item_styled(1);
     ASSERT_EQ(folder.size(),2U);
     ASSERT_EQ(file.size(),2U);
     EXPECT_EQ(folder[0].color,ColorVariant::Info);
@@ -240,7 +240,7 @@ TEST(FilePicker, BreadcrumbAndSelectionInformationCanBeHidden)
         .show_breadcrumbs = false,.show_entry_count = false,.show_selection_info = false});
     const auto& children = picker.props().children;
     ASSERT_EQ(children.size(),7U);
-    EXPECT_EQ(children[0].props().text,temporary.path().string());
-    EXPECT_EQ(children[3].props().text,"Enter: open  |  Double-click: open");
-    EXPECT_TRUE(children[5].props().text.empty());
+    EXPECT_EQ(children[0].props().textData().text,temporary.path().string());
+    EXPECT_EQ(children[3].props().textData().text,"Enter: open  |  Double-click: open");
+    EXPECT_TRUE(children[5].props().textData().text.empty());
 }

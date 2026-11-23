@@ -24,8 +24,7 @@ inline const Context<Theme> theme_context(Theme::dark());
 [[nodiscard]] inline Component ThemeProvider(Theme theme, Component child,std::string key = {})
 {
     const Theme value = theme;
-    Component scope({.type = Component::Type::ThemeScope,.children = {std::move(child)},
-        .theme_override = std::move(theme)});
+    Component scope({.type = Component::Type::ThemeScope, .children = {std::move(child)}, .theme_override = std::move(theme)});
     return ContextProvider(detail::theme_context,value,std::move(scope),std::move(key));
 }
 

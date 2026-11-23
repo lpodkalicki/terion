@@ -23,10 +23,9 @@ public:
     };
 
     explicit ErrorBoundary(Props props) :
-        Component({.type = Type::ErrorBoundary,.key = std::move(props.key),.id = std::move(props.id),
-            .children = {std::move(props.child)},.error_fallback = std::move(props.fallback)})
+        Component({.type = Type::ErrorBoundary, .key = std::move(props.key), .id = std::move(props.id), .children = {std::move(props.child)}, .render_function = Component::RenderFunctionData{.error_fallback = std::move(props.fallback)}})
     {
-        if (!this->props().error_fallback)
+        if (!this->props().renderFunctionData().error_fallback)
             throw std::invalid_argument("ErrorBoundary requires a fallback");
     }
 };

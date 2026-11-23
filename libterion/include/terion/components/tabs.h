@@ -26,10 +26,9 @@ public:
     }; /* End of struct Props */
 
     explicit Tabs(Props props) :
-        Component({.type = Type::Tabs,.key = std::move(props.key),.id = std::move(props.id),.text = std::move(props.selected_key),
-            .layout = props.layout,.on_event_capture = std::move(props.on_event_capture),
-            .on_event = std::move(props.on_event),.on_change = std::move(props.on_selection_change),
-            .disabled = props.disabled,.tab_options = std::move(props.options)})
+        Component({.type = Type::Tabs, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .text = Component::TextData{.text = std::move(props.selected_key)},
+            .action = Component::ActionData{.on_change = std::move(props.on_selection_change)},
+            .choice = Component::ChoiceData{.tab_options = std::move(props.options)}})
     {}
 }; /* End of class Tabs */
 

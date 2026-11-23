@@ -27,12 +27,8 @@ public:
     }; /* End of struct Props */
 
     explicit ContextMenu(Props props) :
-        Component({.type = Type::ContextMenu,.key = std::move(props.key),.id = std::move(props.id),
-            .children = {std::move(props.child)},
-            .on_event_capture = std::move(props.on_event_capture),
-            .on_event = std::move(props.on_event),
-            .on_change = std::move(props.on_select),.disabled = props.disabled,
-            .select_options = std::move(props.options)})
+        Component({.type = Type::ContextMenu, .key = std::move(props.key), .id = std::move(props.id), .children = {std::move(props.child)}, .on_event_capture = std::move(props.on_event_capture), .on_event = std::move(props.on_event), .disabled = props.disabled, .action = Component::ActionData{.on_change = std::move(props.on_select)},
+            .choice = Component::ChoiceData{.select_options = std::move(props.options)}})
     {}
 }; /* End of class ContextMenu */
 

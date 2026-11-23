@@ -33,11 +33,8 @@ public:
     }; /* End of struct Props */
 
     explicit Toast(Props props) :
-        Component({.type = Type::Toast,.key = std::move(props.key),.id = std::move(props.id),
-            .text = std::move(props.message),.toast_open = props.open,
-            .toast_duration_ms = props.duration_ms,
-            .toast_severity = static_cast<int>(props.severity),
-            .toast_on_close = std::move(props.on_close)})
+        Component({.type = Type::Toast, .key = std::move(props.key), .id = std::move(props.id), .text = Component::TextData{.text = std::move(props.message)},
+            .overlay = Component::OverlayData{.toast_open = props.open, .toast_duration_ms = props.duration_ms, .toast_severity = static_cast<int>(props.severity), .toast_on_close = std::move(props.on_close)}})
     {}
 }; /* End of class Toast */
 

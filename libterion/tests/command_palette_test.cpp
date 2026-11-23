@@ -15,15 +15,15 @@ TEST(CommandPalette, ProducesModalDialogAndSearchableAutocomplete)
         .key = "palette"});
     EXPECT_EQ(palette.props().type,Component::Type::Dialog);
     EXPECT_EQ(palette.props().key,"palette");
-    EXPECT_TRUE(palette.props().dialog_open);
-    EXPECT_FALSE(palette.props().dialog_show_actions);
+    EXPECT_TRUE(palette.props().overlayData().dialog_open);
+    EXPECT_FALSE(palette.props().overlayData().dialog_show_actions);
     ASSERT_EQ(palette.props().children.size(),2U);
     const auto& search = palette.props().children[1].props();
     EXPECT_EQ(search.type,Component::Type::Autocomplete);
-    ASSERT_EQ(search.select_options.size(),2U);
-    EXPECT_EQ(search.select_options[0].value,"open");
-    EXPECT_NE(search.select_options[0].label.find("Ctrl+O"),std::string::npos);
-    EXPECT_TRUE(search.select_options[1].disabled);
+    ASSERT_EQ(search.choiceData().select_options.size(),2U);
+    EXPECT_EQ(search.choiceData().select_options[0].value,"open");
+    EXPECT_NE(search.choiceData().select_options[0].label.find("Ctrl+O"),std::string::npos);
+    EXPECT_TRUE(search.choiceData().select_options[1].disabled);
 }
 
 TEST(CommandPalette, DispatchesCommandAndCloses)
@@ -34,8 +34,8 @@ TEST(CommandPalette, DispatchesCommandAndCloses)
         .on_execute = [&](std::string id) { executed = std::move(id); },
         .on_close = [&] { ++closed; }});
     const auto& search = palette.props().children[1].props();
-    ASSERT_TRUE(static_cast<bool>(search.on_change));
-    search.on_change("reload");
+    ASSERT_TRUE(static_cast<bool>(search.actionData().on_change));
+    search.actionData().on_change("reload");
     EXPECT_EQ(executed,"reload");
     EXPECT_EQ(closed,1);
 }
@@ -46,8 +46,8 @@ TEST(CommandPalette, InputUpdatesControlledQuery)
     const CommandPalette palette({.open = true,.query = "re",
         .on_query_change = [&](std::string value) { query = std::move(value); }});
     const auto& search = palette.props().children[1].props();
-    EXPECT_EQ(search.autocomplete_query,"re");
-    ASSERT_TRUE(static_cast<bool>(search.autocomplete_on_input_change));
-    search.autocomplete_on_input_change("restart");
+    EXPECT_EQ(search.choiceData().autocomplete_query,"re");
+    ASSERT_TRUE(static_cast<bool>(search.choiceData().autocomplete_on_input_change));
+    search.choiceData().autocomplete_on_input_change("restart");
     EXPECT_EQ(query,"restart");
 }

@@ -31,16 +31,16 @@ inline bool isFormInput(Component::Type type)
 
 inline FormValue initialFormValue(const Component::Props& control)
 {
-    if (control.form_default_value) return *control.form_default_value;
+    if (control.inputData().form_default_value) return *control.inputData().form_default_value;
     if (control.type == Component::Type::Checkbox || control.type == Component::Type::Switch)
-        return control.checked;
+        return control.actionData().checked;
     if (control.type == Component::Type::NumberField)
     {
-        if (control.text.empty()) return std::monostate{};
-        const auto number = parseNumber(control.text);
+        if (control.textData().text.empty()) return std::monostate{};
+        const auto number = parseNumber(control.textData().text);
         return number ? FormValue(*number) : FormValue(std::monostate{});
     }
-    return control.text;
+    return control.textData().text;
 }
 
 inline void collectFormFields(const std::vector<Component>& children,
@@ -57,10 +57,10 @@ inline void collectFormFields(const std::vector<Component>& children,
         if (marker.children.size() != 1 || !isFormInput(marker.children.front().props().type))
             throw std::invalid_argument("FormField requires exactly one supported input control");
         const auto& control = marker.children.front().props();
-        fields.push_back({.name = marker.form_field_name,
-            .initial_value = initialFormValue(control),.required = marker.form_field_required,
-            .validator = control.form_validator,
-            .validator_with_values = marker.form_field_validator});
+        fields.push_back({.name = marker.formData().form_field_name,
+            .initial_value = initialFormValue(control),.required = marker.formData().form_field_required,
+            .validator = control.inputData().form_validator,
+            .validator_with_values = marker.formData().form_field_validator});
     }
 }
 
@@ -68,17 +68,17 @@ inline Component bindFormField(Component component,const std::shared_ptr<FormSta
     const std::function<void(FormStatus)>& on_change)
 {
     const auto& marker = component.props();
-    const auto name = marker.form_field_name;
+    const auto name = marker.formData().form_field_name;
     auto control = marker.children.front().props();
     const auto current = state->value(name);
     // FormState owns this value even if the nested input specifies default_value.
     // Otherwise uncontrolled reconciliation would hide submit/reset changes.
-    control.uncontrolled_value = false;
+    control.inputData().uncontrolled_value = false;
     if (control.type == Component::Type::Checkbox || control.type == Component::Type::Switch)
     {
-        control.checked = std::get<bool>(current);
-        const auto previous = std::move(control.on_toggle);
-        control.on_toggle = [state,name,previous,on_change](bool checked) {
+        control.actionData().checked = std::get<bool>(current);
+        const auto previous = std::move(control.actionData().on_toggle);
+        control.actionData().on_toggle = [state,name,previous,on_change](bool checked) {
             state->setValue(name,checked);
             if (previous) previous(checked);
             if (on_change) on_change(state->status());
@@ -86,11 +86,11 @@ inline Component bindFormField(Component component,const std::shared_ptr<FormSta
     }
     else
     {
-        control.text = control.type == Component::Type::NumberField ?
+        control.textData().text = control.type == Component::Type::NumberField ?
             state->displayValue(name) : toText(current);
-        const auto previous = std::move(control.on_change);
+        const auto previous = std::move(control.actionData().on_change);
         const auto number = control.type == Component::Type::NumberField;
-        control.on_change = [state,name,previous,number,on_change](std::string value) {
+        control.actionData().on_change = [state,name,previous,number,on_change](std::string value) {
             if (number)
             {
                 state->setNumberText(name,value);
@@ -110,8 +110,8 @@ inline Component bindFormField(Component component,const std::shared_ptr<FormSta
     // Form field names are public focus identifiers, not reconciliation keys.
     if (control.id.empty()) control.id = name;
     std::vector<Component> children;
-    if (!marker.form_field_label.empty())
-        children.emplace_back(Typography({.text = marker.form_field_label}));
+    if (!marker.formData().form_field_label.empty())
+        children.emplace_back(Typography({.text = marker.formData().form_field_label}));
     children.emplace_back(Component(std::move(control)));
     const auto error = state->visibleError(name);
     if (!error.empty())

@@ -54,17 +54,14 @@ template<typename T>
     std::string key = {})
 {
     auto token = context.token();
-    return Component({.type = Component::Type::ContextProvider,.key = std::move(key),
-        .children = {std::move(child)},
-        .enter_context = [token,value = std::move(value)] {
+    return Component({.type = Component::Type::ContextProvider, .key = std::move(key), .children = {std::move(child)}, .render_function = Component::RenderFunctionData{.enter_context = [token,value = std::move(value)] {
             detail::context_values[token.get()].emplace_back(value);
-        },
-        .exit_context = [token] {
+        }, .exit_context = [token] {
             const auto it = detail::context_values.find(token.get());
             if (it == detail::context_values.end() || it->second.empty()) return;
             it->second.pop_back();
             if (it->second.empty()) detail::context_values.erase(it);
-        }});
+        }}});
 }
 
 // Multiple direct children share one context scope without a layout wrapper.

@@ -26,11 +26,9 @@ public:
         std::optional<TextStyleSpec> style_spec = std::nullopt;
     }; /* End of struct Props */
 
-    explicit Progress(Props props) : Component({.type = Type::Progress,.key = std::move(props.key),.id = std::move(props.id),
-        .layout = props.layout,.text_style = props.style,.color_variant = props.color,.value = props.value,
-        .progress_variant = props.variant,.progress_indeterminate = props.indeterminate,
-        .progress_show_percentage = props.show_percentage,
-        .text_style_spec = std::move(props.style_spec)})
+    explicit Progress(Props props) : Component({.type = Type::Progress, .key = std::move(props.key), .id = std::move(props.id), .layout = props.layout, .text = Component::TextData{.text_style = props.style, .color_variant = props.color, .text_style_spec = std::move(props.style_spec)},
+            .action = Component::ActionData{.value = props.value},
+            .progress = Component::ProgressData{.progress_variant = props.variant, .progress_indeterminate = props.indeterminate, .progress_show_percentage = props.show_percentage}})
     {}
 }; /* End of class Progress */
 

@@ -85,3 +85,11 @@ Removed duplicate fields include `Table/Tabs/TreeView::value/on_change`,
 
 `key` is exclusively a reconciliation key. `id` is the public focus/shortcut identity.
 See [component-identity-focus.md](component-identity-focus.md) for contracts and migration.
+
+## Component internals (#140)
+
+The internal `Component::Props` is split into shared metadata and separately
+owned typed payload groups. See [Component Internals 2.0](component-internals-140.md).
+New components should reuse an existing behavioral group when suitable,
+while retaining component-specific `Props` aggregates in public headers.
+Do not add unrelated flat fields back to `Component::Props`.
